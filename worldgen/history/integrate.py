@@ -429,9 +429,10 @@ def initial_state(p: HistoryParams) -> np.ndarray:
     y[TC] = thermal.initial_core_k(p, p.mantle_temperature_k)
     y[WS] = p.water_oceans * (1.0 - h.INITIAL_MANTLE_WATER_SHARE)
     y[WM] = p.water_oceans * h.INITIAL_MANTLE_WATER_SHARE
-    y[CS] = p.carbon * h.INITIAL_DEGASSED_CARBON_SHARE
+    degassed = min(h.INITIAL_DEGASSED_CARBON_SHARE * p.outgassing, 1.0)
+    y[CS] = p.carbon * degassed
     y[CK] = 0.0
-    y[CM] = p.carbon * (1.0 - h.INITIAL_DEGASSED_CARBON_SHARE)
+    y[CM] = p.carbon * (1.0 - degassed)
     y[N2] = p.nitrogen
     y[O2] = 0.0
     return y

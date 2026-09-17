@@ -36,7 +36,7 @@ history:
   carbon_inventory: 1.0
   nitrogen_inventory: 1.0
   initial_mantle_temperature_k: 1750
-  outgassing_efficiency: 1.0
+  outgassing_efficiency: 0.1        # reduced mantle: Martian magmas carry little CO2 (Grott et al. 2011)
   weathering_efficiency: 1.0
   weathering_temperature_scale_k: 20
   weathering_co2_exponent: 0.3

@@ -598,8 +598,11 @@ CARBON_SURFACE_EARTH = 0.14
 CARBON_CRUST_EARTH = 260.0
 CARBON_MANTLE_EARTH = 1000.0
 NITROGEN_EARTH = 3.9
-INITIAL_DEGASSED_CARBON_SHARE = 0.2       # carbon released by the magma ocean
-INITIAL_AIR_CARBON_SHARE = 0.01          # of it, what stays in the air where oceans condense (the rest carbonates)
+# Carbon released by the magma ocean, scaled by the planet's outgassing efficiency (a reduced
+# mantle releases less). Venus keeps it as ~80 bar of CO₂; on planets where oceans condense all
+# but INITIAL_AIR_CARBON_SHARE of it is carbonated within a few Myr, which the integration skips.
+INITIAL_DEGASSED_CARBON_SHARE = 0.35
+INITIAL_AIR_CARBON_SHARE = 0.01           # what stays in the air where oceans condense
 INITIAL_MANTLE_WATER_SHARE = 0.3
 CO2_EARTH_BAR = 2.8e-4                    # pre-industrial partial pressure
 OCEAN_CARBON_EARTH = 0.138                # dissolved inorganic carbon (as CO₂) per ocean at CO2_EARTH_BAR
@@ -611,11 +614,16 @@ SEAFLOOR_CO2_EXPONENT = 0.23
 SEAFLOOR_TEMPERATURE_SCALE_K = 40.0
 WEATHERING_SUPPLY_RATIO = 3.0             # supply limit / present kinetic weathering (Earth)
 SEAFLOOR_CAPACITY_RATIO = 30.0            # seafloor uptake limit relative to its present rate
+# Earth's carbon input is ~6 Tmol/yr: ridges and plumes ~1.5, arcs ~3.5, with the rest of the
+# subducted carbonate (~0.8 Tmol/yr) carried into the mantle.
+# These two set the steady state of the cycle: with a share a returned by arcs and a turnover τ,
+# the crust settles at C = W τ with W = volcanic / (1 − a), which reproduces Earth's carbonate
+# crust (260 × 10¹⁸ kg CO₂) and its ~7 Tmol/yr weathering flux.
 ARC_DEGASSING_SHARE = 0.5                 # subducted carbonate returned by arcs
 CARBONATE_TURNOVER_GYR = 0.85             # crustal carbonate subduction timescale at Earth's spreading
 CARBONATE_DECOMPOSITION_K = 700.0         # crustal carbonate returns to the air above this surface temperature
 CARBONATE_DECOMPOSITION_GYR = 0.01
-LID_CARBONATE_RECYCLING_GYR = 1.0         # burial and decarbonation of carbonate on active lids, at Earth-like melt
+LID_CARBONATE_RECYCLING_GYR = 3.0         # burial and decarbonation of carbonate on active lids, at Earth-like melt
 WATER_DEGASSING_EARTH = 1.0               # oceans per Gyr at Earth's melt rate and mantle water
 MANTLE_WATER_EARTH_OCEANS = 1.7
 # Greenhouse: τ = τ_bg·P^n (with water) + a·ln(1 + p/p₁)·P^n + τ_CO₂·p^n,
@@ -632,7 +640,10 @@ GREENHOUSE_STEAM = 5.2                    # τ per bar^n of water vapour in a st
 MOIST_GREENHOUSE_K = 340.0
 STRATOSPHERE_WATER_COLD = 3e-6
 DIFFUSION_LIMIT_PER_MIXING = 2.5e17       # H atoms m⁻² s⁻¹ per unit stratospheric H mixing ratio (Hunten 1973)
-BULK_ESCAPE_SHARE = 0.1
+# Heavy gases escape far less readily than hydrogen: the efficiency below gives a present-day loss
+# of ~3 kg/s at Mars (MAVEN: a few kg/s; Jakosky et al. 2018), ~0.5 kg/s at Venus and almost
+# nothing at Earth, with ~40× more while the young star's XUV output was saturated.
+BULK_ESCAPE_SHARE = 0.002
 BULK_ESCAPE_SHORELINE = 0.5               # bulk escape switches on at this shoreline ratio (present-Sun XUV)
 THIN_AIR_BAR = 1e-4                       # below this pressure, escape is limited by the gas left
 BULK_ESCAPE_WIDTH = 0.1                   # width of the switch (dex)
