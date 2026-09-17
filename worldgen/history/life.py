@@ -37,7 +37,7 @@ def productivity(p: HistoryParams, life: str, land_colonised: float, mean_k: flo
 
 
 def oxygen_rate(p: HistoryParams, t_gyr: float, oxygen: float, total_productivity: float, melt: float,
-                surface_k: float, land: float, heat_ratio: float) -> float:
+                surface_k: float, land: float, heat_ratio: float, spreading: float = 0.0) -> float:
     """Return dO₂/dt (10¹⁸ kg per Gyr) from burial, reductants, oxidative weathering and hot surfaces."""
     burial = 0.0
     if p.product == "o2":
@@ -46,7 +46,10 @@ def oxygen_rate(p: HistoryParams, t_gyr: float, oxygen: float, total_productivit
                   * math.exp((4.57 - t_gyr) / p.reductant_decay_gyr))
     present = oxygen / (oxygen + h.OXYGEN_SMALL)
     root = math.sqrt(max(oxygen, 0.0))
-    exposure = max(land / 0.29, 0.05) * p.area_ratio * max(heat_ratio, 0.1) ** 0.5
+    # Oxygen is consumed by weathering exposed rock and by fresh sea floor (hydrothermal alteration),
+    # so an ocean world with no land still has a sink.
+    exposure = ((max(land / 0.29, 0.05) * max(heat_ratio, 0.1) ** 0.5
+                 + h.SEAFLOOR_OXIDATION * spreading) * p.area_ratio)
     weathering = EARTH_OXIDATIVE * root * exposure
     hot = 1.0 / (1.0 + math.exp(-(surface_k - h.HOT_OXIDATION_K) / 20.0))
     return burial - present * reductants - weathering - hot * oxygen / h.OXYGEN_CRUST_SINK_GYR

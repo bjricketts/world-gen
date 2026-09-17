@@ -122,6 +122,8 @@ class HistoryResult:
     final_modes: Modes
     t_start: float
     t_end: float
+    cycles: int = 0                 # snowball onsets over the run
+    cycling: bool = False           # the planet was still freezing and thawing at the end
 
     def segment_at(self, t: float) -> Segment:
         """Return the integration segment containing ``t`` (the first or last one outside the range)."""
@@ -168,8 +170,8 @@ class HistoryModel:
     # --- diagnostics ------------------------------------------------------------------------
     def diagnostics(self, t: float, y: np.ndarray, modes: Modes) -> Diagnostics:
         """Return every derived quantity for the state ``y`` at ``t`` in ``modes``."""
-        key = (t, y.tobytes())
-        if key == self._cache_key and modes == self._cache.modes:
+        key = (t, y.tobytes(), modes.regime, modes.climate, modes.life, modes.synchronous, modes.land_colonised)
+        if key == self._cache_key:
             return self._cache
         p = self.p
         lum, teff, xuv = self.star(t)
@@ -209,13 +211,13 @@ class HistoryModel:
             escape *= 0.0 if climate.mean_k < 273.0 else 1.0
         bulk = vol.bulk_escape(p, flux, s)
         oxygen = life_model.oxygen_rate(p, t, max(y[O2], 0.0), prod, rates.melt, climate.mean_k, land,
-                                        heat_ratio)
+                                        heat_ratio, rates.spreading)
         d = Diagnostics(time_gyr=t, luminosity_w=lum, effective_temperature_k=teff, xuv_fraction=xuv,
                         instellation=s, runaway_limit=limit, air=air, optical_depth=tau,
                         methane_fraction=methane, climate=climate, land=land, ocean=ocean, thermal=rates,
                         carbon=carbon, degassing=degas, regassing=regas, water_escape=escape, bulk_escape=bulk,
                         productivity=prod, land_productivity=land_prod, oxygen_rate=oxygen, modes=modes)
-        self._cache_key, self._cache = key, replace(d, modes=replace(modes))
+        self._cache_key, self._cache = key, d
         return d
 
     def _colonised(self, t: float, modes: Modes) -> float:
@@ -456,22 +458,79 @@ def initial_modes(model: HistoryModel, t0: float, y0: np.ndarray, regime: str) -
     return model.update_clock(t0, model.diagnostics(t0, y0, modes), modes)
 
 
+class EventLog:
+    """Collects the history's events, collapsing a fast snowball–thaw cycle into one entry.
+
+    Planets near the ice-albedo tipping point can freeze and thaw dozens of
+    times (Menou 2015). Freezes are logged in full until several follow each
+    other quickly; from then on one entry reports the cycle, its period and
+    how many freezes there have been. Widely spaced glaciations stay separate
+    events.
+    """
+
+    REPEATED = ("snowball_onset", "snowball_exit", "life_retreat", "life_emerges", "oxygenation")
+
+    def __init__(self):
+        self.events: list[HistoryEvent] = []
+        self.freezes: list[float] = []
+        self.summary: Optional[HistoryEvent] = None
+        self.in_cycle: list[float] = []      # freezes covered by the current summary
+
+    def add(self, time_gyr: float, kind: str, detail: str, flagged: bool = False) -> None:
+        """Record an event, or fold it into the cycle summary while the cycle repeats."""
+        if kind != "snowball_onset":
+            if self.summary is not None and kind in self.REPEATED and self._fast(time_gyr):
+                return                        # part of the ongoing cycle
+            self.events.append(HistoryEvent(time_gyr, kind, detail, flagged))
+            return
+        self.freezes.append(time_gyr)
+        if self.summary is not None and self._fast(time_gyr):
+            self.in_cycle.append(time_gyr)
+            self._update()
+            return
+        recent = self.freezes[-h.CYCLE_COLLAPSE_AFTER:]
+        if (len(recent) == h.CYCLE_COLLAPSE_AFTER
+                and recent[-1] - recent[0] < (h.CYCLE_COLLAPSE_AFTER - 1) * h.CYCLE_FAST_GYR):
+            self.in_cycle = list(recent)
+            self.summary = HistoryEvent(time_gyr, "limit_cycle", "")
+            self.events.append(self.summary)
+            self._update()
+            return
+        self.summary = None
+        self.events.append(HistoryEvent(time_gyr, kind, detail, flagged))
+
+    def _fast(self, time_gyr: float) -> bool:
+        """Return whether an event continues the current cycle rather than starting a new episode."""
+        return bool(self.in_cycle) and time_gyr - self.in_cycle[-1] < h.CYCLE_FAST_GYR
+
+    def _update(self) -> None:
+        """Refresh the cycle summary with the latest freeze."""
+        first, last, count = self.in_cycle[0], self.in_cycle[-1], len(self.in_cycle)
+        period = (last - first) / max(count - 1, 1) * 1e3
+        self.summary.detail = (f"from {first:.2f} Gyr the climate keeps cycling between snowball and thaw: "
+                               f"{count} freezes by {last:.2f} Gyr, about one every {period:.0f} Myr")
+
+    def cycling(self, t_end: float) -> bool:
+        """Return whether the planet was still freezing and thawing at the end of the run."""
+        return bool(self.in_cycle) and self.in_cycle[-1] > t_end - h.CYCLE_RECENT_GYR
+
+
 def integrate(model: HistoryModel, t_end: float, regime: str, t_start: float = h.HISTORY_START_GYR,
               rtol: float = 1e-4) -> HistoryResult:
     """Integrate the history from ``t_start`` to ``t_end`` (Gyr) and return the segments and events."""
     y = initial_state(model.p)
     t = t_start
     modes = initial_modes(model, t, y, regime)
-    events: list[HistoryEvent] = []
+    log_book = EventLog()
+    events = log_book.events
     segments: list[Segment] = []
     if modes.climate == "runaway":
-        events.append(HistoryEvent(t, "runaway_onset", "the planet forms inside the runaway limit: "
-                                                         "its water never condenses"))
+        log_book.add(t, "runaway_onset", "the planet forms inside the runaway limit: its water never condenses")
     elif modes.climate == "snowball":
-        events.append(HistoryEvent(t, "snowball_onset", "the planet starts frozen"))
+        log_book.add(t, "snowball_onset", "the planet starts frozen")
     dynamo = model.diagnostics(t, y, modes).thermal.dynamo
     if dynamo:
-        events.append(HistoryEvent(t, "dynamo_onset", "a core dynamo runs from formation"))
+        log_book.add(t, "dynamo_onset", "a core dynamo runs from formation")
 
     def settle(t, y, modes):
         """Apply events whose conditions already hold before integrating further."""
@@ -484,7 +543,7 @@ def integrate(model: HistoryModel, t_end: float, regime: str, t_start: float = h
 
             def log(kind, detail, flagged, _t=t):
                 """Record an event."""
-                events.append(HistoryEvent(_t, kind, detail, flagged))
+                log_book.add(_t, kind, detail, flagged)
 
             modes = model.transition(name, t, y, modes, log)
         return modes
@@ -518,12 +577,11 @@ def integrate(model: HistoryModel, t_end: float, regime: str, t_start: float = h
                                               current).thermal.dynamo
                     if after != dynamo:
                         dynamo = after
-                        events.append(HistoryEvent(te, "dynamo_onset" if after else "dynamo_shutdown",
-                                                   "the core dynamo starts" if after else "the core dynamo stops"))
+                        log_book.add(te, "dynamo_onset" if after else "dynamo_shutdown",
+                                     "the core dynamo starts" if after else "the core dynamo stops")
                 elif name.startswith("oxygen_"):
                     level = float(name.split("_", 1)[1])
-                    events.append(HistoryEvent(te, "oxygenation",
-                                               f"O₂ passes {level:.1%} of the air"))
+                    log_book.add(te, "oxygenation", f"O₂ passes {level:.1%} of the air")
         end = sol.t[-1]
         segments.append(Segment(t, end, sol.sol, current))
         if sol.status == 1 and terminal_hit is not None:
@@ -533,7 +591,7 @@ def integrate(model: HistoryModel, t_end: float, regime: str, t_start: float = h
 
             def log(kind, detail, flagged, _t=te):
                 """Record an event."""
-                events.append(HistoryEvent(_t, kind, detail, flagged))
+                log_book.add(_t, kind, detail, flagged)
 
             new = model.transition(name, t, y, current, log)
             if new == current and name != "hot":
@@ -542,11 +600,12 @@ def integrate(model: HistoryModel, t_end: float, regime: str, t_start: float = h
             modes = model.update_clock(t, model.diagnostics(t, y, new), new) if name == "hot" else new
             continue
         if sol.status < 0:
-            events.append(HistoryEvent(end, "integration_failed", sol.message, True))
+            log_book.add(end, "integration_failed", sol.message, True)
             break
         t, y = end, sol.y[:, -1]
         if sol.status == 1:
             continue      # a terminal event at the segment start was ignored; carry on
     events.sort(key=lambda e: e.time_gyr)
     return HistoryResult(params=model.p, segments=segments, events=events, table_solves=model.table.solves,
-                         rhs_calls=model.calls, final_modes=modes, t_start=t_start, t_end=t_end)
+                         rhs_calls=model.calls, final_modes=modes, t_start=t_start, t_end=t_end,
+                         cycles=len(log_book.freezes), cycling=log_book.cycling(t_end))

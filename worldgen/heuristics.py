@@ -542,6 +542,9 @@ HISTORY_START_GYR = 0.03
 HISTORY_OUTPUT_POINTS = 200               # timeline samples for figures
 HISTORY_MAX_SEGMENTS = 400                # integration restarts at events
 HISTORY_CANDIDATES = 10                   # snapshot-screened draws tried in history mode
+CYCLE_COLLAPSE_AFTER = 3                  # freezes in quick succession after which the log reports one cycle
+CYCLE_FAST_GYR = 0.3                      # freezes closer together than this belong to the same cycle
+CYCLE_RECENT_GYR = 0.5                    # a cycle this recent means the planet is still cycling at the end
 
 # Stellar XUV (Tu et al. 2015, 1 M☉): saturation ends at 5.7, 23 and 226 Myr for the
 # 10th, 50th and 90th rotation percentiles; tracks join the snapshot relation by
@@ -607,6 +610,7 @@ INITIAL_MANTLE_WATER_SHARE = 0.3
 CO2_EARTH_BAR = 2.8e-4                    # pre-industrial partial pressure
 OCEAN_CARBON_EARTH = 0.138                # dissolved inorganic carbon (as CO₂) per ocean at CO2_EARTH_BAR
 OCEAN_CARBON_EXPONENT = 0.5               # dissolved carbon ∝ pCO₂^exponent
+AIR_PARTITION_STEPS = 30                  # bisection steps for the air–ocean carbon split
 # Carbon fluxes at present Earth (10¹⁸ kg CO₂ per Gyr; ~7 Tmol C/yr).
 WEATHERING_EARTH = 310.0
 SEAFLOOR_WEATHERING_SHARE = 0.2           # share of Earth's weathering on the sea floor
@@ -664,6 +668,7 @@ OXYGEN_BURIAL_EARTH = 320.0
 REDUCTANT_EARTH_SHARE = 0.18
 OCEAN_PRODUCTIVITY_SHARE = 0.55           # ocean share of Earth's organic burial
 OXYGEN_MASS_EARTH = 1.2
+SEAFLOOR_OXIDATION = 0.1                  # O₂ taken up by fresh sea floor, relative to Earth's land weathering
 OXYGEN_SMALL = 1e-6                       # O₂ mass below which sinks switch off smoothly
 HOT_OXIDATION_K = 500.0                   # hot surfaces take up O₂ on OXYGEN_CRUST_SINK_GYR
 OXYGENATION_FRACTIONS = (1e-3, 0.05)      # O₂ fractions logged as the first and second rise

@@ -9,7 +9,6 @@ and steam atmospheres use the grey-atmosphere estimate instead.
 
 from __future__ import annotations
 
-import itertools
 import math
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -54,6 +53,7 @@ class ClimateTable:
         self.orbit = orbit
         self.land_albedo = land_albedo
         self.nodes: dict[tuple, tuple[float, ...]] = {}
+        self._cells: dict[tuple, list] = {}   # the 16 corners of each grid cell, in corner order
         self.solves = 0
 
     def _grey(self, s: float, tau: float, pressure_bar: float) -> ClimatePoint:
@@ -96,20 +96,33 @@ class ClimateTable:
                   math.log1p(max(tau, 0.0)) / h.HISTORY_TABLE_TAU_STEP,
                   math.log(max(pressure_bar, 1e-4)) / h.HISTORY_TABLE_LOG_P_STEP,
                   min(max(land, 0.0), 1.0) / h.HISTORY_TABLE_LAND_STEP)
-        base = [math.floor(x) for x in coords]
-        frac = [x - b for x, b in zip(coords, base)]
-        total = [0.0] * len(CLIMATE_FIELDS)
-        for corner in itertools.product((0, 1), repeat=4):
-            weight = 1.0
-            for f, bit in zip(frac, corner):
-                weight *= f if bit else 1.0 - f
-            if weight <= 0.0:
+        base = (math.floor(coords[0]), math.floor(coords[1]), math.floor(coords[2]), math.floor(coords[3]))
+        cell = (base, synchronous, branch)
+        corners = self._cells.get(cell)
+        if corners is None:
+            corners = [self._node((base[0] + a, base[1] + b, base[2] + d, base[3] + e, synchronous, branch))
+                       for a in (0, 1) for b in (0, 1) for d in (0, 1) for e in (0, 1)]
+            self._cells[cell] = corners
+        fa, fb, fd, fe = (coords[0] - base[0], coords[1] - base[1], coords[2] - base[2], coords[3] - base[3])
+        weights = (
+            (1 - fa) * (1 - fb) * (1 - fd) * (1 - fe), (1 - fa) * (1 - fb) * (1 - fd) * fe,
+            (1 - fa) * (1 - fb) * fd * (1 - fe), (1 - fa) * (1 - fb) * fd * fe,
+            (1 - fa) * fb * (1 - fd) * (1 - fe), (1 - fa) * fb * (1 - fd) * fe,
+            (1 - fa) * fb * fd * (1 - fe), (1 - fa) * fb * fd * fe,
+            fa * (1 - fb) * (1 - fd) * (1 - fe), fa * (1 - fb) * (1 - fd) * fe,
+            fa * (1 - fb) * fd * (1 - fe), fa * (1 - fb) * fd * fe,
+            fa * fb * (1 - fd) * (1 - fe), fa * fb * (1 - fd) * fe,
+            fa * fb * fd * (1 - fe), fa * fb * fd * fe)
+        mean = albedo = open_water = open_ocean = ice_line = 0.0
+        for w, values in zip(weights, corners):
+            if w <= 0.0:
                 continue
-            key = tuple(b + bit for b, bit in zip(base, corner)) + (synchronous, branch)
-            values = self._node(key)
-            for n, value in enumerate(values):
-                total[n] += weight * value
-        return ClimatePoint(*total)
+            mean += w * values[0]
+            albedo += w * values[1]
+            open_water += w * values[2]
+            open_ocean += w * values[3]
+            ice_line += w * values[4]
+        return ClimatePoint(mean, albedo, open_water, open_ocean, ice_line)
 
 
 _TABLES: "OrderedDict[tuple, ClimateTable]" = OrderedDict()

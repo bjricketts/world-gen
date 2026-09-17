@@ -54,40 +54,38 @@ def partition_air(p: HistoryParams, surface_carbon: float, ocean_oceans: float, 
     """Return the air given the surface carbon, the liquid ocean (oceans) and the other gases.
 
     The ocean holds dissolved carbon ∝ W·pCO₂^exponent; the rest is in the air.
+    The split is solved by bisection on the mass of CO₂ in the air.
     """
     surface_carbon = max(surface_carbon, 0.0)
     nitrogen = max(nitrogen, 0.0)
     oxygen = max(oxygen, 0.0)
+    per_mass = p.gravity * 1e18 / p.area_m2 / c.BAR      # bar per 10¹⁸ kg of air
+    other_moles = nitrogen / MU_N2 + oxygen / MU_O2
+    other_mass = nitrogen + oxygen
 
-    def pressures(air_co2: float) -> tuple[float, float, float, float]:
-        """Return total and partial pressures (bar) for a mass of CO₂ in the air."""
-        total = p.pressure_bar(air_co2 + nitrogen + oxygen)
-        moles = air_co2 / MU_CO2 + nitrogen / MU_N2 + oxygen / MU_O2
-        if moles <= 0:
-            return total, 0.0, 0.0, 0.0
-        return (total, total * air_co2 / MU_CO2 / moles, total * nitrogen / MU_N2 / moles,
-                total * oxygen / MU_O2 / moles)
+    def partial(air_co2: float) -> tuple[float, float]:
+        """Return the total and CO₂ partial pressure (bar) for a mass of CO₂ in the air."""
+        total = (air_co2 + other_mass) * per_mass
+        moles = air_co2 / MU_CO2 + other_moles
+        return total, (total * air_co2 / MU_CO2 / moles if moles > 0 else 0.0)
 
-    def dissolved(air_co2: float) -> float:
-        """Return the carbon held by the ocean for a mass of CO₂ in the air."""
-        if ocean_oceans <= 0.0:
-            return 0.0
-        pco2 = pressures(air_co2)[1]
-        return h.OCEAN_CARBON_EARTH * ocean_oceans * (pco2 / h.CO2_EARTH_BAR) ** h.OCEAN_CARBON_EXPONENT
-
-    low, high = 0.0, surface_carbon
+    ocean_factor = h.OCEAN_CARBON_EARTH * ocean_oceans
     if ocean_oceans > 0.0 and surface_carbon > 0.0:
-        for _ in range(48):
+        low, high = 0.0, surface_carbon
+        for _ in range(h.AIR_PARTITION_STEPS):
             mid = 0.5 * (low + high)
-            if mid + dissolved(mid) > surface_carbon:
+            dissolved = ocean_factor * (partial(mid)[1] / h.CO2_EARTH_BAR) ** h.OCEAN_CARBON_EXPONENT
+            if mid + dissolved > surface_carbon:
                 high = mid
             else:
                 low = mid
         air_co2 = 0.5 * (low + high)
     else:
         air_co2 = surface_carbon
-    total, pco2, pn2, po2 = pressures(air_co2)
-    steam = p.pressure_bar(steam_oceans * c.EARTH_OCEAN_MASS / 1e18) if steam_oceans > 0 else 0.0
+    total, pco2 = partial(air_co2)
+    pn2 = total * (nitrogen / MU_N2) / (air_co2 / MU_CO2 + other_moles) if total > 0 else 0.0
+    po2 = total * (oxygen / MU_O2) / (air_co2 / MU_CO2 + other_moles) if total > 0 else 0.0
+    steam = steam_oceans * c.EARTH_OCEAN_MASS / 1e18 * per_mass if steam_oceans > 0 else 0.0
     return Air(pressure_bar=total, co2_bar=pco2, n2_bar=pn2, o2_bar=po2, co2_mass=air_co2,
                o2_fraction=po2 / total if total > 0 else 0.0,
                co2_fraction=pco2 / total if total > 0 else 0.0, steam_bar=steam)
