@@ -37,6 +37,7 @@ class LifeInputs:
     pigment_absorption_nm: Optional[float] = None
     oxygen_fraction: Optional[float] = None
     weathering_target_is_user: bool = False
+    methane_fraction: Optional[float] = None     # history mode: CH₄ from the integration
 
 
 def default_life(planet_age_gyr: float, surface_water: str, land_fraction: float) -> str:
@@ -112,6 +113,8 @@ def build_biosphere(inputs: LifeInputs, star: StarState, instellation_earth: flo
         oxygen = oxygen_level(age) * (1.0 if life == "surface" else h.OCEAN_ONLY_OXYGEN_SHARE)
     if product == "ch4" and life != "none":
         methane = h.METHANE_BIOTIC * logistic((age - 0.5) / 0.2)
+    if inputs.methane_fraction is not None:
+        methane = inputs.methane_fraction
     if inputs.oxygen_fraction is not None:
         oxygen = inputs.oxygen_fraction
     else:

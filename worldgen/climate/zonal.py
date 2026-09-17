@@ -77,11 +77,12 @@ def _diffusion_matrix(x: np.ndarray, conductance: np.ndarray) -> np.ndarray:
 
 def solve_zonal(setting: ClimateSetting, land_fraction: float | np.ndarray, start_k: float = WARM_START_K,
                 bands: int | None = None, land_albedo: float | None = None,
-                initial: Optional["ZonalClimate"] = None, target_mean_k: Optional[float] = None) -> ZonalClimate:
+                initial: Optional["ZonalClimate"] = None, target_mean_k: Optional[float] = None,
+                tolerance_k: Optional[float] = None) -> ZonalClimate:
     """Return the periodic climate of a planet with the given land fraction, one value or one per band.
 
     ``initial`` is a nearby solution to start from instead of a uniform
-    ``start_k``. With ``target_mean_k`` the constant term of the outgoing
+    ``start_k``; ``tolerance_k`` overrides the convergence tolerance. With ``target_mean_k`` the constant term of the outgoing
     radiation is adjusted until the global mean temperature equals the
     target; the result's ``outgoing`` gives the adjusted coefficients.
     """
@@ -164,7 +165,7 @@ def solve_zonal(setting: ClimateSetting, land_fraction: float | np.ndarray, star
             previous_change = change
             ocean = ocean + relax * (new[:, :n] - ocean)
             land = land + relax * (new[:, n:] - land)
-            if change < h.CLIMATE_TOLERANCE_K:
+            if change < (h.CLIMATE_TOLERANCE_K if tolerance_k is None else tolerance_k):
                 converged = True
                 break
         mean = float(np.mean(f_ocean * ocean + f_land * land))

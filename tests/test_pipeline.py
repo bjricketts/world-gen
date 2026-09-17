@@ -6,7 +6,7 @@ from worldgen import PlanetSpec, candidates, format_report, generate
 from worldgen import constants as c
 from worldgen.cli import app
 from worldgen.priors import ARCHETYPES, resolve
-from worldgen.spec import field_role
+from worldgen.spec import field_role, load_spec
 
 from .conftest import EXAMPLES
 
@@ -70,9 +70,25 @@ def test_red_dwarf_example_is_locked():
     assert state.orbit.spin_state == "synchronous"
 
 
-def test_history_mode_not_available_yet():
-    with pytest.raises(NotImplementedError):
-        generate(PlanetSpec(mode="history"))
+@pytest.mark.slow
+def test_history_mode_runs_with_timeline():
+    spec = load_spec(EXAMPLES / "earth_history.yaml")
+    state, timeline = generate(spec)
+    assert state.mode == "history"
+    assert timeline.times_s[-1] == state.epoch_s
+    assert len(timeline.states) == len(spec.history.epochs_gyr) + 1
+    assert timeline.series["time_gyr"][0] < timeline.series["time_gyr"][-1]
+    assert any(e.kind == "origin_of_life" for e in timeline.events)
+
+
+@pytest.mark.slow
+def test_history_overrides_are_flagged():
+    spec = load_spec(EXAMPLES / "earth_history.yaml")
+    spec = spec.model_copy(update={"atmosphere": spec.atmosphere.model_copy(update={"surface_pressure_bar": 2.0})})
+    state, _ = generate(spec)
+    assert state.atmosphere.surface_pressure_pa == pytest.approx(2.0e5)
+    assert [o.field for o in state.overrides] == ["atmosphere.surface_pressure_bar"]
+    assert any(i.subsystem == "history" and i.kind == "conflict" for i in state.issues)
 
 
 def test_candidates_sorted():
@@ -109,7 +125,6 @@ def test_cli(tmp_path):
     assert out.exists()
     result = runner.invoke(app, ["random", "--candidates", "3", "--seed", "4"])
     assert result.exit_code == 0 and "Best candidate" in result.output
-    assert runner.invoke(app, ["generate", str(template), "--mode", "history"]).exit_code == 1
 
 
 SUN = {"mass_msun": 1.0, "age_gyr": 4.57, "metallicity_feh": 0.0}

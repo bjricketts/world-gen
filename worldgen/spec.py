@@ -51,6 +51,7 @@ class StarSpec(_Section):
     mass_msun: Param = None
     age_gyr: Param = None
     metallicity_feh: Param = None
+    activity_percentile: Param = None    # rotation percentile at birth (0 slow, 1 fast); sets the XUV history
 
 
 class OrbitSpec(_Section):
@@ -125,6 +126,36 @@ class BiosphereSpec(_Section):
     oxygen_fraction: Param = None                 # O2 mole fraction of the air (default from biosphere age)
 
 
+class HistorySpec(_Section):
+    """Initial conditions and poorly constrained rates for history mode. Unset values are drawn."""
+
+    epochs_gyr: Optional[list[float]] = None      # extra epochs at which full states are stored
+    initial_water_mass_fraction: Param = None     # all water at formation (default: body.water_mass_fraction)
+    carbon_inventory: Param = None                # total carbon relative to Earth's, per unit planet mass
+    nitrogen_inventory: Param = None              # atmospheric nitrogen relative to Earth's, per unit planet mass
+    initial_mantle_temperature_k: Param = None    # mantle potential temperature at formation
+    outgassing_efficiency: Param = None           # volcanic degassing relative to Earth's at the same melt rate
+    weathering_efficiency: Param = None           # silicate weathering relative to Earth's at the same climate
+    weathering_temperature_scale_k: Param = None  # e-folding temperature of weathering kinetics
+    weathering_co2_exponent: Param = None         # weathering ∝ pCO₂^exponent
+    biotic_weathering_factor: Param = None        # speed-up of land weathering by a full land biosphere
+    escape_efficiency: Param = None               # heating efficiency of XUV-driven escape
+    mantle_activation_energy_kj: Param = None     # activation energy of mantle viscosity
+    core_adiabatic_heat_flow: Param = None        # heat the core conducts along its adiabat, relative to Earth's
+    life_origin_delay_gyr: Param = None           # time with habitable conditions before life appears
+    oxygen_burial_efficiency: Param = None        # organic burial (O₂ source) relative to Earth's
+    reductant_decay_gyr: Param = None             # e-folding time of the volcanic reductant flux (mantle oxidation)
+    land_colonisation_delay_gyr: Param = None     # time from the origin of surface life to life on land
+
+    @field_validator("epochs_gyr")
+    @classmethod
+    def _positive_epochs(cls, v):
+        """Reject negative epochs."""
+        if v is not None and any(t < 0 for t in v):
+            raise ValueError("epochs must be non-negative")
+        return v
+
+
 class PriorSpec(_Section):
     """How unset parameters are drawn."""
 
@@ -158,6 +189,7 @@ class PlanetSpec(BaseModel):
     atmosphere: AtmosphereSpec = AtmosphereSpec()
     surface: SurfaceSpec = SurfaceSpec()
     biosphere: BiosphereSpec = BiosphereSpec()
+    history: HistorySpec = HistorySpec()
     priors: PriorSpec = PriorSpec()
 
 
@@ -211,7 +243,7 @@ SPEC_TEMPLATE = """\
 
 name: New World
 seed: 42
-mode: snapshot            # snapshot | history (history mode arrives in milestone 6)
+mode: snapshot            # snapshot | history (integrated from formation)
 
 priors:
   archetype: temperate    # see `worldgen archetypes`; omit for a weighted mix
@@ -223,6 +255,7 @@ star:
   mass_msun: 0.9          # solar masses
   # age_gyr: [3, 6]
   # metallicity_feh: 0.0
+  # activity_percentile: 0.5      # birth rotation percentile: 0 slow, 1 fast (XUV history)
 
 orbit:
   # semi_major_axis_au: 1.0   # or give instellation_earth instead
@@ -261,6 +294,25 @@ biosphere: {}
   # temperature_tolerance_k: 25
   # pigment_absorption_nm: 680    # default: where the star's light peaks at the surface
   # oxygen_fraction: 0.21
+
+history: {}                # used in history mode; unset values are drawn
+  # epochs_gyr: [0.5, 1, 2, 3]    # states stored at these planet ages
+  # initial_water_mass_fraction: 0.0007
+  # carbon_inventory: 1.0         # relative to Earth, per unit planet mass
+  # nitrogen_inventory: 1.0
+  # initial_mantle_temperature_k: 2000
+  # outgassing_efficiency: 1.0
+  # weathering_efficiency: 1.0
+  # weathering_temperature_scale_k: 20
+  # weathering_co2_exponent: 0.3
+  # biotic_weathering_factor: 4
+  # escape_efficiency: 0.15
+  # mantle_activation_energy_kj: 300
+  # core_adiabatic_heat_flow: 1.0
+  # life_origin_delay_gyr: 0.4
+  # oxygen_burial_efficiency: 1.0
+  # reductant_decay_gyr: 3.0
+  # land_colonisation_delay_gyr: 3.4
 
 atmosphere: {}
   # present: true

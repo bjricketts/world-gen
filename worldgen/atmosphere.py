@@ -49,6 +49,12 @@ class AtmosphereInputs:
     extra_optical_depth: float = 0.0     # greenhouse from gases the composition does not include (biotic methane)
     land_albedo: Optional[float] = None  # snow-free land albedo for the climate model
     land_by_band: Optional[np.ndarray] = None  # land share of each climate band, once the surface is built
+    # History mode: the integrated greenhouse, runaway state and climate branch replace the snapshot rules.
+    optical_depth: Optional[float] = None
+    runaway: Optional[bool] = None
+    frozen_branch: bool = False
+    regulate: bool = True
+    land_fraction: Optional[float] = None
 
 
 def shoreline_ratio(instellation_earth: float, xuv_relative_sun: float, escape_velocity_m_s: float) -> float:
@@ -244,6 +250,8 @@ def build_atmosphere(
     # Runaway greenhouse
     runaway_limit = orbit.habitable_zone.runaway_greenhouse_s
     runaway = bool(present and has_water and not no_surface and s > runaway_limit)
+    if inputs.runaway is not None:
+        runaway = bool(inputs.runaway and has_water and not no_surface)
     if runaway:
         issues.append(Issue("warning", "note", "atmosphere",
                             f"instellation ({s:.2f}) exceeds the runaway-greenhouse limit ({runaway_limit:.2f}): "
@@ -261,6 +269,8 @@ def build_atmosphere(
     tau = 0.0 if no_surface else greenhouse_optical_depth(composition, pressure)
     if present and not no_surface:
         tau += inputs.extra_optical_depth
+    if inputs.optical_depth is not None and not no_surface:
+        tau = inputs.optical_depth
     t_surf = surface_temperature(t_eq, tau)
     if present and not no_surface:
         issues.append(Issue("info", "heuristic", "atmosphere",
@@ -270,6 +280,8 @@ def build_atmosphere(
     surface_water = has_water and not runaway
 
     land_share = water.land_fraction_estimate if surface_water else 1.0
+    if surface_water and inputs.land_fraction is not None:
+        land_share = inputs.land_fraction
     if surface_water and inputs.land_by_band is not None:
         land_share = inputs.land_by_band
 
@@ -280,6 +292,8 @@ def build_atmosphere(
                                   orbit.spin_state == "synchronous", pressure, bulk.surface_gravity_m_s2,
                                   composition, optical_depth, orbit.rotation_period_s, orbit.orbital_period_s,
                                   albedo, albedo_fixed, surface_water, reference)
+        if inputs.frozen_branch and "initial" not in options:
+            options.setdefault("start_k", COLD_START_K)
         return solve_zonal(setting, land_share, land_albedo=inputs.land_albedo, **options)
 
     def matched(target_k: float, low: float, high: float) -> tuple[float, ZonalClimate]:
@@ -296,7 +310,7 @@ def build_atmosphere(
     weathering = False
     wet = surface_water and water_state(has_water, present, pressure, t_surf, runaway) in ("liquid", "ice")
     waterworld = water.land_fraction_estimate < h.WATERWORLD_LAND_FRACTION
-    regulated = (inputs.surface_temperature_k is None and regime == "mobile_lid"
+    regulated = (inputs.regulate and inputs.surface_temperature_k is None and regime == "mobile_lid"
                  and composition in WEATHERING_COMPOSITIONS and wet and not runaway)
     if regulated and waterworld:
         issues.append(Issue("info", "note", "atmosphere",
@@ -340,7 +354,7 @@ def build_atmosphere(
         if zonal is None:
             zonal = climate_at(tau)
         snowball = zonal.open_water_fraction < h.OPEN_WATER_LIQUID
-        if surface_water and zonal.open_ocean_fraction < 0.999 and not snowball:
+        if surface_water and zonal.open_ocean_fraction < 0.999 and not snowball and not inputs.frozen_branch:
             cold = climate_at(tau, reference_k=zonal.mean_k, start_k=COLD_START_K)
             snowball = cold.open_water_fraction < h.OPEN_WATER_LIQUID
             if snowball:

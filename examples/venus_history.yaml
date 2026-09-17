@@ -1,0 +1,47 @@
+# Venus integrated from formation (history mode): an Earth-sized planet inside the runaway limit.
+name: Venus (history)
+seed: 0
+mode: history
+
+star:
+  mass_msun: 1.0
+  age_gyr: 4.57
+  metallicity_feh: 0.0
+  activity_percentile: 0.5
+
+orbit:
+  semi_major_axis_au: 0.723
+  eccentricity: 0.0068
+  obliquity_deg: 177.4
+  rotation_period_h: 5832.5
+  periapsis_longitude_deg: 0
+
+body:
+  mass_mearth: 0.815
+  radius_rearth: 0.9499
+  envelope_mass_fraction: 0.0
+  radiogenic_abundance: 1.0
+  tidal_heating_w: 0
+  tidal_q: 100
+
+atmosphere:
+  volatile_richness: 1.0
+
+history:
+  epochs_gyr: [0.1, 0.3, 0.5, 1.0, 2.0, 3.0]
+  initial_water_mass_fraction: 0.00064
+  carbon_inventory: 1.0
+  nitrogen_inventory: 1.0
+  initial_mantle_temperature_k: 1750
+  outgassing_efficiency: 1.0
+  weathering_efficiency: 1.0
+  weathering_temperature_scale_k: 20
+  weathering_co2_exponent: 0.3
+  biotic_weathering_factor: 4
+  escape_efficiency: 0.15
+  mantle_activation_energy_kj: 300
+  core_adiabatic_heat_flow: 1.0
+  life_origin_delay_gyr: 0.4
+  oxygen_burial_efficiency: 1.0
+  reductant_decay_gyr: 3.0
+  land_colonisation_delay_gyr: 3.4

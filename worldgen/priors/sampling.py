@@ -27,7 +27,21 @@ LOG_SCALE_FIELDS = frozenset({
     "body.tidal_q",
     "atmosphere.surface_pressure_bar",
     "atmosphere.volatile_richness",
+    "history.initial_water_mass_fraction",
+    "history.carbon_inventory",
+    "history.nitrogen_inventory",
+    "history.outgassing_efficiency",
+    "history.weathering_efficiency",
+    "history.biotic_weathering_factor",
+    "history.escape_efficiency",
+    "history.core_adiabatic_heat_flow",
+    "history.life_origin_delay_gyr",
+    "history.oxygen_burial_efficiency",
+    "history.reductant_decay_gyr",
 })
+
+# Spec fields that are read from the spec directly rather than resolved.
+NOT_DRAWN_FIELDS = frozenset({"history.epochs_gyr"})
 
 # Oldest allowed draw as a fraction of the star's main-sequence lifetime.
 MAX_AGE_FRACTION = 0.9
@@ -55,8 +69,10 @@ class ResolvedInputs:
 def _spec_values(spec: PlanetSpec) -> dict[str, Any]:
     """Return every spec field as a flat dict keyed by 'section.field'."""
     out = {}
-    for section in ("star", "orbit", "body", "interior", "atmosphere", "surface", "biosphere"):
+    for section in ("star", "orbit", "body", "interior", "atmosphere", "surface", "biosphere", "history"):
         for name, value in getattr(spec, section).model_dump().items():
+            if f"{section}.{name}" in NOT_DRAWN_FIELDS:
+                continue
             out[f"{section}.{name}"] = value
     return out
 

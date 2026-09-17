@@ -201,6 +201,25 @@ class SurfaceSummary:
 
 
 @dataclass
+class TimelineEvent:
+    """An event in a planet's history (history mode)."""
+
+    time_s: float                  # planet age
+    kind: str                      # e.g. 'ocean_loss', 'runaway_onset', 'dynamo_shutdown', 'snowball_onset'
+    detail: str
+    flagged: bool = False          # physics overrode a value the user asked to hold
+
+
+@dataclass
+class Override:
+    """A user value applied at the end of a history run in place of the integrated value."""
+
+    field: str                     # spec path
+    history_value: object
+    user_value: object
+
+
+@dataclass
 class PlanetState:
     """Everything known about a generated planet at one epoch."""
 
@@ -225,6 +244,8 @@ class PlanetState:
     surface: Optional[SurfaceSummary] = None
     climate: Optional[ClimateSummary] = None
     biosphere: Optional[BiosphereState] = None
+    events: list[TimelineEvent] = field(default_factory=list)       # history mode: what happened, oldest first
+    overrides: list[Override] = field(default_factory=list)         # history mode: user values applied at the end
 
     def to_dict(self) -> dict:
         """Return the state as nested plain Python types."""
@@ -251,13 +272,34 @@ class PlanetState:
             d["climate"] = ClimateSummary(**d["climate"])
         if d.get("surface") is not None:
             d["surface"] = SurfaceSummary(**d["surface"])
+        d["events"] = [TimelineEvent(**e) for e in d.get("events", [])]
+        d["overrides"] = [Override(**o) for o in d.get("overrides", [])]
         return cls(**d)
 
 
 @dataclass
 class Timeline:
-    """Sequence of global states over time. Snapshot mode has a single point."""
+    """Global states over time. Snapshot mode has a single point.
+
+    ``states`` are full planet states at ``times_s`` (chosen epochs and the
+    target epoch); ``series`` holds sampled history values on
+    ``series['time_gyr']`` for figures; ``events`` lists what happened.
+    """
 
     times_s: list[float] = field(default_factory=list)
     states: list[PlanetState] = field(default_factory=list)
-    events: list[tuple[float, str]] = field(default_factory=list)
+    events: list[TimelineEvent] = field(default_factory=list)
+    series: dict[str, list] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        """Return the timeline as nested plain Python types (states included)."""
+        return {"times_s": list(self.times_s), "states": [s.to_dict() for s in self.states],
+                "events": [asdict(e) for e in self.events], "series": dict(self.series)}
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Timeline":
+        """Return a timeline rebuilt from ``to_dict`` output."""
+        return cls(times_s=list(data.get("times_s", [])),
+                   states=[PlanetState.from_dict(s) for s in data.get("states", [])],
+                   events=[TimelineEvent(**e) for e in data.get("events", [])],
+                   series={k: list(v) for k, v in data.get("series", {}).items()})

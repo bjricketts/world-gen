@@ -119,7 +119,10 @@ def format_report(state: PlanetState) -> str:
         _row("luminosity", f"{s.luminosity_w / c.L_SUN:.3g} L☉"),
         _row("radius", f"{s.radius_m / c.R_SUN:.3f} R☉"),
         _row("effective temperature", f"{s.effective_temperature_k:.0f} K"),
-        _row("XUV activity", f"{s.xuv_fraction_relative_sun:.3g} × Sun (fractional)", "heuristic"),
+        _row("XUV activity", f"{s.xuv_fraction_relative_sun:.3g} × Sun (fractional)"
+             + (f", birth rotation percentile {state.inputs['star.activity_percentile']:.2f}"
+                if state.mode == "history" and state.inputs.get("star.activity_percentile") is not None else ""),
+             "heuristic"),
         "",
         "Orbit and spin",
         _row("semi-major axis", f"{o.semi_major_axis_m / c.AU:.4g} AU", p.get("orbit.semi_major_axis_au")),

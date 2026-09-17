@@ -48,6 +48,21 @@ BASE_PRIORS: dict[str, Distribution] = {
     "surface.tectonics": Fixed("simulated"),
     "surface.tectonics_start": Choice(("supercontinent", "cratons")),
     "surface.tectonics_duration_myr": Fixed(h.TECTONIC_DURATION_MYR),
+    "star.activity_percentile": Uniform(0.0, 1.0),
+    # History mode: initial state and poorly constrained rates (Earth-like values inside each range).
+    "history.initial_mantle_temperature_k": Uniform(1650.0, 1850.0),
+    "history.outgassing_efficiency": LogUniform(0.5, 2.0),
+    "history.weathering_efficiency": LogUniform(0.5, 2.0),
+    "history.weathering_temperature_scale_k": Uniform(10.0, 40.0),
+    "history.weathering_co2_exponent": Uniform(0.1, 0.5),
+    "history.biotic_weathering_factor": LogUniform(2.0, 10.0),
+    "history.escape_efficiency": LogUniform(0.05, 0.3),
+    "history.mantle_activation_energy_kj": Uniform(250.0, 350.0),
+    "history.core_adiabatic_heat_flow": LogUniform(0.5, 2.0),
+    "history.life_origin_delay_gyr": LogUniform(0.1, 1.0),
+    "history.oxygen_burial_efficiency": LogUniform(0.5, 2.0),
+    "history.reductant_decay_gyr": LogUniform(1.5, 6.0),
+    "history.land_colonisation_delay_gyr": Uniform(1.5, 4.5),
 }
 
 

@@ -16,6 +16,15 @@ SUN_MS_FRACTION = 0.457          # Sun's age as a fraction of its MS lifetime
 # Radius grows with luminosity during the main sequence as R ∝ L^exponent.
 RADIUS_LUMINOSITY_EXPONENT = 0.4
 
+# Before the main sequence a contracting star is brighter: L = L_MS (t_ZAMS / t)^exponent,
+# capped near the birth line, at the same effective temperature. Fitted to the tracks of
+# Baraffe et al. (2015): the main sequence is reached at ~30 Myr for the Sun and ~0.8 Gyr
+# at 0.1 M☉, where the star is then ~3 times brighter at 30 Myr.
+ZAMS_TIME_SUN_GYR = 0.03
+ZAMS_MASS_EXPONENT = -1.4
+PRE_MAIN_SEQUENCE_EXPONENT = 0.4
+PRE_MAIN_SEQUENCE_MAX = 30.0
+
 # XUV activity: saturated at L_XUV/L_bol = XUV_SATURATED until t_sat, then
 # decays as (t / t_sat)^XUV_DECAY_EXPONENT (Ribas et al. 2005 slope).
 # t_sat = XUV_SAT_TIME_SUN_GYR * (M / M_sun)^XUV_SAT_MASS_EXPONENT, so
@@ -526,3 +535,121 @@ OXYGEN_TOLERABLE_BAR = (0.08, 1.0)
 BREATHING_GEAR_SCORE = 0.3
 NO_FOOD_SCORE = 0.3
 XUV_HARSH_RATIO = 10.0
+
+# --- History mode (milestone 6) ------------------------------------------------
+# Integration: planet ages in Gyr from HISTORY_START_GYR (after the magma ocean).
+HISTORY_START_GYR = 0.03
+HISTORY_OUTPUT_POINTS = 200               # timeline samples for figures
+HISTORY_MAX_SEGMENTS = 400                # integration restarts at events
+HISTORY_CANDIDATES = 10                   # snapshot-screened draws tried in history mode
+
+# Stellar XUV (Tu et al. 2015, 1 M☉): saturation ends at 5.7, 23 and 226 Myr for the
+# 10th, 50th and 90th rotation percentiles; tracks join the snapshot relation by
+# XUV_CONVERGENCE_GYR (scaled with the saturation time's mass dependence).
+XUV_SAT_PERCENTILES = (0.1, 0.5, 0.9)
+XUV_SAT_TIMES_SUN_GYR = (0.0057, 0.023, 0.226)
+XUV_CONVERGENCE_GYR = 1.0
+
+# Mantle and core thermal evolution (parameterised convection).
+MANTLE_HEAT_CAPACITY = 1250.0             # J kg⁻¹ K⁻¹
+CORE_HEAT_CAPACITY = 840.0
+MANTLE_TEMPERATURE_EARTH_K = 1620.0       # present potential temperature
+CORE_TEMPERATURE_EARTH_K = 4100.0         # present core–mantle boundary temperature
+SURFACE_HEAT_FLOW_EARTH_W = 46e12
+CMB_HEAT_FLOW_EARTH_W = 10e12
+MANTLE_VISCOSITY_EARTH = 1e21             # Pa s at the present potential temperature
+LOWER_MANTLE_FACTOR = 1.55                # lower-mantle temperature / potential temperature (adiabat)
+CORE_SUPERHEAT_EARTH_K = 2500.0           # initial core excess over the lower mantle (Earth)
+CORE_SUPERHEAT_EXPONENT = 0.7             # superheat ∝ (depth scale)^exponent
+MAGMA_HEAT_EARTH_W = 4e12                 # heat carried by Earth's present melt production
+# Mobile lid: Q ∝ ΔT^(1+β) η^(−β) with weak β (Korenaga 2006); stagnant lid: β = 1/3 with a lid factor.
+PLATE_FLUX_BETA = 0.0
+LID_FLUX_BETA = 1.0 / 3.0
+LID_FLUX_FACTOR = 0.2                     # stagnant-lid heat flow relative to plates at Earth's mantle state
+EPISODIC_FLUX_FACTOR = 0.5
+HEAT_PIPE_FLUX_FACTOR = 1.0
+INACTIVE_FLUX_FACTOR = 0.1
+CMB_FLUX_BETA = 1.0 / 3.0
+CRUST_RADIOGENIC_SHARE = 0.3              # share of heat-producing elements in the crust of plate planets
+# Dynamo: runs while the core–mantle heat flow exceeds the adiabatic heat flow, or a
+# share of it once an inner core grows (compositional buoyancy).
+CORE_ADIABATIC_EARTH_W = 7.5e12
+INNER_CORE_DYNAMO_SHARE = 0.3
+INNER_CORE_ONSET_EARTH_K = 4320.0         # CMB temperature at which an inner core starts to grow (Earth ~1 Ga)
+INNER_CORE_PRESSURE_EXPONENT = 0.5       # onset temperature ∝ (central pressure)^exponent
+INNER_CORE_RANGE_K = 1500.0               # cooling below onset to freeze most of the core
+# Melting: melt production ∝ spreading × (T_m − solidus); solidus at the surface.
+MANTLE_SOLIDUS_K = 1400.0
+LID_MELT_FACTOR = 0.01                    # stagnant-lid melt production relative to plates at the same excess
+                                          # (Mars ~0.01, Venus ~0.05 of Earth's present crust production)
+LID_MELT_DECAY_K = 60.0                   # stagnant lids: melt falls off as the lid thickens with cooling
+REGIME_PLATE_LOSS_FACTOR = 0.5            # plates stop below this × ACTIVITY_PLATES_ABOVE
+
+# Volatile reservoirs (masses in 10¹⁸ kg). Earth: CO₂ in air and ocean 0.14,
+# crustal carbonate 260, mantle 1000; atmospheric N₂ 3.9.
+CARBON_SURFACE_EARTH = 0.14
+CARBON_CRUST_EARTH = 260.0
+CARBON_MANTLE_EARTH = 1000.0
+NITROGEN_EARTH = 3.9
+INITIAL_DEGASSED_CARBON_SHARE = 0.2       # carbon released by the magma ocean
+INITIAL_AIR_CARBON_SHARE = 0.01          # of it, what stays in the air where oceans condense (the rest carbonates)
+INITIAL_MANTLE_WATER_SHARE = 0.3
+CO2_EARTH_BAR = 2.8e-4                    # pre-industrial partial pressure
+OCEAN_CARBON_EARTH = 0.138                # dissolved inorganic carbon (as CO₂) per ocean at CO2_EARTH_BAR
+OCEAN_CARBON_EXPONENT = 0.5               # dissolved carbon ∝ pCO₂^exponent
+# Carbon fluxes at present Earth (10¹⁸ kg CO₂ per Gyr; ~7 Tmol C/yr).
+WEATHERING_EARTH = 310.0
+SEAFLOOR_WEATHERING_SHARE = 0.2           # share of Earth's weathering on the sea floor
+SEAFLOOR_CO2_EXPONENT = 0.23
+SEAFLOOR_TEMPERATURE_SCALE_K = 40.0
+WEATHERING_SUPPLY_RATIO = 3.0             # supply limit / present kinetic weathering (Earth)
+SEAFLOOR_CAPACITY_RATIO = 30.0            # seafloor uptake limit relative to its present rate
+ARC_DEGASSING_SHARE = 0.5                 # subducted carbonate returned by arcs
+CARBONATE_TURNOVER_GYR = 0.85             # crustal carbonate subduction timescale at Earth's spreading
+CARBONATE_DECOMPOSITION_K = 700.0         # crustal carbonate returns to the air above this surface temperature
+CARBONATE_DECOMPOSITION_GYR = 0.01
+LID_CARBONATE_RECYCLING_GYR = 1.0         # burial and decarbonation of carbonate on active lids, at Earth-like melt
+WATER_DEGASSING_EARTH = 1.0               # oceans per Gyr at Earth's melt rate and mantle water
+MANTLE_WATER_EARTH_OCEANS = 1.7
+# Greenhouse: τ = τ_bg·P^n (with water) + a·ln(1 + p/p₁)·P^n + τ_CO₂·p^n,
+# P total and p CO₂ partial pressure in bar. a from Earth's 2×CO₂ forcing (Δτ ≈ 0.034).
+GREENHOUSE_BACKGROUND_WET = 0.618
+GREENHOUSE_BACKGROUND_DRY = 0.02
+GREENHOUSE_CO2_LOG = 0.0358
+GREENHOUSE_CO2_LOG_BAR = 1e-6
+GREENHOUSE_STEAM = 5.2                    # τ per bar^n of water vapour in a steam atmosphere
+# Escape: energy-limited, ṁ = ε π F_XUV R³ / (G M). Water with a wet stratosphere
+# (moist greenhouse above MOIST_GREENHOUSE_K) or a steam atmosphere loses hydrogen;
+# the oxygen left behind oxidises the crust. Bulk air escapes with BULK_ESCAPE_SHARE
+# of the efficiency, switched on around the cosmic shoreline at the current XUV.
+MOIST_GREENHOUSE_K = 340.0
+STRATOSPHERE_WATER_COLD = 3e-6
+DIFFUSION_LIMIT_PER_MIXING = 2.5e17       # H atoms m⁻² s⁻¹ per unit stratospheric H mixing ratio (Hunten 1973)
+BULK_ESCAPE_SHARE = 0.1
+BULK_ESCAPE_SHORELINE = 0.5               # bulk escape switches on at this shoreline ratio (present-Sun XUV)
+THIN_AIR_BAR = 1e-4                       # below this pressure, escape is limited by the gas left
+BULK_ESCAPE_WIDTH = 0.1                   # width of the switch (dex)
+OXYGEN_CRUST_SINK_GYR = 0.02              # timescale of abiotic O₂ uptake by the crust at Earth-like volcanism
+# Tier 0 table used during the integration.
+HISTORY_CLIMATE_BANDS = 18
+HISTORY_CLIMATE_TOLERANCE_K = 0.2
+# Node spacing; halving every step changed Earth's temperatures by < 0.5 K.
+HISTORY_TABLE_LOG_S_STEP = 0.08           # in ln(instellation)
+HISTORY_TABLE_TAU_STEP = 0.12             # in ln(1 + τ)
+HISTORY_TABLE_LOG_P_STEP = 0.7            # in ln(pressure)
+HISTORY_TABLE_LAND_STEP = 0.15
+HISTORY_TABLE_CACHE = 16                  # tables kept in memory for repeated runs of the same planet
+# Oxygen (redox balance, after Goldblatt et al. 2006). Masses in 10¹⁸ kg, fluxes per Gyr.
+# Earth: organic burial ~10 Tmol O₂/yr; volcanic reductants (∝ √melt) about a fifth of it today;
+# the rest balances oxidative weathering ∝ √O₂ at 1.2 × 10¹⁸ kg of O₂.
+OXYGEN_BURIAL_EARTH = 320.0
+REDUCTANT_EARTH_SHARE = 0.18
+OCEAN_PRODUCTIVITY_SHARE = 0.55           # ocean share of Earth's organic burial
+OXYGEN_MASS_EARTH = 1.2
+OXYGEN_SMALL = 1e-6                       # O₂ mass below which sinks switch off smoothly
+HOT_OXIDATION_K = 500.0                   # hot surfaces take up O₂ on OXYGEN_CRUST_SINK_GYR
+OXYGENATION_FRACTIONS = (1e-3, 0.05)      # O₂ fractions logged as the first and second rise
+METHANE_ANOXIC_O2 = 1e-4                  # methanogenic CH₄ falls once O₂ exceeds this fraction
+HABITABLE_MAX_K = 340.0                   # the origin-of-life clock runs below this mean temperature
+LAND_PRODUCTIVITY_WIDTH_K = 30.0
+HISTORY_MAX_STEP_GYR = 0.02
