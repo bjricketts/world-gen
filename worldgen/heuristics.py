@@ -563,7 +563,11 @@ CORE_SUPERHEAT_EARTH_K = 2500.0           # initial core excess over the lower m
 CORE_SUPERHEAT_EXPONENT = 0.7             # superheat ∝ (depth scale)^exponent
 MAGMA_HEAT_EARTH_W = 4e12                 # heat carried by Earth's present melt production
 # Mobile lid: Q ∝ ΔT^(1+β) η^(−β) with weak β (Korenaga 2006); stagnant lid: β = 1/3 with a lid factor.
-PLATE_FLUX_BETA = 0.0
+# Mobile lid: a weak temperature dependence (Korenaga 2006). Pure β = 0 leaves no feedback, so a
+# small planet with plates would cool without limit; β = 0.07 with the scale below ends Earth's run
+# at 1620 K, 82 mW/m² and its present melt production, and grows an inner core at ~3.7 Gyr.
+PLATE_FLUX_BETA = 0.07
+PLATE_FLUX_SCALE = 0.9
 LID_FLUX_BETA = 1.0 / 3.0
 LID_FLUX_FACTOR = 0.2                     # stagnant-lid heat flow relative to plates at Earth's mantle state
 EPISODIC_FLUX_FACTOR = 0.5
@@ -580,6 +584,9 @@ INNER_CORE_PRESSURE_EXPONENT = 0.5       # onset temperature ∝ (central pressu
 INNER_CORE_RANGE_K = 1500.0               # cooling below onset to freeze most of the core
 # Melting: melt production ∝ spreading × (T_m − solidus); solidus at the surface.
 MANTLE_SOLIDUS_K = 1400.0
+# Melt production grows with the mantle's excess over the solidus but saturates: a mantle far above
+# the solidus is largely molten and loses heat by volcanism instead (normalised to 1 for Earth).
+MELT_EXCESS_MAX = 4.0
 LID_MELT_FACTOR = 0.01                    # stagnant-lid melt production relative to plates at the same excess
                                           # (Mars ~0.01, Venus ~0.05 of Earth's present crust production)
 LID_MELT_DECAY_K = 60.0                   # stagnant lids: melt falls off as the lid thickens with cooling

@@ -6,6 +6,11 @@ lid factor (Stevenson et al. 1983; Driscoll & Bercovici 2014). The core
 cools through a boundary layer of fixed viscosity; the dynamo runs while the core–mantle heat
 flow exceeds the heat conducted along the core adiabat, or a share of it
 once an inner core grows.
+
+Calibration: an Earth run from a 1750 K mantle ends at 1620 K with a surface
+heat flow of 82 mW/m², its present melt production, a dynamo that never
+stops and an inner core that starts to grow at ~3.7 Gyr. A Mars run ends at
+18 mW/m² with almost no melting and loses its dynamo after ~0.35 Gyr.
 """
 
 from __future__ import annotations
@@ -43,7 +48,9 @@ class ThermalRates:
     melt: float                    # melt production relative to present Earth
     spreading: float               # plate creation rate per unit area relative to Earth (0 off plates)
     heat_flux_w_m2: float
-    activity: float                # activity index (1 for Earth)
+    activity: float                # activity index from the heat leaving the surface (1 for Earth)
+    budget_flux_w_m2: float        # heat available: radiogenic (at Earth's Urey ratio) plus tides
+    budget_activity: float         # activity index of that budget; the tectonic regime follows it
 
     @property
     def dynamo(self) -> bool:
@@ -100,7 +107,8 @@ def thermal_rates(p: HistoryParams, t_gyr: float, mantle_k: float, core_k: float
     d_t = max(mantle_k - surface_k, 1.0) / d_earth
     eta = viscosity_ratio(mantle_k, h.MANTLE_TEMPERATURE_EARTH_K, p.activation_energy_j)
     area = p.area_ratio
-    plate_flux = _convective_earth_w() * area * d_t ** (1.0 + h.PLATE_FLUX_BETA) * eta ** (-h.PLATE_FLUX_BETA)
+    plate_flux = (h.PLATE_FLUX_SCALE * _convective_earth_w() * area * d_t ** (1.0 + h.PLATE_FLUX_BETA)
+                  * eta ** (-h.PLATE_FLUX_BETA))
     factor = REGIME_FLUX.get(regime, h.LID_FLUX_FACTOR)
     if factor is None:
         convective = plate_flux
@@ -126,9 +134,10 @@ def thermal_rates(p: HistoryParams, t_gyr: float, mantle_k: float, core_k: float
     margin = cmb - needed if p.core_kg > 0 else -1.0
 
     # Melting and plate speed
-    excess = max(mantle_k - h.MANTLE_SOLIDUS_K, 0.0) / (h.MANTLE_TEMPERATURE_EARTH_K - h.MANTLE_SOLIDUS_K)
+    raw = max(mantle_k - h.MANTLE_SOLIDUS_K, 0.0) / (h.MANTLE_TEMPERATURE_EARTH_K - h.MANTLE_SOLIDUS_K)
+    excess = raw / (1.0 + raw / h.MELT_EXCESS_MAX) * (1.0 + 1.0 / h.MELT_EXCESS_MAX)
     if regime == "mobile_lid":
-        spreading = (convective / (_convective_earth_w() * area)) ** 2
+        spreading = (convective / (h.PLATE_FLUX_SCALE * _convective_earth_w() * area)) ** 2
         melt = spreading * excess * area
     elif regime in ("stagnant_lid", "episodic", "heat_pipe"):
         spreading = 0.0
@@ -142,11 +151,15 @@ def thermal_rates(p: HistoryParams, t_gyr: float, mantle_k: float, core_k: float
         convective += h.MAGMA_HEAT_EARTH_W * melt
         surface += h.MAGMA_HEAT_EARTH_W * melt
     flux = surface / p.area_m2
-    activity = flux / c.EARTH_HEAT_FLUX * (p.mass_kg / c.M_EARTH) ** h.ACTIVITY_MASS_EXPONENT
+    mass_factor = (p.mass_kg / c.M_EARTH) ** h.ACTIVITY_MASS_EXPONENT
+    activity = flux / c.EARTH_HEAT_FLUX * mass_factor
+    # The regime follows the heat the planet has to lose, not the flux its current lid happens to carry.
+    budget_flux = (radiogenic * h.INVERSE_UREY_RATIO + p.tidal_power_w) / p.area_m2
     return ThermalRates(radiogenic_w=radiogenic, mantle_heating_w=heating, surface_w=surface,
                         convective_w=convective, cmb_w=cmb, adiabatic_w=adiabatic, inner_core=inner,
                         dynamo_margin=margin, melt=melt, spreading=spreading, heat_flux_w_m2=flux,
-                        activity=activity)
+                        activity=activity, budget_flux_w_m2=budget_flux,
+                        budget_activity=budget_flux / c.EARTH_HEAT_FLUX * mass_factor)
 
 
 def temperature_rates(p: HistoryParams, rates: ThermalRates) -> tuple[float, float]:

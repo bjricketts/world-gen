@@ -275,11 +275,19 @@ class HistoryModel:
             add("runaway_end", lambda d, t, y: 0.98 * d.runaway_limit - d.instellation, direction=1)
         if modes.climate == "dry":
             add("ocean_return", lambda d, t, y: y[WS] - 20.0 * self.min_water, direction=1)
-        if modes.regime == "mobile_lid" and self.held_regime is None:
-            add("plates_stop", lambda d, t, y: d.thermal.activity
-                - h.REGIME_PLATE_LOSS_FACTOR * h.ACTIVITY_PLATES_ABOVE, direction=-1)
-        if modes.regime in LID_REGIMES and self.held_regime is None:
-            add("regime_dead", lambda d, t, y: d.thermal.activity - h.ACTIVITY_DEAD_BELOW, direction=-1)
+        if self.held_regime is None:
+            if modes.regime == "mobile_lid":
+                add("plates_stop", lambda d, t, y: d.thermal.budget_activity
+                    - h.REGIME_PLATE_LOSS_FACTOR * h.ACTIVITY_PLATES_ABOVE, direction=-1)
+            if modes.regime in LID_REGIMES:
+                add("regime_dead", lambda d, t, y: d.thermal.budget_activity - h.ACTIVITY_DEAD_BELOW,
+                    direction=-1)
+            heat_pipe = (lambda d, t, y: d.thermal.budget_flux_w_m2 / c.EARTH_HEAT_FLUX
+                         - h.HEATPIPE_FLUX_RATIO_ABOVE)
+            if modes.regime == "heat_pipe":
+                add("heat_pipe_end", heat_pipe, direction=-1)
+            elif modes.regime != "inactive":
+                add("heat_pipe_start", heat_pipe, direction=1)
         if modes.clock_start is not None and modes.life == "none":
             due = modes.clock_start + self.p.life_delay_gyr - modes.clock_elapsed
             add("origin_of_life", lambda d, t, y, _due=due: t - _due, direction=1)
@@ -362,8 +370,16 @@ class HistoryModel:
             log("ocean_return", "outgassed water collects at the surface", False)
         elif name == "plates_stop":
             m.regime = "stagnant_lid"
-            log("regime_change", f"interior activity {d.thermal.activity:.2f} too low for plates: stagnant lid",
-                False)
+            log("regime_change", f"interior activity {d.thermal.budget_activity:.2f} too low for plates: "
+                                 "stagnant lid", False)
+        elif name == "heat_pipe_start":
+            m.regime = "heat_pipe"
+            log("regime_change", f"heat flux {d.thermal.budget_flux_w_m2 / c.EARTH_HEAT_FLUX:.0f} × Earth's: "
+                                 "volcanism carries the heat (heat pipe)", False)
+        elif name == "heat_pipe_end":
+            m.regime = "stagnant_lid"
+            log("regime_change", f"heat flux {d.thermal.budget_flux_w_m2 / c.EARTH_HEAT_FLUX:.1f} × Earth's is "
+                                 "too low for heat-pipe volcanism: stagnant lid", False)
         elif name == "regime_dead":
             m.regime = "inactive"
             log("regime_change", "the interior falls quiet: inactive", False)
