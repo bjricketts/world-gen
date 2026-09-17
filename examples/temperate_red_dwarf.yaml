@@ -1,0 +1,15 @@
+# A tidally locked world around a red dwarf, with some values left open.
+name: Ember
+seed: 7
+priors:
+  archetype: tidally_locked
+
+star:
+  mass_msun: [0.15, 0.3]
+
+orbit:
+  instellation_earth: [0.7, 1.0]
+
+body:
+  mass_mearth: 1.4
+  water_mass_fraction: 0.0005

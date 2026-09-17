@@ -1,0 +1,42 @@
+# Present-day Earth, fully specified. Used as a validation case.
+name: Earth
+seed: 0
+mode: snapshot
+
+star:
+  mass_msun: 1.0
+  age_gyr: 4.57
+  metallicity_feh: 0.0
+
+orbit:
+  semi_major_axis_au: 1.0
+  eccentricity: 0.0167
+  obliquity_deg: 23.44
+  rotation_period_h: 23.934
+  periapsis_longitude_deg: 283     # perihelion in early January
+
+body:
+  mass_mearth: 1.0
+  core_mass_fraction: 0.325
+  water_mass_fraction: 0.00062      # total water, including ~1 ocean in the mantle
+  envelope_mass_fraction: 0.0
+  radiogenic_abundance: 1.0
+  tidal_heating_w: 0
+  tidal_q: 100
+
+interior:
+  tectonic_regime: mobile_lid
+  magnetic_field: true
+
+atmosphere:
+  present: true
+  surface_pressure_bar: 1.013
+  composition: n2_o2
+  bond_albedo: 0.3
+  weathering_target_k: 288
+
+biosphere:
+  life: surface
+  biochemistry: oxygenic
+  age_gyr: 3.8
+  oxygen_fraction: 0.2095
