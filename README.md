@@ -282,6 +282,8 @@ Run from the `scripts/` folder:
 |---|---|
 | `validate_earth.py` | Earth example against Earth over several seeds (hypsometry, ocean, plates, rivers, lakes, climate, ice, Köppen shares); `--set NAME=VALUE` overrides a heuristic for a sweep |
 | `archetype_fidelity.py` | Archetype outcomes over many draws: temperatures, water phase, open ocean, estimated land, life, redraws |
+| `validate_history.py` | History-mode Earth, Mars and Venus against the real planets, and Earth against its snapshot build; exits non-zero if a check misses |
+| `history_sensitivity.py` | Ranks the poorly constrained history parameters by how far they move the outcome, one at a time over each prior |
 | `hypsometry_table.py` | Reference land fraction against ocean volume, for `worldgen/water.py` |
 | `render_examples.py` | The example figures in "Claude outputs" |
 | `planet_gallery.py` | Several planets with their reports, saved worlds and every applicable map and figure, one folder each |
