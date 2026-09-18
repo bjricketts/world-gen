@@ -36,8 +36,13 @@ worldgen report kestrel
 
 # Plate tectonics
 worldgen generate planet.yaml --start cratons --duration 600 --snapshots 20 --save kestrel
-worldgen history kestrel drift.gif        # animation; a .png gives a panel figure
+worldgen drift kestrel drift.gif          # animation; a .png gives a panel figure
 worldgen generate planet.yaml --tectonics heuristic   # fast layout without simulation
+
+# History mode: the planet integrated from formation
+worldgen generate planet.yaml --mode history --epochs "0.5,1,2" --save kestrel
+worldgen history kestrel life.png -f life   # or -f climate (default) or -f interior
+worldgen report kestrel --timeline         # every event, and the planet at each epoch
 ```
 
 Map fields: `elevation`, `terrain`, `plates`, `crust_age`, `orogeny_age`, `temperature`, `rainfall`, `basins`,
@@ -48,7 +53,7 @@ Resolutions: `preview` (10k cells), `standard` (40k), `high` (160k), or a cell c
 ## Python
 
 ```python
-from worldgen import PlanetSpec, generate, format_report
+from worldgen import PlanetSpec, generate, format_report, format_timeline
 
 spec = PlanetSpec(
     name="Ember",
@@ -77,12 +82,23 @@ world.state.biosphere    # life, O2 and CH4, pigment colour, expected productivi
 plot_climate(world)      # seasonal temperature and rain, biomes, Köppen classes
 save_world(world, "ember")
 
-# Tectonic history (mobile-lid planets)
+# Continental drift (mobile-lid planets)
 from worldgen.render import plot_history, animate_history
 
 world = generate_world(spec, snapshot_interval_myr=20)
 plot_history(world)
 animate_history(world, "drift.gif")
+
+# History mode: everything integrated from formation
+from worldgen.render import plot_climate_history, plot_interior_history, plot_life_history
+
+state, timeline = generate(spec.model_copy(update={"mode": "history"}))
+timeline.events          # origin of life, oxygenation, snowball onset, dynamo shutdown, ...
+timeline.states          # full planet states at the epochs the spec asked for
+timeline.series          # sampled values through the run, for figures
+print(format_timeline(timeline, state))
+plot_climate_history(timeline)
+plot_life_history(timeline)
 ```
 
 A guided tour is in `notebooks/01_quickstart.ipynb`.
@@ -166,8 +182,9 @@ Planets with liquid surface water get:
 The report summarises the largest river and basin, total outflow, lakes and inland drainage.
 Frozen and dry planets get no rivers.
 
-A saved world is a folder with `spec.yaml`, `state.yaml` and `surface.zarr`. Worlds saved before
-milestone 5 use an older format and need to be generated again.
+A saved world is a folder with `spec.yaml`, `state.yaml` and `surface.zarr`; a history-mode world also
+carries `timeline.yaml` (its events and sampled series) and one state file per epoch under `epochs/`.
+Worlds saved before milestone 6 use an older format and need to be generated again.
 
 ### Plate-tectonic simulation
 
@@ -239,7 +256,7 @@ the spec like any other value.
 | `biosphere/` | Life and its gases, pigment colour, vegetation, biomes and Köppen classes, climate–ice–vegetation coupling |
 | `hydrology/` | Water balance, drainage, lakes, rivers, river erosion and sediment |
 | `tectonics/` | Plate simulation: crust points, Numba kernels, processes, re-mapping, conversion to a surface |
-| `render/` | Cartopy map projections, colour schemes, hillshading, smoothed rivers, tectonic history figures and animations |
+| `render/` | Cartopy map projections, colour schemes, hillshading, smoothed rivers, drift figures and animations, history figures |
 | `world.py` | World container, save and load |
 | `evolve/` | Snapshot evolver (now) and history evolver (milestone 6) |
 | `heuristics.py` | Every tunable calibration constant, in one place |

@@ -107,33 +107,33 @@ def test_cli_map_workflow(tmp_path):
 
 
 @pytest.mark.slow
-def test_cli_tectonic_history_workflow(tmp_path):
+def test_cli_tectonic_drift_workflow(tmp_path):
     runner = CliRunner()
     world_dir = tmp_path / "world"
     result = runner.invoke(app, ["random", "-a", "temperate", "--seed", "4", "-r", "preview",
                                  "--duration", "60", "--start", "cratons", "--snapshots", "20",
                                  "-s", str(world_dir)])
     assert result.exit_code == 0, result.output
-    for name in ("history.gif", "history.png"):
-        result = runner.invoke(app, ["history", str(world_dir), str(tmp_path / name), "--panels", "4"])
+    for name in ("drift.gif", "drift.png"):
+        result = runner.invoke(app, ["drift", str(world_dir), str(tmp_path / name), "--panels", "4"])
         assert result.exit_code == 0, result.output
         assert (tmp_path / name).stat().st_size > 0
 
 
 @pytest.mark.slow
-def test_cli_rejects_history_without_snapshots_and_bad_options(tmp_path):
+def test_cli_rejects_drift_without_snapshots_and_bad_options(tmp_path):
     runner = CliRunner()
     world_dir = tmp_path / "world"
     result = runner.invoke(app, ["random", "-a", "temperate", "--seed", "4", "-r", "preview",
                                  "--tectonics", "heuristic", "-s", str(world_dir)])
     assert result.exit_code == 0, result.output
-    result = runner.invoke(app, ["history", str(world_dir), str(tmp_path / "h.gif")])
+    result = runner.invoke(app, ["drift", str(world_dir), str(tmp_path / "h.gif")])
     assert result.exit_code == 1
     result = runner.invoke(app, ["random", "--tectonics", "magic"])
     assert result.exit_code == 1
 
 
-def test_history_figure_needs_snapshots(small_world):
+def test_drift_figure_needs_snapshots(small_world):
     from worldgen.render import has_history, plot_history
 
     assert not has_history(small_world)

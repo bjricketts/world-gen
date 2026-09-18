@@ -170,7 +170,8 @@ class HistoryModel:
     # --- diagnostics ------------------------------------------------------------------------
     def diagnostics(self, t: float, y: np.ndarray, modes: Modes) -> Diagnostics:
         """Return every derived quantity for the state ``y`` at ``t`` in ``modes``."""
-        key = (t, y.tobytes(), modes.regime, modes.climate, modes.life, modes.synchronous, modes.land_colonised)
+        key = (t, y.tobytes(), modes.regime, modes.climate, modes.life, modes.synchronous, modes.land_colonised,
+               modes.life_origin)
         if key == self._cache_key:
             return self._cache
         p = self.p
@@ -182,7 +183,8 @@ class HistoryModel:
         ocean = modes.climate in ("warm", "snowball") and water > self.min_water
         liquid_ocean = water if modes.climate in ("warm", "snowball") else 0.0
         air = vol.partition_air(p, y[CS], liquid_ocean, y[N2], y[O2], steam_oceans=water if steam else 0.0)
-        methane = life_model.methane_fraction(p, modes.life, air.o2_fraction)
+        grown = self._established(t, modes)
+        methane = life_model.methane_fraction(p, modes.life, air.o2_fraction, grown)
         tau = vol.optical_depth(air, ocean or steam, methane_optical_depth(methane))
         if ocean:
             volume = water * c.EARTH_OCEAN_MASS / h.SEAWATER_DENSITY
@@ -199,7 +201,8 @@ class HistoryModel:
         rates = thermal.thermal_rates(p, t, y[TM], y[TC], modes.regime, climate.mean_k)
         heat_ratio = rates.heat_flux_w_m2 / c.EARTH_HEAT_FLUX
         prod, land_prod = life_model.productivity(p, modes.life, self._colonised(t, modes), climate.mean_k,
-                                                  land, climate.open_ocean if modes.climate == "warm" else 0.05)
+                                                  land, climate.open_ocean if modes.climate == "warm" else 0.05,
+                                                  grown)
         liquid = min(climate.open_ocean / h.OPEN_OCEAN_LIQUID, 1.0) if modes.climate == "warm" else 0.0
         carbon = vol.carbon_fluxes(p, max(y[CK], 0.0), max(y[CM], 0.0), air.co2_bar, climate.mean_k, land,
                                    ocean, liquid, modes.regime, rates.melt, rates.spreading, heat_ratio, land_prod)
@@ -224,7 +227,15 @@ class HistoryModel:
         """Return the land biosphere's spread (0–1) after colonisation."""
         if modes.land_colonised is None or modes.life != "surface":
             return 0.0
-        return min(max((t - modes.land_colonised) / 0.2, 0.0), 1.0)
+        return min(max((t - modes.land_colonised) / h.LAND_SPREAD_GYR, 0.0), 1.0)
+
+    def _established(self, t: float, modes: Modes) -> float:
+        """Return how far a young biosphere has grown towards its full productivity (0–1)."""
+        if modes.life == "none":
+            return 0.0
+        if modes.life_origin is None:
+            return 1.0
+        return min(max((t - modes.life_origin) / h.BIOSPHERE_ESTABLISH_GYR, 0.0), 1.0)
 
     def warm_climate(self, d: Diagnostics) -> ClimatePoint:
         """Return the warm-branch climate at the conditions of ``d``."""
@@ -293,7 +304,7 @@ class HistoryModel:
         if modes.clock_start is not None and modes.life == "none":
             due = modes.clock_start + self.p.life_delay_gyr - modes.clock_elapsed
             add("origin_of_life", lambda d, t, y, _due=due: t - _due, direction=1)
-        if modes.life == "surface" and modes.land_colonised is None and modes.life_origin is not None:
+        if modes.life != "none" and modes.land_colonised is None and modes.life_origin is not None:
             due = modes.life_origin + self.p.land_delay_gyr
             add("land_colonisation", lambda d, t, y, _due=due: t - _due, direction=1)
         if not modes.synchronous and math.isfinite(self.p.tidal_lock_gyr):
@@ -309,11 +320,13 @@ class HistoryModel:
         """Return whether the origin-of-life clock runs."""
         return modes.climate == "warm" and d.ocean and d.surface_k < h.HABITABLE_MAX_K
 
-    def life_kind(self, d: Diagnostics) -> str:
-        """Return the life a newly living (or re-emerging) planet has, from the snapshot rules."""
+    def life_kind(self, d: Diagnostics, modes: Modes) -> str:
+        """Return where life lives: in the ocean until it colonises the land, which needs land to colonise."""
         if self.held_life is not None:
             return self.held_life
-        return "surface" if d.land >= h.LIFE_MIN_LAND_FRACTION else "ocean"
+        if modes.land_colonised is not None and d.land >= h.LIFE_MIN_LAND_FRACTION:
+            return "surface"
+        return "ocean"
 
     def update_clock(self, t: float, d: Diagnostics, modes: Modes) -> Modes:
         """Start or pause the origin-of-life clock to match the current conditions."""
@@ -342,7 +355,7 @@ class HistoryModel:
             m.climate = "warm"
             log("snowball_exit", f"the ice melts back with {d.air.co2_bar:.2g} bar of CO₂", False)
             if m.life == "subsurface" and m.surface_life:
-                m.life = self.life_kind(self.diagnostics(t, y, m))
+                m.life = self.life_kind(self.diagnostics(t, y, m), m)
                 log("life_emerges", f"{m.life} life returns to the open water", False)
         elif name == "hot":
             pass
@@ -386,13 +399,19 @@ class HistoryModel:
             m.regime = "inactive"
             log("regime_change", "the interior falls quiet: inactive", False)
         elif name == "origin_of_life":
-            m.life = self.life_kind(d)
+            m.life = self.life_kind(d, m)
             m.life_origin = t
             m.surface_life = m.life in ("surface", "ocean")
             log("origin_of_life", f"{m.life} life appears", False)
         elif name == "land_colonisation":
             m.land_colonised = t
-            log("land_colonisation", "life spreads onto land", False)
+            kind = self.life_kind(self.diagnostics(t, y, m), m)
+            if m.life in ("surface", "ocean") and kind != m.life:
+                m.life = kind
+                log("land_colonisation", "life spreads onto land", False)
+            elif m.life == "subsurface":
+                # Life is under the ice: it reaches the land when the surface thaws.
+                log("land_colonisation", "life is ready for the land, but the surface is frozen", False)
         elif name == "tidal_locking":
             m.synchronous = True
             log("tidal_locking", "the rotation locks to the orbit", False)

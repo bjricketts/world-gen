@@ -33,8 +33,7 @@ atmosphere:
   volatile_richness: 1.0
 
 biosphere:
-  life: surface
-  biochemistry: oxygenic
+  biochemistry: oxygenic         # where life lives is left to the history: ocean first, land after colonisation
 
 history:
   epochs_gyr: [0.5, 1.0, 2.0, 2.5, 3.0, 4.0]

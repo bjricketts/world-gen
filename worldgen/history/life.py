@@ -4,7 +4,12 @@ O₂ rises when organic burial (the oxygen source) exceeds the flux of
 volcanic reductants, which declines as the mantle oxidises; oxidative
 weathering ∝ √O₂ sets the level once it is high (after Goldblatt et al.
 2006). Ocean life starts burial; land life adds to it after a colonisation
-delay. Methanogens keep CH₄ high while the air is anoxic.
+delay. Methanogens keep CH₄ high while the air is anoxic, and oxidation cuts
+it back as O₂ rises: 10³ ppm in the Archean (Pavlov et al. 2000), of order
+10 ppm in the mid-Proterozoic (Olson et al. 2016), 0.7 ppm before industry.
+
+A new biosphere grows into these rates over ``BIOSPHERE_ESTABLISH_GYR``
+rather than appearing at full strength.
 """
 
 from __future__ import annotations
@@ -14,6 +19,8 @@ import math
 from .. import heuristics as h
 from .params import HistoryParams
 
+# Oxidative weathering per unit of exposed rock, set so that burial minus reductants balances the sinks
+# on present Earth, where the land and sea-floor exposure together come to about one.
 EARTH_OXIDATIVE = (h.OXYGEN_BURIAL_EARTH * (1.0 - h.REDUCTANT_EARTH_SHARE)) / math.sqrt(h.OXYGEN_MASS_EARTH)
 
 
@@ -25,7 +32,7 @@ def land_productivity(p: HistoryParams, mean_k: float, land: float, open_ocean: 
 
 
 def productivity(p: HistoryParams, life: str, land_colonised: float, mean_k: float, land: float,
-                 open_ocean: float) -> tuple[float, float]:
+                 open_ocean: float, established: float = 1.0) -> tuple[float, float]:
     """Return (total, land) productivity relative to Earth's for the current life and climate."""
     if life not in ("surface", "ocean"):
         return 0.0, 0.0
@@ -33,7 +40,7 @@ def productivity(p: HistoryParams, life: str, land_colonised: float, mean_k: flo
     on_land = 0.0
     if life == "surface":
         on_land = land_colonised * land_productivity(p, mean_k, land, open_ocean)
-    return ocean + (1.0 - h.OCEAN_PRODUCTIVITY_SHARE) * on_land, on_land
+    return established * (ocean + (1.0 - h.OCEAN_PRODUCTIVITY_SHARE) * on_land), established * on_land
 
 
 def oxygen_rate(p: HistoryParams, t_gyr: float, oxygen: float, total_productivity: float, melt: float,
@@ -55,12 +62,18 @@ def oxygen_rate(p: HistoryParams, t_gyr: float, oxygen: float, total_productivit
     return burial - present * reductants - weathering - hot * oxygen / h.OXYGEN_CRUST_SINK_GYR
 
 
-def methane_fraction(p: HistoryParams, life: str, o2_fraction: float) -> float:
-    """Return the CH₄ mole fraction kept up by methanogens."""
+def methane_fraction(p: HistoryParams, life: str, o2_fraction: float, established: float = 1.0) -> float:
+    """Return the CH₄ mole fraction kept up by methanogens.
+
+    Life sealed under an ice cover vents only a small share of it, so a
+    snowball loses most of its methane greenhouse.
+    """
     if life == "none":
         return 0.0
+    reach = h.SUBSURFACE_METHANE_SHARE if life == "subsurface" else 1.0
     if p.product == "ch4":
-        return h.METHANE_BIOTIC
+        return reach * established * h.METHANE_BIOTIC
     if p.product == "o2" or p.biochemistry == "oxygenic":
-        return h.METHANE_BIOTIC / (1.0 + (o2_fraction / h.METHANE_ANOXIC_O2) ** 2)
+        oxidation = 1.0 + (max(o2_fraction, 0.0) / h.METHANE_ANOXIC_O2) ** h.METHANE_O2_EXPONENT
+        return reach * established * h.METHANE_BIOTIC / oxidation
     return 0.0

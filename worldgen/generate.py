@@ -24,9 +24,9 @@ def generate_world(spec: PlanetSpec, resolution: int | str = "standard",
     ``snapshot_interval_myr`` stores the tectonic history at that interval
     (simulated plate tectonics only).
     """
-    state, _ = evolve(spec, t_target_gyr)
+    state, timeline = evolve(spec, t_target_gyr)
     surface = build_surface(state, resolution, snapshot_interval_myr)
-    return World(spec=spec, state=state, surface=surface)
+    return World(spec=spec, state=state, surface=surface, timeline=timeline)
 
 
 def candidates(spec: PlanetSpec, n: int) -> list[PlanetState]:

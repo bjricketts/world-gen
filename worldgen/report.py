@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
+from typing import Optional
 
 import yaml
 
 from . import constants as c
-from .state import PlanetState
+from .state import PlanetState, Timeline
 
 TAGS = {
     "user": "user",
@@ -97,6 +98,37 @@ def _biosphere_rows(state: PlanetState) -> list[str]:
     if life.weathering_cooling_k:
         rows.append(_row("weathering by biota", f"lowers the weathering target by {life.weathering_cooling_k:.0f} K",
                          "heuristic"))
+    return rows
+
+
+HIGHLIGHTS = ("origin_of_life", "land_colonisation", "runaway_onset", "ocean_loss", "limit_cycle",
+              "snowball_onset", "dynamo_shutdown", "regime_change", "tidal_locking", "integration_failed")
+
+
+def _gyr(time_s: float) -> str:
+    """Return an age in Gyr."""
+    return f"{time_s / c.SECONDS_PER_GYR:.2f} Gyr"
+
+
+def _history_rows(state: PlanetState) -> list[str]:
+    """Return the short history summary: when the planet changed and which user values were applied at the end."""
+    events = state.events
+    rows = [_row("events", f"{len(events)} from formation to {_gyr(state.epoch_s)}"
+                 if events else f"none up to {_gyr(state.epoch_s)}")]
+    oxygen = [e for e in events if e.kind == "oxygenation"]
+    if oxygen:
+        rows.append(_row("oxygenation", ", ".join(_gyr(e.time_s) for e in oxygen)))
+    seen = set()
+    for kind in HIGHLIGHTS:
+        first = next((e for e in events if e.kind == kind), None)
+        if first is not None and first.detail not in seen:
+            seen.add(first.detail)
+            rows.append(_row(kind.replace("_", " "), f"{_gyr(first.time_s)}: {first.detail}"))
+    last = events[-1] if events else None
+    if last is not None and last.kind not in HIGHLIGHTS and last.kind != "oxygenation":
+        rows.append(_row("latest change", f"{_gyr(last.time_s)}: {last.detail}"))
+    if state.overrides:
+        rows.append(_row("user values at the end", ", ".join(o.field for o in state.overrides), "user"))
     return rows
 
 
@@ -196,6 +228,9 @@ def format_report(state: PlanetState) -> str:
         _row("factors", ", ".join(f"{k} {v:.2f}" for k, v in occ.factors.items())),
     ]
 
+    if state.mode == "history":
+        lines += ["", "History", *_history_rows(state)]
+
     if state.surface is not None:
         sf = state.surface
         lines += [
@@ -263,17 +298,56 @@ def format_report(state: PlanetState) -> str:
     return "\n".join(lines)
 
 
+def format_timeline(timeline: "Timeline", state: Optional[PlanetState] = None) -> str:
+    """Return the full history: every event with its age, and the planet at each saved epoch."""
+    end = state if state is not None else (timeline.states[-1] if timeline.states else None)
+    if end is None:
+        return "no timeline"
+    lines = [f"=== {end.name}: history ===", ""]
+    lines.append("Events")
+    if timeline.events:
+        for e in timeline.events:
+            flag = "  [overrides a held value]" if e.flagged else ""
+            lines.append(f"  {_gyr(e.time_s):>10}  {e.kind:<18}{e.detail}{flag}")
+    else:
+        lines.append("  nothing changed over the planet's history")
+
+    if timeline.states:
+        lines += ["", "Epochs",
+                  f"  {'age':>8}{'T [K]':>9}{'P [bar]':>10}{'water':>9}{'O₂':>8}{'CH₄ [ppm]':>11}"
+                  f"  {'regime':<14}{'life':<11}field"]
+        for s in timeline.states:
+            life = s.biosphere.life if s.biosphere else "none"
+            o2 = s.biosphere.oxygen_fraction if s.biosphere else 0.0
+            ch4 = (s.biosphere.methane_fraction if s.biosphere else 0.0) * 1e6
+            lines.append(f"  {_gyr(s.epoch_s):>8}{s.atmosphere.surface_temperature_k:>9.0f}"
+                         f"{s.atmosphere.surface_pressure_pa / c.BAR:>10.3g}{s.atmosphere.surface_water:>9}"
+                         f"{o2:>8.1%}{ch4:>11.3g}  {s.interior.tectonic_regime:<14}{life:<11}"
+                         f"{_yes_no(s.interior.magnetic_field)}")
+
+    if end.overrides:
+        lines += ["", "User values applied at the end"]
+        lines += [f"  {o.field:<36}{_fmt_value(o.user_value)} replaces {_fmt_value(o.history_value)}"
+                  for o in end.overrides]
+    return "\n".join(lines)
+
+
+def _fmt_value(value) -> str:
+    """Return a short text form of a value."""
+    return f"{value:.3g}" if isinstance(value, float) else str(value)
+
+
 def state_to_plain(state: PlanetState) -> dict:
     """Return the planet state as plain Python types suitable for YAML or JSON."""
-    return _plain(state.to_dict())
+    return to_plain(state.to_dict())
 
 
-def _plain(obj):
+def to_plain(obj):
     """Return a copy of nested data using only built-in Python types."""
     if isinstance(obj, dict):
-        return {k: _plain(v) for k, v in obj.items()}
+        return {k: to_plain(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
-        return [_plain(v) for v in obj]
+        return [to_plain(v) for v in obj]
     if isinstance(obj, float):
         return float(obj)
     if hasattr(obj, "item"):

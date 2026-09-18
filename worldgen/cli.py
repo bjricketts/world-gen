@@ -9,7 +9,7 @@ import typer
 
 from .generate import candidates, generate, generate_world
 from .priors import ARCHETYPES
-from .report import format_report, save_state
+from .report import format_report, format_timeline, save_state
 from .spec import SPEC_TEMPLATE, PlanetSpec, PriorSpec, load_spec
 from .world import World, load_world, save_world
 
@@ -25,6 +25,8 @@ START_HELP = "Initial continents of the simulation: supercontinent or cratons (d
 DURATION_HELP = "Simulated tectonic time in Myr (default 400)."
 SNAPSHOTS_HELP = ("Store the tectonic history every N Myr (rounded to 20 Myr steps) in the saved world; "
                   "simulated tectonics only.")
+EPOCHS_HELP = "History mode: ages in Gyr to keep full states for, e.g. '0.5,1,2' (default: the spec's epochs)."
+TOPIC_HELP = "History figure: climate, interior or life."
 
 
 def _resolution(value: str) -> int | str:
@@ -32,15 +34,25 @@ def _resolution(value: str) -> int | str:
     return int(value) if value.isdigit() else value
 
 
+def _epochs(value: str) -> list[float]:
+    """Return the epoch ages parsed from a comma-separated option."""
+    try:
+        return sorted(float(part) for part in value.replace(" ", "").split(",") if part)
+    except ValueError:
+        raise typer.BadParameter(f"could not read '{value}' as a list of ages in Gyr")
+
+
 def _spec_with_overrides(spec: PlanetSpec, seed: Optional[int] = None, mode: Optional[str] = None,
                          tectonics: Optional[str] = None, start: Optional[str] = None,
-                         duration: Optional[float] = None) -> PlanetSpec:
+                         duration: Optional[float] = None, epochs: Optional[str] = None) -> PlanetSpec:
     """Return the spec with command-line options applied."""
     update = {}
     if seed is not None:
         update["seed"] = seed
     if mode is not None:
         update["mode"] = mode
+    if epochs is not None:
+        update["history"] = spec.history.model_copy(update={"epochs_gyr": _epochs(epochs)})
     surface = {k: v for k, v in (("tectonics", tectonics), ("tectonics_start", start),
                                  ("tectonics_duration_myr", duration)) if v is not None}
     if surface:
@@ -126,9 +138,10 @@ def generate_cmd(
     start: Optional[str] = typer.Option(None, "--start", help=START_HELP),
     duration: Optional[float] = typer.Option(None, "--duration", help=DURATION_HELP),
     snapshots: Optional[float] = typer.Option(None, "--snapshots", help=SNAPSHOTS_HELP),
+    epochs: Optional[str] = typer.Option(None, "--epochs", help=EPOCHS_HELP),
 ) -> None:
     """Generate a planet from a spec file, print its report, and optionally map or save it."""
-    spec = _spec_with_overrides(load_spec(spec_file), seed, mode, tectonics, start, duration)
+    spec = _spec_with_overrides(load_spec(spec_file), seed, mode, tectonics, start, duration, epochs)
     _run(spec, epoch, out, candidates_n, resolution, map_path, field, projection_name, lon, lat, save, snapshots)
 
 
@@ -149,13 +162,16 @@ def random_cmd(
     start: Optional[str] = typer.Option(None, "--start", help=START_HELP),
     duration: Optional[float] = typer.Option(None, "--duration", help=DURATION_HELP),
     snapshots: Optional[float] = typer.Option(None, "--snapshots", help=SNAPSHOTS_HELP),
+    mode: Optional[str] = typer.Option(None, help="Evolution mode: snapshot or history."),
+    epochs: Optional[str] = typer.Option(None, "--epochs", help=EPOCHS_HELP),
 ) -> None:
     """Generate a random planet, optionally from an archetype."""
     if archetype is not None and archetype not in ARCHETYPES:
         typer.echo(f"unknown archetype '{archetype}'; see `worldgen archetypes`", err=True)
         raise typer.Exit(code=1)
     spec = PlanetSpec(name="Random world", seed=seed, priors=PriorSpec(archetype=archetype))
-    spec = _spec_with_overrides(spec, tectonics=tectonics, start=start, duration=duration)
+    spec = _spec_with_overrides(spec, mode=mode, tectonics=tectonics, start=start, duration=duration,
+                                epochs=epochs)
     _run(spec, None, out, candidates_n, resolution, map_path, field, projection_name, lon, lat, save, snapshots)
 
 
@@ -172,8 +188,8 @@ def map_cmd(
     _write_map(load_world(world_dir), map_path, field, projection_name, lon, lat)
 
 
-@app.command("history")
-def history_cmd(
+@app.command("drift")
+def drift_cmd(
     world_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Folder written by --save --snapshots."),
     path: Path = typer.Argument(..., help="Output file: a GIF gives an animation, other image types a panel figure."),
     fps: int = typer.Option(4, help="Frames per second of the animation."),
@@ -181,7 +197,7 @@ def history_cmd(
     projection_name: str = typer.Option("mollweide", "--projection", "-p", help=PROJECTION_HELP),
     lon: float = typer.Option(0.0, help="Central longitude of the map (degrees)."),
 ) -> None:
-    """Draw the tectonic history of a saved world as an animation or a panel figure."""
+    """Draw the simulated continental drift of a saved world as an animation or a panel figure."""
     import matplotlib
 
     matplotlib.use("Agg")
@@ -195,13 +211,48 @@ def history_cmd(
         animate_history(world, path, fps=fps, projection_name=projection_name, central_longitude=lon)
     else:
         save_figure(plot_history(world, panels, projection_name, lon), path)
+    typer.echo(f"drift written to {path}")
+
+
+@app.command("history")
+def history_cmd(
+    world_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Folder written by --save."),
+    path: Path = typer.Argument(..., help="Output image file (PNG, JPG, PDF or SVG)."),
+    topic: str = typer.Option("climate", "--field", "-f", help=TOPIC_HELP),
+) -> None:
+    """Draw the integrated history of a saved world: its climate, interior or biosphere against time."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    from .render import has_timeline, plot_timeline, save_figure
+
+    world = load_world(world_dir)
+    if not has_timeline(world):
+        typer.echo("no integrated history in this world; generate it with mode: history", err=True)
+        raise typer.Exit(code=1)
+    try:
+        figure = plot_timeline(world, topic)
+    except ValueError as e:
+        typer.echo(f"error: {e}", err=True)
+        raise typer.Exit(code=1)
+    save_figure(figure, path)
     typer.echo(f"history written to {path}")
 
 
 @app.command("report")
-def report_cmd(world_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Folder written by --save.")) -> None:
+def report_cmd(
+    world_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Folder written by --save."),
+    timeline: bool = typer.Option(False, "--timeline", "-t", help="Print the full event log and epoch table instead."),
+) -> None:
     """Print the report of a saved world."""
-    typer.echo(format_report(load_world(world_dir).state))
+    world = load_world(world_dir)
+    if not timeline:
+        typer.echo(format_report(world.state))
+        return
+    if world.timeline is None or not world.timeline.events:
+        typer.echo("no integrated history in this world; generate it with mode: history", err=True)
+        raise typer.Exit(code=1)
+    typer.echo(format_timeline(world.timeline, world.state))
 
 
 @app.command("archetypes")

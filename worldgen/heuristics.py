@@ -673,6 +673,12 @@ OXYGEN_SMALL = 1e-6                       # O₂ mass below which sinks switch o
 HOT_OXIDATION_K = 500.0                   # hot surfaces take up O₂ on OXYGEN_CRUST_SINK_GYR
 OXYGENATION_FRACTIONS = (1e-3, 0.05)      # O₂ fractions logged as the first and second rise
 METHANE_ANOXIC_O2 = 1e-4                  # methanogenic CH₄ falls once O₂ exceeds this fraction
+# CH₄ ∝ 1 / (1 + (O₂ / METHANE_ANOXIC_O2)^exponent): 10³ ppm in the anoxic Archean (Pavlov et al. 2000),
+# ~10 ppm in the mid-Proterozoic at a per cent of present O₂ (Olson et al. 2016), 0.7 ppm pre-industrial.
+METHANE_O2_EXPONENT = 0.95
+SUBSURFACE_METHANE_SHARE = 0.1            # CH₄ reaching the air from life sealed under ice
 HABITABLE_MAX_K = 340.0                   # the origin-of-life clock runs below this mean temperature
 LAND_PRODUCTIVITY_WIDTH_K = 30.0
+BIOSPHERE_ESTABLISH_GYR = 0.05            # a new biosphere reaches its full productivity over this time
+LAND_SPREAD_GYR = 0.2                     # and spreads over the land over this one
 HISTORY_MAX_STEP_GYR = 0.02
