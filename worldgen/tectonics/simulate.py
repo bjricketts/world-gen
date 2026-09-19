@@ -9,6 +9,7 @@ import numpy as np
 from .. import constants as c
 from .. import heuristics as h
 from ..grid import SphereGrid
+from ..surface.drive import TectonicDrive, plate_speed_m_myr
 from ..surface.landforms import random_unit_vectors
 from ..util import named_rng
 from ..hydrology import WaterSetting, erode_surface
@@ -81,25 +82,31 @@ def erode_crust(crust: Crust, grid: SphereGrid, water: WaterSetting, duration_my
 
 def run(grid: SphereGrid, radius_m: float, activity: float, continental_fraction: float, relief: float,
         start: str, duration_myr: float, seed: int, snapshot_interval_myr: float | None = None,
-        water: WaterSetting | None = None) -> SimulationResult:
+        water: WaterSetting | None = None, drive: TectonicDrive | None = None) -> SimulationResult:
     """Simulate plate tectonics for ``duration_myr`` and return the final state on the grid.
 
     With ``water`` (liquid surface water), rivers erode the land at each
     re-map; otherwise continental relief decays uniformly.
 
+    With ``drive`` (history mode) the plate speed follows the integrated plate
+    creation rate through the simulated window and the hotspots follow the
+    melt production; otherwise both come from the activity index.
+
     Snapshots are taken when crust is re-mapped onto the grid, so the
     snapshot interval is rounded to a multiple of the re-map interval.
     """
+    speed = typical_speed_m_myr(activity) if drive is None else drive.speed_m_myr(-duration_myr)
     ctx = StepContext(radius_m=radius_m, edge_rad=grid.mean_spacing(), relief=relief,
-                      typical_speed=typical_speed_m_myr(activity), dt=h.TECTONIC_STEP_MYR)
-    crust, plates = initial_state(grid, radius_m, activity, continental_fraction, start, seed)
+                      typical_speed=speed, dt=h.TECTONIC_STEP_MYR)
+    crust, plates = initial_state(grid, radius_m, activity, continental_fraction, start, seed, speed)
     stats = StepStats()
     target_count = plates.count
     continental_fraction = float(crust.continental.mean())
     history = np.zeros((len(plates.active), len(plates.active)))
 
     rng = named_rng(seed, "tectonics.hotspots")
-    expected = h.HOTSPOTS_EARTH * max(activity, 0.05) ** 0.5 * (radius_m / c.R_EARTH) ** 2
+    melting = max(activity, 0.05) if drive is None else max(drive.melt_now, 0.02)
+    expected = h.HOTSPOTS_EARTH * melting ** h.HOTSPOT_MELT_EXPONENT * (radius_m / c.R_EARTH) ** 2
     hotspot_positions = random_unit_vectors(rng, min(int(rng.poisson(expected)), h.HOTSPOTS_MAX))
 
     steps = max(int(round(duration_myr / ctx.dt)), 1)
@@ -126,6 +133,9 @@ def run(grid: SphereGrid, radius_m: float, activity: float, continental_fraction
         merge_colliding(crust, plates, history, target_count, stats)
         since_remap += 1
 
+        if drive is not None:
+            # The interior keeps cooling while the simulation runs, so the plates slow with it.
+            ctx.typical_speed = drive.speed_m_myr((step - steps) * ctx.dt)
         if since_remap == h.TECTONIC_REMAP_STEPS or step == steps:
             crust = remap(crust, plates, grid, since_remap * ctx.dt, ctx)
             tidy_plates(crust, plates, grid)

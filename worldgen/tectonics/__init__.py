@@ -11,6 +11,7 @@ import numpy as np
 from .. import heuristics as h
 from ..noise import fbm, ridged
 from ..surface import plates as heuristic_plates
+from ..surface.drive import TectonicDrive
 from ..surface.distance import distance_from, smooth
 from ..surface.fields import Boundary, Crust as CrustType, SurfaceFields, Terrain
 from ..hydrology import WaterSetting
@@ -18,7 +19,7 @@ from .crust import OROGENY_ARC, Crust, Plates, ocean_depth
 from .initial import STARTS
 from .simulate import SimulationResult, Snapshot, run
 
-__all__ = ["STARTS", "SimulationResult", "Snapshot", "build_simulated_terrain", "run"]
+__all__ = ["STARTS", "SimulationResult", "Snapshot", "TectonicDrive", "build_simulated_terrain", "run"]
 
 RIDGE_AGE_CELLS = 1.5        # oceanic cells within this many grid spacings of a ridge are marked as ridge
 MOUNTAIN_UPLIFT_M = 1500.0   # uplift above the continental base that counts as a mountain (Earth gravity)
@@ -119,15 +120,17 @@ def _terrain(fields: SurfaceFields, crust: Crust, mountains: np.ndarray, hotspot
 def build_simulated_terrain(fields: SurfaceFields, activity: float, land_fraction: float, relief: float,
                             age_gyr: float, seed: int, start: str, duration_myr: float,
                             snapshot_interval_myr: float | None = None,
-                            water: WaterSetting | None = None) -> tuple[dict, SimulationResult]:
+                            water: WaterSetting | None = None,
+                            drive: TectonicDrive | None = None) -> tuple[dict, SimulationResult]:
     """Simulate plate tectonics, fill the surface fields and return summary attributes and the full result.
 
-    The simulated time is limited to the planet's age.
+    The simulated time is limited to the planet's age. With ``drive`` the
+    plate speed and the volcanism follow the planet's integrated history.
     """
     duration = min(duration_myr, age_gyr * 1e3)
     continental_target = float(np.clip(land_fraction + h.CONTINENTAL_SHELF_EXTRA, 0.02, h.CONTINENTAL_MAX_FRACTION))
     result = run(fields.grid, fields.radius_m, activity, continental_target, relief, start, duration, seed,
-                 snapshot_interval_myr, water)
+                 snapshot_interval_myr, water, drive)
     crust = result.crust
     cont = crust.continental
 
@@ -148,7 +151,9 @@ def build_simulated_terrain(fields: SurfaceFields, activity: float, land_fractio
         fields.boundary[i[sel]] = code
         fields.boundary[j[sel]] = code
 
-    half_rate = h.PLATE_SPEED_EARTH_CM_YR * heuristic_plates.KM_PER_MYR_PER_CM_YR * max(activity, 0.05) ** 0.5 / 2
+    speed_km_myr = (h.PLATE_SPEED_EARTH_CM_YR * heuristic_plates.KM_PER_MYR_PER_CM_YR * max(activity, 0.05) ** 0.5
+                    if drive is None else drive.speed_m_myr() / 1e3)
+    half_rate = speed_km_myr / 2
     _terrain(fields, crust, mountains, result.hotspots, relief, half_rate)
 
     ocean_age = crust.ocean_age[~cont]
@@ -163,5 +168,6 @@ def build_simulated_terrain(fields: SurfaceFields, activity: float, land_fractio
         "rifts": stats.rifts,
         "subduction_initiations": stats.initiations,
         "median_ocean_age_myr": float(np.median(ocean_age)) if ocean_age.size else 0.0,
+        "plate_speed_km_myr": float(speed_km_myr),
     }
     return features, result

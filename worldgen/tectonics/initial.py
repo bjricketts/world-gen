@@ -36,11 +36,15 @@ def continent_mask(grid: SphereGrid, start: str, area_fraction: float, seed: int
 
 
 def initial_state(grid: SphereGrid, radius_m: float, activity: float, continental_fraction: float,
-                  start: str, seed: int) -> tuple[Crust, Plates]:
-    """Return the crust and plates at the start of the simulation."""
+                  start: str, seed: int, speed_m_myr: float | None = None) -> tuple[Crust, Plates]:
+    """Return the crust and plates at the start of the simulation.
+
+    The plate layout follows the activity index; ``speed_m_myr`` overrides how
+    fast they move (history mode drives it from the plate creation rate).
+    """
     fields = SurfaceFields(grid=grid, radius_m=radius_m)
     layout = heuristic_plates.make_plates(fields, activity, seed)
-    speed = typical_speed_m_myr(activity)
+    speed = typical_speed_m_myr(activity) if speed_m_myr is None else speed_m_myr
     omega = layout.euler_poles * (speed / radius_m * named_rng(seed, "tectonics.speeds")
                                   .uniform(0.3, 1.0, size=layout.count))[:, None]
 

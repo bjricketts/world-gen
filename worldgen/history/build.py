@@ -249,7 +249,7 @@ def sample_series(ctx: HistoryContext, points: int = h.HISTORY_OUTPUT_POINTS) ->
     names = ("time_gyr", "surface_temperature_k", "pressure_bar", "co2_bar", "o2_fraction", "ch4_fraction",
              "surface_water_oceans", "mantle_water_oceans", "mantle_temperature_k", "core_temperature_k",
              "heat_flux_w_m2", "dynamo", "land_fraction", "open_ocean_fraction", "luminosity_lsun",
-             "xuv_fraction", "instellation", "runaway_limit", "melt", "weathering", "outgassing",
+             "xuv_fraction", "instellation", "runaway_limit", "melt", "spreading", "weathering", "outgassing",
              "productivity", "water_escape", "climate", "regime", "life", "optical_depth", "albedo")
     series = {n: [] for n in names}
     for t in times:
@@ -260,8 +260,8 @@ def sample_series(ctx: HistoryContext, points: int = h.HISTORY_OUTPUT_POINTS) ->
                d.methane_fraction, max(y[WS], 0.0), max(y[WM], 0.0), y[TM], y[TC], d.thermal.heat_flux_w_m2,
                bool(d.thermal.dynamo), d.land, d.climate.open_ocean if d.ocean else 0.0,
                d.luminosity_w / c.L_SUN, d.xuv_fraction, d.instellation, d.runaway_limit, d.thermal.melt,
-               d.carbon.weathering, d.carbon.volcanic + d.carbon.arc + d.carbon.recycling, d.productivity,
-               d.water_escape, seg.modes.climate, seg.modes.regime, seg.modes.life, d.optical_depth,
+               d.thermal.spreading, d.carbon.weathering,
+               d.carbon.volcanic + d.carbon.arc + d.carbon.recycling, d.productivity, d.water_escape, seg.modes.climate, seg.modes.regime, seg.modes.life, d.optical_depth,
                d.climate.albedo)
         for n, value in zip(names, row):
             series[n].append(value if isinstance(value, (str, bool)) else float(value))

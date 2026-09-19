@@ -25,7 +25,7 @@ def generate_world(spec: PlanetSpec, resolution: int | str = "standard",
     (simulated plate tectonics only).
     """
     state, timeline = evolve(spec, t_target_gyr)
-    surface = build_surface(state, resolution, snapshot_interval_myr)
+    surface = build_surface(state, resolution, snapshot_interval_myr, timeline)
     return World(spec=spec, state=state, surface=surface, timeline=timeline)
 
 

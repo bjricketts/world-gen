@@ -244,6 +244,14 @@ HOTSPOTS_MAX = 30
 # --- Surface: tectonic simulation (milestone 3) ------------------------------
 
 TECTONIC_DURATION_MYR = 400.0        # default simulated time
+# History mode drives the simulation from the integrated interior (milestone 6). Plate speed follows
+# the plate creation rate, bounded so a very hot or very cold planet stays in a sensible range; the
+# simulated span is scaled so the plates travel about as far as Earth's do in TECTONIC_DURATION_MYR,
+# and Earth replaces its sea floor (3 km²/yr over a 3.1 × 10⁸ km² ocean) in about a hundred Myr.
+PLATE_SPEED_SPREADING_RANGE = (0.1, 4.0)
+TECTONIC_DURATION_RANGE_MYR = (200.0, 800.0)
+SEAFLOOR_TURNOVER_EARTH_MYR = 100.0
+HOTSPOT_MELT_EXPONENT = 0.5          # hotspot count ∝ melt production^exponent
 TECTONIC_STEP_MYR = 2.0
 TECTONIC_REMAP_STEPS = 10            # steps between re-mapping crust onto the grid
 GAP_FACTOR = 0.75                    # grid cells farther than this × edge length from any crust point are gaps

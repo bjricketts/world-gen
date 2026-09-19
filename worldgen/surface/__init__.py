@@ -13,7 +13,7 @@ from .. import constants as c
 from .. import heuristics as h
 from .. import water as water_model
 from ..grid import build_grid, resolve_resolution
-from ..state import Issue, PlanetState, SurfaceSummary
+from ..state import Issue, PlanetState, SurfaceSummary, Timeline
 from . import plates, regimes
 from ..biosphere import CoupledSurface, classify_biomes, couple_surface, koppen, productive_share
 from ..atmosphere import refine_climate
@@ -21,6 +21,7 @@ from ..climate import SurfaceClimate, band_land_fraction, planet_climate, planet
 from ..climate.ice import ICE_DENSITY
 from ..priors.occupiability import score_planet
 from ..hydrology import Drainage, WaterSetting, build_drainage, erode_surface
+from .drive import TectonicDrive
 from .fields import Boundary, Crust, SurfaceFields, Terrain
 from .sealevel import OceanFill, apply_sea_level, ocean_fill
 
@@ -36,13 +37,16 @@ def relief_factor(surface_gravity_m_s2: float) -> float:
 
 
 def build_surface(state: PlanetState, resolution: int | str = "standard",
-                  snapshot_interval_myr: Optional[float] = None) -> Optional[xr.Dataset]:
+                  snapshot_interval_myr: Optional[float] = None,
+                  timeline: Optional[Timeline] = None) -> Optional[xr.Dataset]:
     """Return the global surface of a planet, or ``None`` for planets without a solid surface.
 
     The planet state gains a surface summary, and notes on the land-fraction
     target are added to its report. For simulated plate tectonics,
     ``snapshot_interval_myr`` adds the elevation, plates and crust type at
-    that interval through the simulation.
+    that interval through the simulation, and a history-mode ``timeline``
+    drives the plate speed, the volcanism and the simulated span from the
+    planet's own interior history.
     """
     regime = state.interior.tectonic_regime
     if regime == "fluid":
@@ -78,16 +82,20 @@ def build_surface(state: PlanetState, resolution: int | str = "standard",
     setting = _water_setting(state, relief, target, climate_setting, zonal, liquid) if has_ocean else None
     sim_setting = setting if liquid else None
 
+    drive = None
+    if timeline is not None and timeline.series:
+        drive = TectonicDrive.from_series(timeline.series, age_gyr)
+
     snapshots = []
     mode = state.inputs.get("surface.tectonics", "simulated")
     if regime == "mobile_lid" and mode == "simulated":
         from .. import tectonics    # imported here: the simulation builds on this package
 
         start = state.inputs.get("surface.tectonics_start", "supercontinent")
-        duration = state.inputs.get("surface.tectonics_duration_myr", h.TECTONIC_DURATION_MYR)
+        duration = _tectonic_duration(state, drive)
         features, result = tectonics.build_simulated_terrain(
             fields, activity, crust_target, relief, age_gyr, seed, start, duration, snapshot_interval_myr,
-            sim_setting)
+            sim_setting, drive)
         snapshots = result.snapshots
     elif regime == "mobile_lid":
         features = plates.build_plate_terrain(fields, activity, crust_target, relief, age_gyr, seed)
@@ -161,9 +169,11 @@ def build_surface(state: PlanetState, resolution: int | str = "standard",
         fields.terrain[drainage.lake] = Terrain.LAKE
         features.update(_hydrology_features(drainage, ocean, fields))
     if regime == "mobile_lid" and mode == "simulated":
+        driven = "" if drive is None else (f", with plates at {features['plate_speed_km_myr']:.0f} km/Myr and "
+                                           f"{drive.melt_now:.2g} × Earth's melting from the planet's history")
         state.issues.append(Issue("info", "note", "surface",
                                   f"plate tectonics simulated for {features['simulated_myr']:.0f} Myr "
-                                  f"from a {start} start"))
+                                  f"from a {start} start{driven}"))
     else:
         state.issues.append(Issue("info", "heuristic", "surface",
                                   f"terrain for the '{regime}' regime uses heuristic landform rules"))
@@ -202,6 +212,17 @@ def build_surface(state: PlanetState, resolution: int | str = "standard",
     if snapshots:
         dataset = dataset.merge(_snapshot_dataset(snapshots, grid, state, fill, snapshot_volume))
     return dataset
+
+
+def _tectonic_duration(state: PlanetState, drive: Optional[TectonicDrive]) -> float:
+    """Return how long to simulate: the value in the spec, or one sea-floor turnover from the history."""
+    value = state.inputs.get("surface.tectonics_duration_myr", h.TECTONIC_DURATION_MYR)
+    if drive is None or state.provenance.get("surface.tectonics_duration_myr") in ("user", "user_range"):
+        return value
+    duration = drive.duration_myr(value)
+    state.provenance["surface.tectonics_duration_myr"] = "derived"
+    state.inputs["surface.tectonics_duration_myr"] = duration
+    return duration
 
 
 def _water_setting(state: PlanetState, relief: float, target: Optional[float], climate_setting,
