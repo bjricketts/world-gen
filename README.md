@@ -210,6 +210,31 @@ Typical run times (400 Myr, including climate, rivers, ice and erosion): see DES
 standard resolution takes about 35 s, heuristic mode about 10 s.
 The first run also compiles the Numba kernels (a few seconds, cached afterwards).
 
+## History mode
+
+`mode: history` integrates the planet from formation to its present age instead of evaluating
+relations at one epoch. One coupled system carries the star's brightening and XUV, the mantle and
+core cooling with their dynamo and melting, outgassing and atmospheric escape, the water traded
+with the mantle, carbon between air, ocean, crust and mantle under a Tier 0 climate, and the
+biosphere: origin of life, the rise of O₂, biotic methane and biotic weathering. Events (snowball
+onset and exit, runaway, ocean loss, dynamo shutdown, regime change, origin of life, oxygenation)
+restart the integration and are logged, and the CO₂ of the air comes from the weathering flux
+balance rather than the drawn target.
+
+`generate` returns a `Timeline` as well as the state: its events, full planet states at the epochs
+the spec asks for (`history.epochs_gyr`, or `--epochs`), and a sampled series behind the figures.
+Present-state fields in the spec become overrides applied at the end and flagged in the report.
+
+The history also reaches the surface: plate speed follows the plate creation rate the thermal model
+produces, volcanism follows the melt, the simulated span follows the sea-floor turnover, and the
+planet keeps relicts of its past — a terrace at a lost sea level, valley networks cut when it still
+had rain, ground the ice has left, plains buried by older volcanism — for as long as its own
+erosion preserves them (~100 Myr on Earth, billions of years on a dry, quiet world).
+
+Earth, Mars and Venus have example specs (`examples/*_history.yaml`); `scripts/validate_history.py`
+checks them against the real planets and `scripts/history_sensitivity.py` ranks which poorly
+constrained parameters move the outcome.
+
 ## Spec files
 
 YAML, in user-friendly units (solar masses, AU, Earth masses, bar, hours, degrees). Each numeric
@@ -252,14 +277,15 @@ the spec like any other value.
 | `grid/` | Fibonacci sphere grid, triangulation, neighbours |
 | `noise.py` | Seamless 3D fractal noise on the sphere |
 | `water.py` | Water inventory: mantle and surface water, land fraction estimates |
-| `surface/` | Heuristic plates, landforms, non-plate regimes, sea level, surface dataset |
+| `surface/` | Heuristic plates, landforms, non-plate regimes, sea level, surface dataset, tectonic drive and relict features from the history |
 | `climate/` | Insolation, Tier 0 and Tier 1 energy balance, moisture and precipitation, ice sheets and snowline erosion |
 | `biosphere/` | Life and its gases, pigment colour, vegetation, biomes and Köppen classes, climate–ice–vegetation coupling |
 | `hydrology/` | Water balance, drainage, lakes, rivers, river erosion and sediment |
 | `tectonics/` | Plate simulation: crust points, Numba kernels, processes, re-mapping, conversion to a surface |
 | `render/` | Cartopy map projections, colour schemes, hillshading, smoothed rivers, drift figures and animations, history figures |
 | `world.py` | World container, save and load |
-| `evolve/` | Snapshot evolver (now) and history evolver (milestone 6) |
+| `history/` | The history ODE system: per-planet constants, thermal evolution, volatiles, Tier 0 climate table, biosphere, integration, states at epochs |
+| `evolve/` | Snapshot evolver and history evolver behind one interface |
 | `heuristics.py` | Every tunable calibration constant, in one place |
 | `report.py` | Text report and state export |
 | `cli.py` | Command-line interface |
@@ -292,9 +318,9 @@ Run from the `scripts/` folder:
 ## Tests
 
 ```bash
-pytest                   # full suite, ~2.8 min on one core
+pytest                   # full suite, ~4-5 min on two cores
 pytest -n auto           # in parallel (needs pytest-xdist, included in the dev extras)
-pytest -m "not slow"     # skip tests that generate worlds, ~10 s
+pytest -m "not slow"     # skip tests that generate worlds, ~27 s
 ```
 
 The suite checks each relation against published values, runs Earth, Venus and Mars through the full
