@@ -64,6 +64,7 @@ class SurfaceFields:
     boundary: np.ndarray = field(init=False)
     crust_age_myr: np.ndarray = field(init=False)
     orogeny_age_myr: np.ndarray = field(init=False)
+    fabric: np.ndarray = field(init=False)
 
     def __post_init__(self) -> None:
         """Allocate empty per-cell arrays."""
@@ -75,6 +76,7 @@ class SurfaceFields:
         self.boundary = np.full(n, Boundary.NONE, dtype=np.int8)
         self.crust_age_myr = np.full(n, np.nan)
         self.orogeny_age_myr = np.full(n, np.nan)
+        self.fabric = np.zeros((n, 3))
 
     @property
     def spacing_km(self) -> float:
@@ -97,10 +99,14 @@ class SurfaceFields:
                               {"units": "Myr", "long_name": "oceanic crust age"}),
                 "orogeny_age": ("cell", self.orogeny_age_myr.astype(np.float32),
                                 {"units": "Myr", "long_name": "time since last mountain building"}),
+                "fabric": (("vec", "cell"), self.fabric.T.astype(np.float32),
+                           {"long_name": "structural grain as a tangent vector (x, y, z in the grid frame); "
+                                         "length 0 to 1 is the grain strength, 0 where there is no grain"}),
             },
             coords={
                 "lat": ("cell", g.lat.astype(np.float32), {"units": "degrees_north"}),
                 "lon": ("cell", g.lon.astype(np.float32), {"units": "degrees_east"}),
+                "vec": ("vec", np.arange(3, dtype=np.int8), {"long_name": "Cartesian component (x, y, z)"}),
             },
             attrs={"grid": "fibonacci", "grid_size": g.size, "radius_m": self.radius_m, **attrs},
         )

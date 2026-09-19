@@ -315,6 +315,17 @@ SIM_MARGIN_DROP_M = 1000.0           # continental crust thins toward the ocean,
 SIM_MARGIN_WIDTH_KM = 250.0
 SIM_MOUNTAIN_SHARPNESS = 1.5         # higher values concentrate mountain uplift into narrower, higher ranges
 
+# --- Surface: structural fabric (milestone 7) --------------------------------
+# The dominant grain of the surface, stored per cell so zoom can orient detail:
+# the belt axis along continental elevation contours, the ridge axis along
+# oceanic crust-age contours. Strength runs 0 to 1.
+FABRIC_SMOOTH_STEPS = 2               # smoothing of the field before its gradient is taken
+FABRIC_OCEAN_AGE_FADE_MYR = 120.0    # abyssal-hill grain fades as sediment buries it (buried by ~120 Myr)
+FABRIC_MOUNTAIN_REF_M = 1500.0       # continental relief (above base, at Earth gravity) for full grain strength
+FABRIC_OROGENY_FADE_MYR = 300.0      # the fold grain of an orogen subsides as it is worn down
+FABRIC_CONFIDENCE_FRACTION = 0.3     # slope, relative to the typical belt slope, needed for a defined grain
+FABRIC_MIN_STRENGTH = 0.05           # grains weaker than this are dropped, keeping the field sparse
+
 # --- Climate: energy balance (Tier 0 and Tier 1) ------------------------------
 # Outgoing radiation slope: the grey value (3.3 W m⁻² K⁻¹ for Earth) is lowered by
 # water vapour to Earth's all-sky ~2.1 (North et al. 1981); the reduction grows

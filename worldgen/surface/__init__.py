@@ -22,6 +22,7 @@ from ..climate.ice import ICE_DENSITY
 from ..priors.occupiability import score_planet
 from ..hydrology import Drainage, WaterSetting, build_drainage, erode_surface
 from .drive import TectonicDrive
+from .fabric import structural_fabric
 from .fields import Boundary, Crust, SurfaceFields, Terrain
 from .relicts import Relict, paint as paint_relicts, read_history as read_relict_history
 from .sealevel import OceanFill, apply_sea_level, ocean_fill
@@ -220,6 +221,8 @@ def build_surface(state: PlanetState, resolution: int | str = "standard",
         "degrees_per_cell": math.degrees(summary.spacing_km / (state.bulk.radius_m / 1e3)),
         "tectonics": mode if regime == "mobile_lid" else "none",
     }
+    fields.fabric[:] = structural_fabric(grid, fields.elevation, fields.crust, fields.crust_age_myr,
+                                         fields.orogeny_age_myr, relief)
     dataset = fields.to_dataset(ocean, attrs)
     if relict is not None:
         dataset = dataset.merge(xr.Dataset(data_vars={
