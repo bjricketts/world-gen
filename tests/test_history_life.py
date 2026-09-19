@@ -99,7 +99,8 @@ def test_land_life_speeds_continental_weathering():
                     spreading=1.0, heat_ratio=1.0)
     full = vol.carbon_fluxes(p, land_life=1.0, **settings).continental
     bare = vol.carbon_fluxes(p, land_life=0.0, **settings).continental
-    assert full == pytest.approx(h.WEATHERING_EARTH * (1.0 - h.SEAFLOOR_WEATHERING_SHARE), rel=0.15)
+    assert full == pytest.approx(h.WEATHERING_EARTH * (1.0 - h.SEAFLOOR_WEATHERING_SHARE)
+                                 * h.CONTINENTAL_WEATHERING_SCALE, rel=0.15)
     assert 0.6 * p.biotic_weathering < full / bare <= p.biotic_weathering
 
 

@@ -304,7 +304,7 @@ history: {}                # used in history mode; unset values are drawn
   # outgassing_efficiency: 1.0
   # weathering_efficiency: 1.0
   # weathering_temperature_scale_k: 20
-  # weathering_co2_exponent: 0.3
+  # weathering_co2_exponent: 0.45
   # biotic_weathering_factor: 4
   # escape_efficiency: 0.15
   # mantle_activation_energy_kj: 300

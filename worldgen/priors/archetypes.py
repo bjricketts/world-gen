@@ -54,7 +54,7 @@ BASE_PRIORS: dict[str, Distribution] = {
     "history.outgassing_efficiency": LogUniform(0.5, 2.0),
     "history.weathering_efficiency": LogUniform(0.5, 2.0),
     "history.weathering_temperature_scale_k": Uniform(10.0, 40.0),
-    "history.weathering_co2_exponent": Uniform(0.1, 0.5),
+    "history.weathering_co2_exponent": Uniform(0.2, 0.6),
     "history.biotic_weathering_factor": LogUniform(2.0, 10.0),
     "history.escape_efficiency": LogUniform(0.05, 0.3),
     "history.mantle_activation_energy_kj": Uniform(250.0, 350.0),

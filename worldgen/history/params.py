@@ -123,7 +123,7 @@ def build_params(values, bulk: BulkState, orbit: OrbitState, star_mass_msun: flo
         outgassing=v("history.outgassing_efficiency", 1.0),
         weathering=v("history.weathering_efficiency", 1.0),
         weathering_scale_k=v("history.weathering_temperature_scale_k", 20.0),
-        weathering_exponent=v("history.weathering_co2_exponent", 0.3),
+        weathering_exponent=v("history.weathering_co2_exponent", 0.45),
         biotic_weathering=v("history.biotic_weathering_factor", 4.0),
         escape_efficiency=v("history.escape_efficiency", 0.15),
         activation_energy_j=v("history.mantle_activation_energy_kj", 300.0) * 1e3,

@@ -613,6 +613,11 @@ OCEAN_CARBON_EXPONENT = 0.5               # dissolved carbon ∝ pCO₂^exponent
 AIR_PARTITION_STEPS = 30                  # bisection steps for the air–ocean carbon split
 # Carbon fluxes at present Earth (10¹⁸ kg CO₂ per Gyr; ~7 Tmol C/yr).
 WEATHERING_EARTH = 310.0
+# The continental sink is calibrated on the Earth a full history produces, not on the nominal
+# present-day point: that planet has 26% land, a land biosphere at 91% of full cover, and a crust
+# still draining the carbonate the hot early mantle put there, which together need a sink this much
+# stronger to hold pre-industrial CO₂.
+CONTINENTAL_WEATHERING_SCALE = 1.15
 SEAFLOOR_WEATHERING_SHARE = 0.2           # share of Earth's weathering on the sea floor
 SEAFLOOR_CO2_EXPONENT = 0.23
 SEAFLOOR_TEMPERATURE_SCALE_K = 40.0

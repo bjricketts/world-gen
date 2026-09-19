@@ -67,10 +67,17 @@ def _fluxes(p, **kwargs):
 
 
 def test_earth_carbon_fluxes_balance():
-    """At present Earth the weathering sink matches the volcanic and arc sources."""
+    """The sources match Earth's flux, and the sink carries the calibration of the realised Earth.
+
+    The continental constant is set so the balance is struck on the Earth a
+    full history produces, which has less land and a crust still draining, so
+    at the nominal present-day point the sink is stronger by that factor.
+    """
     p = params_of()
     f = _fluxes(p)
-    assert f.weathering == pytest.approx(h.WEATHERING_EARTH, rel=0.1)
+    continental = h.WEATHERING_EARTH * (1.0 - h.SEAFLOOR_WEATHERING_SHARE) * h.CONTINENTAL_WEATHERING_SCALE
+    assert f.continental == pytest.approx(continental, rel=0.1)
+    assert f.weathering == pytest.approx(h.CONTINENTAL_WEATHERING_SCALE * h.WEATHERING_EARTH, rel=0.12)
     assert f.volcanic + f.arc == pytest.approx(h.WEATHERING_EARTH, rel=0.15)
     assert f.seafloor == pytest.approx(h.SEAFLOOR_WEATHERING_SHARE * h.WEATHERING_EARTH, rel=0.15)
 

@@ -144,7 +144,8 @@ def carbon_fluxes(p: HistoryParams, crust: float, mantle: float, co2_bar: float,
     ``heat_ratio`` the surface heat flow per area relative to Earth's.
     """
     area = p.area_ratio
-    earth_continental = h.WEATHERING_EARTH * (1.0 - h.SEAFLOOR_WEATHERING_SHARE)
+    earth_continental = (h.WEATHERING_EARTH * (1.0 - h.SEAFLOOR_WEATHERING_SHARE)
+                         * h.CONTINENTAL_WEATHERING_SCALE)
     earth_seafloor = h.WEATHERING_EARTH * h.SEAFLOOR_WEATHERING_SHARE
     ratio = max(co2_bar, 0.0) / h.CO2_EARTH_BAR
     warm = min(surface_k - c.T_SURFACE_EARTH, 400.0)
