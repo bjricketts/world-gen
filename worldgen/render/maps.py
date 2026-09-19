@@ -15,6 +15,7 @@ from matplotlib.patches import Patch
 from ..biosphere.biomes import KOPPEN_CODES, Biome
 from ..heuristics import MOUNTAIN_OROGENY_MAX_MYR
 from ..surface.fields import Boundary, Crust, Terrain
+from ..surface.relicts import Relict
 from ..world import World
 from .raster import projected_sampler
 from .rivers import LAKE_COLOUR, draw_rivers
@@ -22,9 +23,17 @@ from .rivers import LAKE_COLOUR, draw_rivers
 PROJECTIONS = ("equirectangular", "mollweide", "robinson", "orthographic", "north_polar", "south_polar")
 GLOBE_PROJECTIONS = ("orthographic", "north_polar", "south_polar")
 FIELDS = ("elevation", "terrain", "plates", "crust_age", "orogeny_age", "temperature", "rainfall", "basins",
-          "biomes", "koppen", "ice")
+          "biomes", "koppen", "ice", "relicts")
 SEASON_NAMES = {1: "month 1 (northern winter)", 7: "month 7 (northern summer)"}
 DEFAULT_WIDTH = {"map": 1100, "globe": 700}
+
+RELICT_COLOURS = {
+    Relict.NONE: "#b9b9b9",
+    Relict.SHORELINE: "#3fa7c4",
+    Relict.RIVER: "#7a6bd0",
+    Relict.GLACIAL: "#cfe3f5",
+    Relict.VOLCANIC: "#8a5a4a",
+}
 
 _OCEAN = LinearSegmentedColormap.from_list("ocean", ["#0b1d3a", "#16386b", "#2a5d9c", "#4f8cc9", "#9cc7e8"])
 _ICE = LinearSegmentedColormap.from_list("sea_ice", ["#7fa3bb", "#bcd6e6", "#eef6fb"])
@@ -224,6 +233,8 @@ def field_image(world: World, field: str, proj: ccrs.Projection, width: int, mon
         raise ValueError("'rainfall' needs surface water and an atmosphere")
     elif field in ("biomes", "koppen", "ice") and "biome" not in ds:
         raise ValueError(f"'{field}' needs a saved world from milestone 5 or later")
+    elif field == "relicts" and "relict" not in ds:
+        raise ValueError(f"{world.state.name} has no relict features; generate it in history mode")
     elif field == "basins" and "drainage_basin" not in ds:
         raise ValueError("'basins' needs rivers, which only planets with liquid surface water have")
     elif field == "temperature":
@@ -278,6 +289,20 @@ def field_image(world: World, field: str, proj: ccrs.Projection, width: int, mon
             base = np.array(to_rgb("#2f5a8a"))
             rgb[ocean] = base + (np.array(to_rgb("#e8f1f7")) - base) * np.clip(sea[ocean], 0, 1)[:, None]
         extra = (cmap, Normalize(0, top))
+    elif field == "relicts":
+        codes = sampler.sample(ds["relict"].values, categorical=True)
+        shade = sampler.sample(ds["elevation"].values)
+        ocean = sampler.sample(ds["ocean"].values, categorical=True).astype(bool)
+        table = np.array([to_rgb(RELICT_COLOURS[Relict(k)]) for k in range(len(Relict))])
+        # Present relief in grey, with the relicts painted over it.
+        grey = np.clip(0.45 + 0.35 * np.nan_to_num(shade) / max(float(np.nanmax(np.abs(shade))), 1.0), 0.15, 0.95)
+        rgb = np.repeat(grey[..., None], 3, axis=-1)
+        rgb[ocean] = to_rgb("#2f5a8a")
+        marked = codes != Relict.NONE
+        rgb[marked] = table[codes[marked]]
+        present = set(np.unique(ds["relict"].values).tolist()) - {int(Relict.NONE)}
+        extra = [Patch(color=RELICT_COLOURS[Relict(k)], label=Relict(k).name.lower().replace("_", " "))
+                 for k in sorted(present)]
     elif field == "orogeny_age":
         raw = ds["orogeny_age"].values
         top = MOUNTAIN_OROGENY_MAX_MYR

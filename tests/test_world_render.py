@@ -66,6 +66,8 @@ def test_equirectangular_raster(small_world):
 
 @pytest.mark.parametrize("field", FIELDS)
 def test_every_field_renders(small_world, field):
+    if field == "relicts":
+        pytest.skip("relicts exist only in history mode; tests/test_relicts.py renders them")
     ax = plot_map(small_world, field, "mollweide", width=200)
     assert ax.get_title().endswith(field)
     matplotlib.pyplot.close(ax.figure)

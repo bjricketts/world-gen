@@ -23,6 +23,7 @@ from ..priors.occupiability import score_planet
 from ..hydrology import Drainage, WaterSetting, build_drainage, erode_surface
 from .drive import TectonicDrive
 from .fields import Boundary, Crust, SurfaceFields, Terrain
+from .relicts import Relict, paint as paint_relicts, read_history as read_relict_history
 from .sealevel import OceanFill, apply_sea_level, ocean_fill
 
 DEFAULT_LAND_FRACTION = 0.3
@@ -168,6 +169,21 @@ def build_surface(state: PlanetState, resolution: int | str = "standard",
         drainage = build_drainage(grid, fields.radius_m, fields.elevation, ocean, rain)
         fields.terrain[drainage.lake] = Terrain.LAKE
         features.update(_hydrology_features(drainage, ocean, fields))
+
+    relict = None
+    past = read_relict_history(state, timeline)
+    if past is not None:
+        relict, relict_features = paint_relicts(
+            grid, state, past, fields.elevation, ocean,
+            ocean_fill(grid, fields.elevation, fields.radius_m) if has_ocean else None,
+            climate.rainfall.temperature_k, coupled.ice.glaciated if has_ocean else None, relief, seed)
+        features.update(relict_features)
+        if relict_features:
+            kinds = ", ".join(f"{Relict(k).name.lower().replace('_', ' ')} {(relict == k).mean():.0%}"
+                              for k in np.unique(relict) if k != Relict.NONE)
+            state.issues.append(Issue("info", "heuristic", "surface",
+                                      f"relict features from the planet's history ({kinds}), preserved for "
+                                      f"{past.memory_myr:.0f} Myr against this surface's erosion"))
     if regime == "mobile_lid" and mode == "simulated":
         driven = "" if drive is None else (f", with plates at {features['plate_speed_km_myr']:.0f} km/Myr and "
                                            f"{drive.melt_now:.2g} × Earth's melting from the planet's history")
@@ -205,6 +221,12 @@ def build_surface(state: PlanetState, resolution: int | str = "standard",
         "tectonics": mode if regime == "mobile_lid" else "none",
     }
     dataset = fields.to_dataset(ocean, attrs)
+    if relict is not None:
+        dataset = dataset.merge(xr.Dataset(data_vars={
+            "relict": ("cell", relict, {"long_name": "feature left by the planet's past "
+                                                     "(worldgen.surface.relicts.Relict)",
+                                        "flag_values": " ".join(str(int(r)) for r in Relict),
+                                        "flag_meanings": " ".join(r.name.lower() for r in Relict)})}))
     dataset = dataset.merge(_climate_dataset(climate, has_ocean, climate_setting.humidity > 0.0))
     dataset = dataset.merge(_life_dataset(coupled, climate, ocean, state))
     if drainage is not None:

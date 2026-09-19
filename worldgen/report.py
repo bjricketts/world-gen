@@ -275,6 +275,25 @@ def format_report(state: PlanetState) -> str:
         if "ice_sheet_fraction_of_land" in features:
             lines.append(_row("ice sheets", f"{features.pop('ice_sheet_fraction_of_land'):.1%} of land, "
                               f"up to {features.pop('max_ice_thickness_m'):,.0f} m thick"))
+        if "relict_memory_myr" in features:
+            kinds = []
+            if "relict_shoreline_fraction" in features:
+                kinds.append(f"a shoreline at {features.pop('relict_shoreline_m'):+,.0f} m from "
+                             f"{features.pop('relict_shoreline_age_myr'):,.0f} Myr ago on "
+                             f"{features.pop('relict_shoreline_fraction'):.1%} of the surface")
+            if "relict_river_fraction" in features:
+                kinds.append(f"valley networks on {features.pop('relict_river_fraction'):.1%}, last cut "
+                             f"{features.pop('relict_river_age_myr'):,.0f} Myr ago")
+            if "relict_glacial_fraction" in features:
+                kinds.append(f"ground scoured by ice on {features.pop('relict_glacial_fraction'):.1%} "
+                             f"(the coldest epoch was {features.pop('relict_glacial_cooling_k'):.0f} K colder)")
+            if "relict_volcanic_fraction" in features:
+                features.pop("relict_resurfaced_melt_ratio", None)
+                kinds.append(f"plains resurfaced by older volcanism on "
+                             f"{features.pop('relict_volcanic_fraction'):.1%}")
+            lines.append(_row("relicts of the past", "; ".join(kinds) or "none", "heuristic"))
+            lines.append(_row("  surface memory", f"{features.pop('relict_memory_myr'):,.0f} Myr against "
+                              "this planet's erosion"))
         if "ice_sheet_volume_km3" in features:
             lines.append(_row("water in ice", f"{features.pop('ice_sheet_volume_km3') / 1e6:.3g} million km³, "
                               f"{features.pop('ice_sea_level_equivalent_m'):,.0f} m of sea level; "

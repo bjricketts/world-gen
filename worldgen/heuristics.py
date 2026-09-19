@@ -241,6 +241,23 @@ RIFT_WIDTH_KM = 90.0
 HOTSPOTS_EARTH = 8
 HOTSPOTS_MAX = 30
 
+# Relict features (milestone 6). A mark on the surface survives RELICT_MEMORY_BASE_MYR divided by the
+# erosion the planet applies to it: rain and plate tectonics rework Earth's surface within ~100 Myr,
+# while a dry stagnant lid keeps its record for billions of years (Mars's valley networks).
+RELICT_MEMORY_BASE_MYR = 6000.0
+RELICT_RAIN_EROSION = 50.0           # weight of liquid surface water in that wear
+RELICT_TECTONIC_EROSION = 8.0        # weight of the interior activity index
+RELICT_SHORELINE_MIN_RISE = 0.02     # the past ocean must exceed the present one by this share
+RELICT_SHORELINE_BAND_M = 120.0      # height of the terrace the old coastline leaves (Earth gravity)
+RELICT_SHORELINE_MIN_COVER = 0.02    # the old sea must have covered this share of the planet
+RELICT_MIN_AGE_MYR = 10.0            # a relict of something still happening is not a relict
+RELICT_GLACIAL_COOLING_K = 5.0       # a past epoch this much colder leaves scoured ground
+RELICT_PALAEO_RAIN_M = 0.5           # rainfall assumed for the valley networks of a lost wet climate
+RELICT_RIVER_MIN_ORDER = 2           # Strahler order a dry valley must reach to be drawn
+RELICT_RESURFACING_RATIO = 3.0       # past melting this many times the present resurfaces the plains
+RESURFACING_EARTH_MYR = 100.0        # time Earth's melt production takes to bury its whole surface
+RELICT_RESURFACED_MAX = 0.9          # cap on the share it can cover
+
 # --- Surface: tectonic simulation (milestone 3) ------------------------------
 
 TECTONIC_DURATION_MYR = 400.0        # default simulated time

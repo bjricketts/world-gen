@@ -42,11 +42,12 @@ worldgen generate planet.yaml --tectonics heuristic   # fast layout without simu
 # History mode: the planet integrated from formation
 worldgen generate planet.yaml --mode history --epochs "0.5,1,2" --save kestrel
 worldgen history kestrel life.png -f life   # or -f climate (default) or -f interior
+worldgen map kestrel relicts.png -f relicts # shorelines, dry valleys and scoured ground of its past
 worldgen report kestrel --timeline         # every event, and the planet at each epoch
 ```
 
 Map fields: `elevation`, `terrain`, `plates`, `crust_age`, `orogeny_age`, `temperature`, `rainfall`, `basins`,
-`biomes`, `koppen`, `ice`, or `overview` and `climate` (multi-panel). Rivers are drawn on elevation, terrain, rainfall and basin maps.
+`biomes`, `koppen`, `ice`, `relicts` (history mode), or `overview` and `climate` (multi-panel). Rivers are drawn on elevation, terrain, rainfall and basin maps.
 Projections: `equirectangular`, `mollweide`, `robinson`, `orthographic`, `north_polar`, `south_polar`.
 Resolutions: `preview` (10k cells), `standard` (40k), `high` (160k), or a cell count.
 
