@@ -326,6 +326,21 @@ FABRIC_OROGENY_FADE_MYR = 300.0      # the fold grain of an orogen subsides as i
 FABRIC_CONFIDENCE_FRACTION = 0.3     # slope, relative to the typical belt slope, needed for a defined grain
 FABRIC_MIN_STRENGTH = 0.05           # grains weaker than this are dropped, keeping the field sparse
 
+# --- Zoom: local downscaling (milestone 7) -----------------------------------
+# The sub-grid relief added when a region is zoomed carries its own local rain
+# shadow, applied on top of the global climate the tile inherits.
+ZOOM_OROGRAPHIC_SLOPE = 0.02         # along-wind grade at which the rain-shadow effect is strong
+ZOOM_OROGRAPHIC_CAP = 3.0            # most a cell's rain is raised or cut by the local slope
+# Sub-grid relief synthesised at zoom, below the global grid scale.
+ZOOM_DETAIL_ROUGH_M = 250.0          # base roughness amplitude on land (Earth gravity)
+ZOOM_DETAIL_RIDGE_M = 900.0          # along-grain ridge amplitude where the structural grain is strong
+ZOOM_OCEAN_ROUGH_FACTOR = 0.5        # sea-floor roughness relative to land
+ZOOM_DETAIL_BASE_CELLS = 0.5         # first detail octave wavelength, in global grid spacings
+ZOOM_DETAIL_BASE_OCTAVES = 4         # octaves added at the coarsest zoom
+ZOOM_DETAIL_MAX_OCTAVES = 9          # octaves added at the deepest zoom
+ZOOM_DETAIL_SMOOTH_STEPS = 3         # passes that elongate ridges along the structural grain
+ZOOM_RIDGED_MEDIAN = 0.52            # median of the ridged field, subtracted so ridges add and valleys cut
+
 # --- Climate: energy balance (Tier 0 and Tier 1) ------------------------------
 # Outgoing radiation slope: the grey value (3.3 W m⁻² K⁻¹ for Earth) is lowered by
 # water vapour to Earth's all-sky ~2.1 (North et al. 1981); the reduction grows
