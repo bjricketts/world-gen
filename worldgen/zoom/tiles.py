@@ -35,6 +35,8 @@ FACES = (
     (np.array([0.0, 0.0, -1.0]), np.array([0.0, 1.0, 0.0]), np.array([1.0, 0.0, 0.0])),  # -z
 )
 _NORMALS = np.array([f[0] for f in FACES])
+_RIGHTS = np.array([f[1] for f in FACES])
+_UPS = np.array([f[2] for f in FACES])
 _NEIGHBOUR_OFFSETS = ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1))
 
 
@@ -59,6 +61,16 @@ def unit_to_face_uv(point: np.ndarray) -> tuple[int, float, float]:
     s = np.arctan(x) / QUARTER * 0.5 + 0.5
     t = np.arctan(y) / QUARTER * 0.5 + 0.5
     return face, float(s), float(t)
+
+
+def faces_uv(points: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return the face index and the ``s``, ``t`` in [0, 1] of each unit vector (vectorised)."""
+    points = np.asarray(points, dtype=float)
+    faces = np.argmax(points @ _NORMALS.T, axis=1)
+    project = np.einsum("ij,ij->i", points, _NORMALS[faces])
+    x = np.einsum("ij,ij->i", points, _RIGHTS[faces]) / project
+    y = np.einsum("ij,ij->i", points, _UPS[faces]) / project
+    return faces, np.arctan(x) / QUARTER * 0.5 + 0.5, np.arctan(y) / QUARTER * 0.5 + 0.5
 
 
 def _angular(a: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -172,6 +184,27 @@ class RegionGrid:
         coo = self.neighbours.tocoo()
         keep = coo.row < coo.col
         return coo.row[keep], coo.col[keep]
+
+    def bounds(self) -> tuple[int, float, float, float, float]:
+        """Return the region's face and its face-coordinate extent (s0, s1, t0, t1)."""
+        per = self.nodes_per_tile - 1
+        count = 1 << self.level
+        x0, y0 = self.origin
+        nx, ny = (self.shape[1] - 1) // per, (self.shape[0] - 1) // per
+        return self.face, x0 / count, (x0 + nx) / count, y0 / count, (y0 + ny) / count
+
+    def boundary(self) -> np.ndarray:
+        """Return a mask of the nodes on the region's outer edge."""
+        rows, cols = self.shape
+        mask = np.zeros((rows, cols), dtype=bool)
+        mask[[0, -1], :] = mask[:, [0, -1]] = True
+        return mask.ravel()
+
+    def contains(self, points: np.ndarray) -> np.ndarray:
+        """Return which of the given directions fall inside the region's footprint."""
+        face, s0, s1, t0, t1 = self.bounds()
+        faces, s, t = faces_uv(points)
+        return (faces == face) & (s >= s0) & (s <= s1) & (t >= t0) & (t <= t1)
 
     def tree(self) -> cKDTree:
         """Return a KD-tree over the nodes for nearest-node queries."""

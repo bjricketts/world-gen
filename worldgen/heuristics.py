@@ -340,6 +340,9 @@ ZOOM_DETAIL_BASE_OCTAVES = 4         # octaves added at the coarsest zoom
 ZOOM_DETAIL_MAX_OCTAVES = 9          # octaves added at the deepest zoom
 ZOOM_DETAIL_SMOOTH_STEPS = 3         # passes that elongate ridges along the structural grain
 ZOOM_RIDGED_MEDIAN = 0.52            # median of the ridged field, subtracted so ridges add and valleys cut
+ZOOM_EROSION_MYR = 15.0              # erosion applied to a zoomed region, carving its sub-grid valleys
+ZOOM_EROSION_STEP_MYR = 5.0          # erosion step for a zoomed region
+ZOOM_RIVER_MIN_AREA_KM2 = 5.0        # upstream area at which a local stream is drawn (streams, not just big rivers)
 
 # --- Climate: energy balance (Tier 0 and Tier 1) ------------------------------
 # Outgoing radiation slope: the grey value (3.3 W m⁻² K⁻¹ for Earth) is lowered by

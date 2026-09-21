@@ -152,10 +152,11 @@ def _strahler(order, receiver, river):
 
 
 def build_drainage(grid: SphereGrid, radius_m: float, height_m: np.ndarray, ocean: np.ndarray,
-                   rain: Rainfall) -> Drainage:
+                   rain: Rainfall, cell_area_m2: float | None = None) -> Drainage:
     """Return the drainage network of a surface with an ocean.
 
-    ``height_m`` is elevation above sea level.
+    ``height_m`` is elevation above sea level. ``cell_area_m2`` overrides the
+    per-cell area (used by local zoom grids, which are not the whole sphere).
     """
     adj = grid.neighbours
     land = ~ocean
@@ -165,7 +166,7 @@ def build_drainage(grid: SphereGrid, radius_m: float, height_m: np.ndarray, ocea
     lakes = _find_depressions(grid, z, filled, receiver, land)
     order = upstream_order(receiver)
 
-    area = 4 * np.pi * radius_m**2 / grid.size
+    area = 4 * np.pi * radius_m**2 / grid.size if cell_area_m2 is None else cell_area_m2
     in_lake = lakes.label >= 0
     # Lakes receive rain directly and lose water at the open-water evaporation rate.
     inflow = np.where(land & ~in_lake, rain.runoff_m, 0.0) * area

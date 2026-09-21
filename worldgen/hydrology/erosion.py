@@ -99,15 +99,18 @@ def _flow(grid: SphereGrid, z: np.ndarray, ocean: np.ndarray):
 
 
 def erode(grid: SphereGrid, radius_m: float, height_m: np.ndarray, ocean: np.ndarray, runoff_m: np.ndarray,
-          duration_myr: float, relief: float, step_myr: float = h.EROSION_STEP_MYR) -> ErosionResult:
+          duration_myr: float, relief: float, step_myr: float = h.EROSION_STEP_MYR,
+          cell_area_m2: float | None = None) -> ErosionResult:
     """Return the surface after ``duration_myr`` of river erosion, creep and deposition.
 
     ``height_m`` is elevation above sea level and ``runoff_m`` the yearly
     runoff depth on land. The ocean mask stays fixed during the run.
+    ``cell_area_m2`` overrides the per-cell area (used by local zoom grids,
+    which are not the whole sphere).
     """
     steps = max(int(np.ceil(duration_myr / step_myr)), 1)
     dt = duration_myr / steps
-    area = 4 * np.pi * radius_m**2 / grid.size
+    area = 4 * np.pi * radius_m**2 / grid.size if cell_area_m2 is None else cell_area_m2
     adj = grid.neighbours
     z = height_m.astype(float).copy()
     land = ~ocean
