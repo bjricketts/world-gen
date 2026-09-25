@@ -241,6 +241,42 @@ def test_snowline_lies_where_the_mass_balance_is_zero():
     assert (below < 0.0).all() and (above > 0.0).all()
 
 
+def test_snow_melts_first_and_more_slowly_than_ice():
+    """The year's snow melts at the snow rate; only degree-days left over melt ice, at the higher ice rate."""
+    from worldgen.climate.ice import mass_balance, positive_degree_days, snow_balance, snow_share
+
+    months = np.array([[255.0, 275.0]] * 9 + [[270.0, 290.0]] * 3)     # a cold and a warm site
+    rain = np.full((12, 2), 1.0)
+    snowfall = (rain * snow_share(months)).mean(axis=0)
+    degree_days = positive_degree_days(months)
+    balance = mass_balance(months, rain)
+    cold = snowfall[0] > h.SNOW_DEGREE_DAY_FACTOR_M * degree_days[0]
+    assert cold and balance[0] == pytest.approx(snowfall[0] - h.SNOW_DEGREE_DAY_FACTOR_M * degree_days[0])
+    left = degree_days[1] - snowfall[1] / h.SNOW_DEGREE_DAY_FACTOR_M
+    assert left > 0.0 and balance[1] == pytest.approx(-h.DEGREE_DAY_FACTOR_M * left)
+    assert np.array_equal(np.sign(balance), np.sign(snow_balance(months, rain)))
+    assert h.SNOW_DEGREE_DAY_FACTOR_M < 0.6 * h.DEGREE_DAY_FACTOR_M
+
+
+def test_snowline_climate_matches_glaciers():
+    """At the snowline, summer temperature and precipitation follow the glacier relation within ~2 K.
+
+    Ohmura et al. (1992): P = 645 + 296 T + 9 T² (mm w.e., June–August °C) at 70 glaciers' ELAs.
+    """
+    annual = np.linspace(270.0, 300.0, 200)
+    previous = -np.inf
+    for p_mm in (500.0, 1000.0, 2000.0):
+        for annual_range in (15.0, 25.0):
+            months = annual[None, :] + 0.5 * annual_range * np.cos(2 * np.pi * (np.arange(12)[:, None] + 0.5) / 12)
+            ela = equilibrium_line(months, np.full((12, 200), p_mm / 1000.0), np.zeros(200))
+            k = np.flatnonzero(np.isfinite(ela) & (ela > 100.0))[0]
+            summer = np.sort(months[:, k])[-3:].mean() - 273.15 - h.LAPSE_RATE_K_PER_M * ela[k]
+            glaciers = (-296.0 + np.sqrt(296.0**2 - 4 * 9.0 * (645.0 - p_mm))) / (2 * 9.0)
+            assert abs(summer - glaciers) < 2.5
+        assert summer > previous                          # wetter glaciers reach down into warmer air
+        previous = summer
+
+
 def test_buzzsaw_wears_peaks_toward_the_snowline():
     height = np.array([500.0, 2000.0, 6000.0, 9000.0, 6000.0])
     ocean = np.array([False, False, False, False, True])

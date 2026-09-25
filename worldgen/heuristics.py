@@ -495,9 +495,13 @@ EVAPORATION_ZERO_K = 263.0
 BUDYKO_W = 2.6                        # Fu–Budyko shape parameter (Zhang et al. 2004)
 
 # --- Ice sheets and glacial erosion -------------------------------------------
-# Melt 8 mm water per positive degree-day (Braithwaite 1995: 7–9 for ice), with
-# monthly temperatures spread by a normal distribution; snow below +1 °C.
+# Melt 8 mm water per positive degree-day of ice (Braithwaite 1995: ~8 for ice) and 4.1 mm of snow, the
+# value that fits the precipitation–temperature climate at 66 glaciers' equilibrium lines (Braithwaite
+# 2008: 4.1 ± 1.5; snow melts at less than half the ice rate, Braithwaite 1995). The year's snow melts
+# first. Monthly temperatures are spread by a normal distribution, 4.5 K as measured on glaciers near
+# 0 °C (Wake & Marshall 2015); snow below +1 °C.
 DEGREE_DAY_FACTOR_M = 0.008
+SNOW_DEGREE_DAY_FACTOR_M = 0.0041
 PDD_TEMPERATURE_SPREAD_K = 4.5
 SNOW_RAIN_THRESHOLD_C = 1.0
 # Plastic ice profile h = √(2 τ₀ L / (ρ g)) (Nye 1952); τ₀ = 50 kPa gives ~4.8 km

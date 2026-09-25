@@ -2,12 +2,15 @@
 
 Snow accumulates in months below freezing; melt follows the positive
 degree-day method (Braithwaite 1995), with monthly temperatures spread by
-a normal distribution to count the warm days of a cool month. Land with a
-positive annual balance is glaciated. Ice thickness follows the perfectly
+a normal distribution to count the warm days of a cool month. The year's
+snow melts first, at the snow degree-day factor, and only the degree-days
+left over melt ice, at the higher ice factor (snow melts at less than half
+the rate of ice; Braithwaite 1995, 2008). Land with a positive annual
+balance is glaciated. Ice thickness follows the perfectly
 plastic profile h = √(2 τ₀ L / (ρ_i g)) with L the distance to the ice
 margin (Nye 1952); the ice surface stands above the bedrock by the
 thickness less its isostatic sinking. The equilibrium-line altitude (ELA),
-where the balance is zero, caps mountains: land far above it is worn down
+where the year's snow just survives the melt season, caps mountains: land far above it is worn down
 toward it ("glacial buzzsaw"; Egholm et al. 2009).
 """
 
@@ -55,21 +58,39 @@ def snow_share(monthly_k: np.ndarray) -> np.ndarray:
     return 1.0 / (1.0 + np.exp((monthly_k - FREEZING_K - h.SNOW_RAIN_THRESHOLD_C) / 1.0))
 
 
+def snow_balance(monthly_k: np.ndarray, monthly_p_m: np.ndarray, lowering_k: np.ndarray | float = 0.0) -> np.ndarray:
+    """Return the year's snowfall less what the melt season can melt of it (m water per year).
+
+    Positive where some of the year's snow survives the summer, which is where
+    ice accumulates. Arguments are as for ``mass_balance``.
+    """
+    t = monthly_k - lowering_k
+    snowfall = (monthly_p_m * snow_share(t)).mean(axis=0)
+    return snowfall - h.SNOW_DEGREE_DAY_FACTOR_M * positive_degree_days(t)
+
+
 def mass_balance(monthly_k: np.ndarray, monthly_p_m: np.ndarray, lowering_k: np.ndarray | float = 0.0) -> np.ndarray:
     """Return the annual surface mass balance (m water per year).
 
+    The year's snow melts first; degree-days left once it is gone melt ice.
     ``monthly_p_m`` holds precipitation as annual rates; ``lowering_k`` is
     subtracted from the temperatures (height above the reference surface).
     """
     t = monthly_k - lowering_k
-    accumulation = (monthly_p_m * snow_share(t)).mean(axis=0)
-    melt = h.DEGREE_DAY_FACTOR_M * positive_degree_days(t)
-    return accumulation - melt
+    snowfall = (monthly_p_m * snow_share(t)).mean(axis=0)
+    degree_days = positive_degree_days(t)
+    snow_melt = np.minimum(snowfall, h.SNOW_DEGREE_DAY_FACTOR_M * degree_days)
+    left = degree_days - snow_melt / h.SNOW_DEGREE_DAY_FACTOR_M
+    return snowfall - snow_melt - h.DEGREE_DAY_FACTOR_M * left
 
 
 def equilibrium_line(monthly_k: np.ndarray, monthly_p_m: np.ndarray, ground_m: np.ndarray,
                      cells: np.ndarray | None = None) -> np.ndarray:
     """Return the height above sea level where the mass balance turns positive (inf where it never does).
+
+    That is where the snow balance crosses zero; it is interpolated on the snow
+    balance, which is smooth, rather than on the mass balance, which bends
+    where the melt turns from snow to ice.
 
     ``monthly_k`` is the temperature at ``ground_m``. Precipitation is taken
     as independent of height. Only ``cells`` (a mask) are evaluated; the
@@ -81,7 +102,7 @@ def equilibrium_line(monthly_k: np.ndarray, monthly_p_m: np.ndarray, ground_m: n
     out = np.full(idx.size, np.inf)
     previous = None
     for z in ELA_LEVELS_M:
-        b = mass_balance(sea_level_k, p, h.LAPSE_RATE_K_PER_M * z)
+        b = snow_balance(sea_level_k, p, h.LAPSE_RATE_K_PER_M * z)
         if previous is None:
             out[b > 0.0] = 0.0
         else:
@@ -152,4 +173,4 @@ def seasonal_temperatures(annual_k: np.ndarray, amplitude_k: np.ndarray, norther
 
 
 __all__ = ["IceSheets", "build_ice_sheets", "buzzsaw", "equilibrium_line", "mass_balance",
-           "positive_degree_days", "seasonal_temperatures"]
+           "positive_degree_days", "seasonal_temperatures", "snow_balance"]
