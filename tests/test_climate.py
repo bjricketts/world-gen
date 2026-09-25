@@ -222,6 +222,25 @@ def test_ice_sheet_on_cold_wet_land():
     assert np.all(ela[(grid.lat < 55) & ~ocean] > 2000.0)
 
 
+def test_snowline_lies_where_the_mass_balance_is_zero():
+    """The snowline is interpolated between height steps, not rounded to them."""
+    from worldgen.climate.ice import mass_balance
+
+    ground = np.zeros(40)
+    warm = np.linspace(274.0, 300.0, 40)
+    months = warm[None, :] + 8.0 * np.cos(2 * np.pi * (np.arange(12)[:, None] + 0.5) / 12)
+    rain = np.full((12, 40), 1.0)
+    ela = equilibrium_line(months, rain, ground)
+    found = np.isfinite(ela) & (ela > 0.0)
+    assert found.sum() > 30
+    assert np.mean(np.mod(ela[found], 500.0) == 0.0) < 0.1          # not stuck on the 500 m levels
+    at_line = mass_balance(months[:, found], rain[:, found], h.LAPSE_RATE_K_PER_M * ela[found])
+    assert np.abs(at_line).max() < 0.25                             # balance near zero at the snowline (m/yr)
+    below = mass_balance(months[:, found], rain[:, found], h.LAPSE_RATE_K_PER_M * (ela[found] - 300.0))
+    above = mass_balance(months[:, found], rain[:, found], h.LAPSE_RATE_K_PER_M * (ela[found] + 300.0))
+    assert (below < 0.0).all() and (above > 0.0).all()
+
+
 def test_buzzsaw_wears_peaks_toward_the_snowline():
     height = np.array([500.0, 2000.0, 6000.0, 9000.0, 6000.0])
     ocean = np.array([False, False, False, False, True])

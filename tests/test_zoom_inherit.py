@@ -84,7 +84,7 @@ def test_inherited_region_matches_the_global_surface(zoomed):
     assert np.isfinite(inherited.elevation).all()
     lo, hi = world.surface["elevation"].values.min(), world.surface["elevation"].values.max()
     assert lo - 1.0 <= inherited.elevation.min() and inherited.elevation.max() <= hi + 1.0
-    assert np.array_equal(inherited.ocean, inherited.elevation < 0.0)
+    assert not (inherited.ocean & (inherited.elevation >= 0.0)).any()   # sea only below sea level
     assert set(inherited.categorical) >= {"crust", "terrain", "biome"}
     assert all(v.shape == (region.size,) for v in inherited.categorical.values())
     assert inherited.temperature_k.shape == (region.size,) and np.isfinite(inherited.temperature_k).all()
@@ -111,3 +111,28 @@ def test_downscale_is_a_no_op_without_added_relief(zoomed):
     temperature, precipitation, _ = downscale_climate(inherited, inherited.elevation)
     assert np.allclose(temperature, inherited.temperature_k)
     assert np.allclose(precipitation, inherited.precipitation_m)
+
+
+def test_connected_sea_keeps_closed_basins_dry():
+    """Ground below sea level is sea only where it connects to the global ocean."""
+    from worldgen.zoom.inherit import connected_sea
+
+    region = region_grid(4, 5, 10, 10, 10, 10, nodes_per_tile=20)
+    rows, cols = region.shape
+    r, c = np.divmod(np.arange(region.size), cols)
+    elevation = np.where(c < 5, -100.0, 50.0)                    # sea along the left edge
+    basin = (np.abs(r - rows // 2) < 3) & (np.abs(c - 14) < 3)
+    elevation[basin] = -20.0                                     # an enclosed depression inland
+    sea = c < 3                                                  # nearest global cell is ocean near the left edge
+    ocean = connected_sea(region, elevation, sea)
+    assert ocean[c < 5].all() and not ocean[basin].any()
+    assert not connected_sea(region, elevation, None).any()      # a planet without a sea has none
+
+
+def test_inherited_ice_and_snowline_are_ready_for_glaciers(zoomed):
+    world, region = zoomed
+    inherited = inherit_region(world, region)
+    assert np.isfinite(inherited.snowline_m).all()                # gaps filled, so glaciers can be built anywhere
+    if inherited.ice_sheet is not None:
+        assert ((inherited.ice_sheet >= 0.0) & (inherited.ice_sheet <= 1.0)).all()
+        assert np.isfinite(inherited.ice_top_m).all()

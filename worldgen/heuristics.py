@@ -332,17 +332,69 @@ FABRIC_MIN_STRENGTH = 0.05           # grains weaker than this are dropped, keep
 ZOOM_OROGRAPHIC_SLOPE = 0.02         # along-wind grade at which the rain-shadow effect is strong
 ZOOM_OROGRAPHIC_CAP = 3.0            # most a cell's rain is raised or cut by the local slope
 # Sub-grid relief synthesised at zoom, below the global grid scale.
-ZOOM_DETAIL_ROUGH_M = 250.0          # base roughness amplitude on land (Earth gravity)
-ZOOM_DETAIL_RIDGE_M = 900.0          # along-grain ridge amplitude where the structural grain is strong
-ZOOM_OCEAN_ROUGH_FACTOR = 0.5        # sea-floor roughness relative to land
-ZOOM_DETAIL_BASE_CELLS = 0.5         # first detail octave wavelength, in global grid spacings
-ZOOM_DETAIL_BASE_OCTAVES = 4         # octaves added at the coarsest zoom
-ZOOM_DETAIL_MAX_OCTAVES = 9          # octaves added at the deepest zoom
+# The detail continues the global surface's relief spectrum below the grid spacing: an octave of
+# wavelength λ has standard deviation σ_ref (λ / λ_ref)^H, with σ_ref set by how rugged the ground is.
+# H = 0.5 is a k⁻² topographic spectrum; the mountain value gives ~500 m of relief between the grid
+# scale and a few km, as in the Alps, and the plain value ~25 m, as in lowland river country.
+ZOOM_RELIEF_REF_KM = 10.0            # reference wavelength λ_ref
+ZOOM_HURST = 0.5                     # growth of octave amplitude with wavelength
+ZOOM_RELIEF_PLAIN_M = 6.0            # σ_ref on flat plains (Earth gravity)
+ZOOM_RELIEF_MOUNTAIN_M = 120.0       # σ_ref in mountains
+ZOOM_RELIEF_ABYSSAL_M = 10.0         # σ_ref on old, sediment-covered sea floor
+ZOOM_RELIEF_SEAFLOOR_M = 40.0        # σ_ref on young or steep sea floor (abyssal hills, slopes)
+ZOOM_RUGGED_SLOPE = 0.015            # coarse grid slope counted as fully rugged
+ZOOM_RUGGED_HEIGHT_M = 2500.0        # height above the continental base counted as fully rugged
+ZOOM_DETAIL_MIN_OCTAVES = 2
+ZOOM_DETAIL_MAX_OCTAVES = 10
 ZOOM_DETAIL_SMOOTH_STEPS = 3         # passes that elongate ridges along the structural grain
-ZOOM_RIDGED_MEDIAN = 0.52            # median of the ridged field, subtracted so ridges add and valleys cut
+ZOOM_WARP_FRACTION = 0.25            # domain warp, as a fraction of the grid spacing, to break grid alignment
+ZOOM_HILLSHADE_EXAGGERATION = 3.0    # vertical exaggeration of the local relief shading
 ZOOM_EROSION_MYR = 15.0              # erosion applied to a zoomed region, carving its sub-grid valleys
 ZOOM_EROSION_STEP_MYR = 5.0          # erosion step for a zoomed region
-ZOOM_RIVER_MIN_AREA_KM2 = 5.0        # upstream area at which a local stream is drawn (streams, not just big rivers)
+# Soil creep at its physical rate (~0.01 m²/yr on soil-mantled hillslopes). The global grid's
+# CREEP_M2_PER_MYR is an effective value for 100 km cells and would diffuse away all zoom detail.
+ZOOM_CREEP_M2_PER_MYR = 1.0e4
+ZOOM_EDGE_BLEND_CELLS = 6            # erosion fades to zero over this many cells at the pinned region edge
+# Long fluvial erosion cuts outlets through most small sills; zoom does this directly by breaching
+# depressions whose drainage needs a cut no deeper than this, and leaves deeper basins as lakes.
+ZOOM_BREACH_MAX_M = 300.0
+# A channel forms where enough ground drains to a point, and the steeper the ground the less it needs:
+# channel heads follow A·S² ≈ constant (Montgomery & Dietrich 1988, 1992). The constant is set so that
+# moderate hill country (ground slope ~0.012 at the lattice scale) maps channels from 5 km², as mapped
+# streams do; flat plains then need tens of km² and steep mountains a few lattice cells. A channel, once
+# formed, continues downstream. It carries water all year only where the mean flow is large enough;
+# channels with less are dry washes, so deserts show their channel pattern without looking wet.
+ZOOM_RIVER_MIN_AREA_KM2 = 5.0        # channel-head area at the reference slope
+ZOOM_CHANNEL_HEAD_REF_SLOPE = 0.012
+ZOOM_CHANNEL_HEAD_MIN_CELLS = 2.0    # smallest channel head, in lattice cells
+ZOOM_CHANNEL_HEAD_MAX_KM2 = 1000.0   # largest, on the flattest plains
+ZOOM_STREAM_MIN_DISCHARGE_M3_S = 0.1 # mean flow at which a channel is a perennial stream
+# Glaciers at zoom follow the glacial stream-power law E = K_g Q_iᵐ S (Hergarten 2021; Liebl et al. 2023):
+# Q_i is the ice flux from the mass balance, b = P·min((z − ELA)/ΔH, 1), gained above the snowline and
+# lost below it; S is the slope of the ice surface. K_g gives ~1 mm/yr under an Alpine valley glacier (80 km² fed at
+# ~1 m/yr, surface slope 0.1), about ten times the fluvial rate, within the range Hallet et al. (1996)
+# report for temperate glaciers. The ice surface is the perfectly plastic profile with ICE_YIELD_STRESS_PA
+# (Nye 1952; Benn & Hulton 2010) rather than Liebl et al.'s constant thickness-to-width ratio, which puts
+# cliffs in the ice surface where glaciers of different size meet.
+ZOOM_GLACIER_FULL_ACCUMULATION_M = 500.0   # ΔH: height above the snowline where all precipitation stays as ice
+# Below the snowline ice melts by degree days, not in proportion to the snowfall: each metre lower adds
+# DEGREE_DAY_FACTOR_M × LAPSE_RATE × (melt-season days) of melt, ~6 mm/yr per metre as on Earth's glaciers.
+ZOOM_MELT_SEASON_DAYS = 120.0
+# Ice is routed to every lower neighbour in proportion to slope^p (Quinn et al. 1991), as in ice-sheet
+# balance-flux calculations (Le Brocq et al. 2006).
+ZOOM_ICE_SPREAD_EXPONENT = 1.0
+ZOOM_ICE_FILL_PASSES = 4                   # lattice steps ice spreads sideways to fill a valley to its surface
+ZOOM_ICE_SHEET_SMOOTH_PASSES = 20          # smoothing of the inherited ice-sheet surface's triangle creases
+ZOOM_GLACIER_MIN_THICKNESS_M = 20.0        # thinnest ice where a glacier crosses a bed steeper than its surface
+ZOOM_GLACIAL_K = 1.0                       # K_g, m/Myr per (m³/yr)^0.5 of ice flux
+ZOOM_GLACIAL_WATER_SHARE = 0.25            # ε: effective flux Q^ε Q_i^(1−ε) keeps the valley network dendritic
+# Meltwater climbing an adverse bed slope steeper than ~1.2–1.7 times the ice-surface slope freezes on,
+# which halts the deepening of an overdeepening (Alley et al. 2003).
+ZOOM_ADVERSE_SLOPE_RATIO = 1.5
+ZOOM_GLACIAL_MYR = 1.0                     # time spent under the coldest glaciation (Quaternary-like)
+ZOOM_GLACIAL_STEP_MYR = 0.2
+ZOOM_ICE_ITERATIONS = 4                    # flux ↔ ice thickness passes when the ice cover is built
+ZOOM_NO_SNOWLINE_M = 1.0e5                 # stands for "no snowline" where the global grid has none
 
 # --- Climate: energy balance (Tier 0 and Tier 1) ------------------------------
 # Outgoing radiation slope: the grey value (3.3 W m⁻² K⁻¹ for Earth) is lowered by

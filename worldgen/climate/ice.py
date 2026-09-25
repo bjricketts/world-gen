@@ -86,7 +86,8 @@ def equilibrium_line(monthly_k: np.ndarray, monthly_p_m: np.ndarray, ground_m: n
             out[b > 0.0] = 0.0
         else:
             cross = (b > 0.0) & ~np.isfinite(out)
-            frac = previous[cross] / np.maximum(previous[cross] - b[cross], 1e-12)
+            # The balance rises from previous ≤ 0 to b > 0 across this step; the snowline is where it is zero.
+            frac = -previous[cross] / np.maximum(b[cross] - previous[cross], 1e-12)
             out[cross] = z - (ELA_LEVELS_M[1] - ELA_LEVELS_M[0]) * (1.0 - np.clip(frac, 0.0, 1.0))
         previous = b
     ela = np.full(ground_m.size, np.inf)

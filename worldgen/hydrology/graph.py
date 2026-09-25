@@ -74,6 +74,64 @@ def priority_flood(z, indptr, indices, outlet, epsilon):
 
 
 @njit(cache=True)
+def priority_breach(z, indptr, indices, outlet, max_depth, epsilon):
+    """Return elevations with shallow depressions drained by cutting through their sills.
+
+    Cells are reached from the outlets in order of elevation, as in
+    priority-flood. A cell found below the level it is reached at lies in a
+    depression; the path it was reached along is lowered so the depression
+    drains, unless some cell on that path would have to drop by more than
+    ``max_depth``, in which case the depression is left to fill as a lake
+    (hybrid breaching and filling, after Lindsay 2016).
+    """
+    n = z.size
+    out = z.copy()
+    level = z.copy()
+    parent = np.full(n, -1, dtype=np.int64)
+    done = np.zeros(n, dtype=np.bool_)
+    heap = [(0.0, np.int64(0))]
+    heap.pop()
+    for i in range(n):
+        if outlet[i]:
+            done[i] = True
+            heapq.heappush(heap, (z[i], np.int64(i)))
+    while heap:
+        _, i = heapq.heappop(heap)
+        for k in range(indptr[i], indptr[i + 1]):
+            j = indices[k]
+            if done[j]:
+                continue
+            done[j] = True
+            parent[j] = i
+            if z[j] >= level[i]:
+                level[j] = z[j]
+                heapq.heappush(heap, (z[j], np.int64(j)))
+                continue
+            # How deep a cut does draining j need along the path back to the outlet?
+            need = 0.0
+            target = z[j] - epsilon
+            c = i
+            while c >= 0 and not outlet[c] and out[c] > target:
+                need = max(need, z[c] - target)
+                c = parent[c]
+                target -= epsilon
+            if need <= max_depth:
+                target = z[j] - epsilon
+                c = i
+                while c >= 0 and not outlet[c] and out[c] > target:
+                    out[c] = target
+                    level[c] = target
+                    c = parent[c]
+                    target -= epsilon
+                level[j] = z[j]
+                heapq.heappush(heap, (z[j], np.int64(j)))
+            else:
+                level[j] = level[i]
+                heapq.heappush(heap, (level[i], np.int64(j)))
+    return out
+
+
+@njit(cache=True)
 def steepest_receivers(z, indptr, indices, lengths, outlet):
     """Return each cell's downhill neighbour (itself for outlets and pits) and the distance to it (radians)."""
     n = z.size
@@ -139,6 +197,37 @@ def accumulate(order, receiver, values):
         r = receiver[i]
         if r != i:
             total[r] += total[i]
+    return total
+
+
+@njit(cache=True)
+def spread_positive(descending, indptr, indices, lengths, z, values, exponent, outlet):
+    """Return a flux carried downhill to every lower neighbour, never below zero.
+
+    ``descending`` lists the nodes from highest to lowest ``z``. Each node
+    passes its flux to its lower neighbours in proportion to (drop/length)^exponent,
+    so flow spreads over broad slopes instead of gathering into single lines
+    (multiple flow directions; Quinn et al. 1991). Nodes in ``outlet`` keep
+    what reaches them.
+    """
+    total = values.copy()
+    for k in range(descending.size):
+        i = descending[k]
+        if total[i] < 0.0:
+            total[i] = 0.0
+        if outlet[i] or total[i] == 0.0:
+            continue
+        weight = 0.0
+        for m in range(indptr[i], indptr[i + 1]):
+            drop = z[i] - z[indices[m]]
+            if drop > 0.0:
+                weight += (drop / lengths[m]) ** exponent
+        if weight == 0.0:
+            continue
+        for m in range(indptr[i], indptr[i + 1]):
+            drop = z[i] - z[indices[m]]
+            if drop > 0.0:
+                total[indices[m]] += total[i] * (drop / lengths[m]) ** exponent / weight
     return total
 
 

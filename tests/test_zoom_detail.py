@@ -51,7 +51,7 @@ def test_detail_is_bounded_and_refines_the_surface(detailed):
     assert out.detail.std() > 1.0                                # it actually adds relief
     inherited = inherit_region(world, region)
     assert np.allclose(out.elevation, inherited.elevation + out.detail)
-    assert np.array_equal(out.ocean, out.elevation < 0.0)
+    assert not (out.ocean & (out.elevation >= 0.0)).any()
     changed = out.detail != 0.0
     assert not np.allclose(out.temperature_k[changed], inherited.temperature_k[changed])  # lapse applied
 
@@ -84,3 +84,32 @@ def test_adjacent_regions_agree_at_shared_interior_nodes(world_cache):
     keep = shared_right[interior(match[shared_right], lr, lc) & interior(shared_right, rr, rc)]
     assert keep.size > 0
     assert np.abs(left.elevation[match[keep]] - right.elevation[keep]).max() < 1e-6
+
+
+def test_ruggedness_presets_scale_the_relief(world_cache):
+    world = world_cache(PlanetSpec(seed=0, priors={"archetype": "temperate"}, surface={"tectonics": "heuristic"}))
+    radius = float(world.surface.attrs["radius_m"])
+    peak = int(np.argmax(world.surface["elevation"].values))
+    region = region_grid(*region_for(world.grid.points[peak], 7, radius, tiles_each_side=1), nodes_per_tile=20)
+    spread = {r: synthesize_region(world, region, ruggedness=r).detail.std() for r in ("gentle", "earth", "dramatic")}
+    assert spread["gentle"] < spread["earth"] < spread["dramatic"]
+
+
+def test_detail_is_stronger_in_rugged_ground():
+    """Relief amplitude follows the inherited ruggedness: mountains get more than plains."""
+    from worldgen.zoom.inherit import InheritedRegion
+
+    class _World:        # just what synthesize_detail reads
+        pass
+
+    grid = region_grid(4, 7, 40, 40, 40, 40, nodes_per_tile=24)
+    fake = _World()
+    fake.state = type("S", (), {"draw_seed": 1})()
+    fake.surface = type("D", (), {"attrs": {"relief_factor": 1.0}})()
+    fake.grid = type("G", (), {"mean_spacing": staticmethod(lambda: 0.0177)})()
+    base = dict(grid=grid, radius_m=6.371e6, elevation=np.full(grid.size, 500.0), ocean=np.zeros(grid.size, bool),
+                fabric=np.zeros((grid.size, 3)), temperature_k=np.full(grid.size, 285.0),
+                wind=np.zeros((grid.size, 3)))
+    plain = synthesize_detail(fake, grid, InheritedRegion(**base, ruggedness=np.zeros(grid.size)))
+    mountain = synthesize_detail(fake, grid, InheritedRegion(**base, ruggedness=np.ones(grid.size)))
+    assert mountain.std() > 10 * plain.std()

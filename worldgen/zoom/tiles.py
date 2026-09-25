@@ -151,6 +151,7 @@ class RegionGrid:
     level: int
     origin: tuple[int, int]     # (x0, y0): the tile at the lower-left of the block
     nodes_per_tile: int
+    pad: int = 0                # halo of extra lattice nodes around the tile block
 
     @property
     def size(self) -> int:
@@ -185,13 +186,31 @@ class RegionGrid:
         keep = coo.row < coo.col
         return coo.row[keep], coo.col[keep]
 
-    def bounds(self) -> tuple[int, float, float, float, float]:
-        """Return the region's face and its face-coordinate extent (s0, s1, t0, t1)."""
+    def tiles(self) -> tuple[int, int, int, int]:
+        """Return the tile block (x0, y0, x1, y1) the region covers, halo excluded."""
         per = self.nodes_per_tile - 1
-        count = 1 << self.level
         x0, y0 = self.origin
-        nx, ny = (self.shape[1] - 1) // per, (self.shape[0] - 1) // per
-        return self.face, x0 / count, (x0 + nx) / count, y0 / count, (y0 + ny) / count
+        nx = (self.shape[1] - 2 * self.pad - 1) // per
+        ny = (self.shape[0] - 2 * self.pad - 1) // per
+        return x0, y0, x0 + nx - 1, y0 + ny - 1
+
+    def bounds(self) -> tuple[int, float, float, float, float]:
+        """Return the region's face and the face-coordinate extent (s0, s1, t0, t1) of its tile block."""
+        count = 1 << self.level
+        x0, y0, x1, y1 = self.tiles()
+        return self.face, x0 / count, (x1 + 1) / count, y0 / count, (y1 + 1) / count
+
+    def padded(self, n: int) -> "RegionGrid":
+        """Return the same region with ``n`` more lattice nodes of halo on every side."""
+        return region_grid(self.face, self.level, *self.tiles(), nodes_per_tile=self.nodes_per_tile,
+                           pad=self.pad + n)
+
+    def inner_index(self, n: int) -> np.ndarray:
+        """Return where this region's nodes sit in its ``n``-padded lattice."""
+        rows, cols = self.shape
+        r = np.arange(rows) + n
+        c = np.arange(cols) + n
+        return (r[:, None] * (cols + 2 * n) + c[None, :]).ravel()
 
     def boundary(self) -> np.ndarray:
         """Return a mask of the nodes on the region's outer edge."""
@@ -213,7 +232,8 @@ class RegionGrid:
     def tile_of(self, row: int, col: int) -> TileId:
         """Return the tile a lattice node falls in (edge nodes belong to the lower tile)."""
         per = self.nodes_per_tile - 1
-        return TileId(self.face, self.level, self.origin[0] + col // per, self.origin[1] + row // per)
+        return TileId(self.face, self.level, self.origin[0] + (col - self.pad) // per,
+                      self.origin[1] + (row - self.pad) // per)
 
 
 def _lattice_neighbours(points: np.ndarray, rows: int, cols: int) -> csr_matrix:
@@ -232,18 +252,23 @@ def _lattice_neighbours(points: np.ndarray, rows: int, cols: int) -> csr_matrix:
 
 
 def region_grid(face: int, level: int, x0: int, y0: int, x1: int, y1: int,
-                nodes_per_tile: int = NODES_PER_TILE) -> RegionGrid:
-    """Return the lattice over the tile block [x0, x1] × [y0, y1] of a face at ``level``."""
+                nodes_per_tile: int = NODES_PER_TILE, pad: int = 0) -> RegionGrid:
+    """Return the lattice over the tile block [x0, x1] × [y0, y1] of a face at ``level``.
+
+    Nodes sit at whole lattice steps of the level, so any two regions at the
+    same level and ``nodes_per_tile`` share their common nodes exactly; ``pad``
+    adds that many nodes of halo beyond the block on every side.
+    """
     per = nodes_per_tile - 1
-    cols = (x1 - x0) * per + nodes_per_tile
-    rows = (y1 - y0) * per + nodes_per_tile
-    count = 1 << level
-    s = np.linspace(x0 / count, (x1 + 1) / count, cols)
-    t = np.linspace(y0 / count, (y1 + 1) / count, rows)
+    cols = (x1 - x0) * per + nodes_per_tile + 2 * pad
+    rows = (y1 - y0) * per + nodes_per_tile + 2 * pad
+    step = 1.0 / ((1 << level) * per)
+    s = (x0 * per + np.arange(-pad, cols - pad)) * step
+    t = (y0 * per + np.arange(-pad, rows - pad)) * step
     ss, tt = np.meshgrid(s, t)
     points = face_uv_to_unit(face, ss.ravel(), tt.ravel())
     return RegionGrid(points=points, neighbours=_lattice_neighbours(points, rows, cols), shape=(rows, cols),
-                      face=face, level=level, origin=(x0, y0), nodes_per_tile=nodes_per_tile)
+                      face=face, level=level, origin=(x0, y0), nodes_per_tile=nodes_per_tile, pad=pad)
 
 
 def tile_at(face: int, level: int, s: float, t: float) -> TileId:

@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
+from scipy.sparse.csgraph import connected_components
+from scipy.spatial import cKDTree
 
 from .. import heuristics as h
 from ..grid import SphereGrid
@@ -132,10 +134,70 @@ class InheritedRegion:
     fabric: np.ndarray                           # (n, 3) structural grain
     temperature_k: np.ndarray
     wind: np.ndarray                             # (n, 3) prevailing annual surface wind (unit vectors)
+    ruggedness: np.ndarray                       # 0 (flat plains) to 1 (mountains): sets the sub-grid relief
     precipitation_m: Optional[np.ndarray] = None
     evaporation_m: Optional[np.ndarray] = None
     categorical: Optional[dict] = None
     lapse_k_per_m: float = h.LAPSE_RATE_K_PER_M
+    sea: Optional[np.ndarray] = None             # nodes whose nearest global cell is ocean (None: no sea at all)
+    ice_sheet: Optional[np.ndarray] = None       # share of the surrounding global cells under an ice sheet (0–1)
+    ice_top_m: Optional[np.ndarray] = None       # height of the global ice-sheet surface above sea level
+    snowline_m: Optional[np.ndarray] = None      # present equilibrium-line altitude (ZOOM_NO_SNOWLINE_M: none)
+    sea_ice: Optional[np.ndarray] = None         # sea-ice fraction
+
+
+def connected_sea(region: RegionGrid, elevation: np.ndarray, sea: Optional[np.ndarray]) -> np.ndarray:
+    """Return the nodes below sea level that connect, through ground below sea level, to the global ocean.
+
+    ``sea`` marks nodes whose nearest global cell is ocean; None means the
+    planet has no sea. Closed basins below sea level stay dry land, as on the
+    global map.
+    """
+    below = elevation < 0.0
+    out = np.zeros(region.size, dtype=bool)
+    if sea is None or not (below & sea).any():
+        return out
+    cells = np.flatnonzero(below)
+    _, label = connected_components(region.neighbours[cells][:, cells], directed=False)
+    wet = np.zeros(label.max() + 1, dtype=bool)
+    wet[label[sea[cells]]] = True
+    out[cells[wet[label]]] = True
+    return out
+
+
+def surface_snowline(world) -> np.ndarray:
+    """Return the global snowline with gaps filled, ready to interpolate.
+
+    Land where ice cannot form gets ``ZOOM_NO_SNOWLINE_M``. The sea has no
+    snowline of its own and takes the nearest land's, so coastal glaciers are
+    not lifted by the blend with an empty sea cell.
+    """
+    surface = world.surface
+    size = world.grid.size
+    if "snowline" not in surface:
+        return np.full(size, h.ZOOM_NO_SNOWLINE_M)
+    raw = surface["snowline"].values.astype(float)
+    ocean = surface["ocean"].values.astype(bool)
+    out = np.where(np.isfinite(raw), raw, h.ZOOM_NO_SNOWLINE_M)
+    if ocean.any() and (~ocean).any():
+        _, nearest = cKDTree(world.grid.points[~ocean]).query(world.grid.points[ocean])
+        out[ocean] = out[~ocean][nearest]
+    return out
+
+
+def surface_ruggedness(world) -> np.ndarray:
+    """Return how rugged each global cell is, 0 (flat plains) to 1 (mountains).
+
+    Steep coarse slopes, a strong structural grain (orogens, young sea floor) and
+    height above the continental base each make ground rugged; the strongest wins.
+    """
+    surface = world.surface
+    elevation = surface["elevation"].values.astype(float)
+    radius = float(surface.attrs["radius_m"])
+    slope = np.linalg.norm(tangent_gradient(world.grid, elevation), axis=1) / radius
+    grain = np.linalg.norm(surface["fabric"].values, axis=0) if "fabric" in surface else np.zeros(elevation.size)
+    height = (elevation - h.CONTINENT_BASE_M) / h.ZOOM_RUGGED_HEIGHT_M
+    return np.clip(np.maximum.reduce([slope / h.ZOOM_RUGGED_SLOPE, grain, height]), 0.0, 1.0)
 
 
 def prevailing_wind(points: np.ndarray, state: PlanetState) -> np.ndarray:
@@ -153,7 +215,8 @@ def inherit_region(world, region: RegionGrid) -> InheritedRegion:
     """Return the global surface of ``world`` sampled onto ``region``.
 
     Continuous fields are interpolated barycentrically and categorical fields
-    take the nearest cell; the ocean mask follows the interpolated elevation.
+    take the nearest cell. The ocean is the interpolated ground below sea level
+    that connects to the global ocean.
     """
     surface = world.surface
     if surface is None:
@@ -171,18 +234,32 @@ def inherit_region(world, region: RegionGrid) -> InheritedRegion:
                    if "potential_evaporation" in surface else None)
     nearest = sampler.nearest(queries)
     categorical = {name: surface[name].values[nearest] for name in CATEGORICAL if name in surface}
+    sea = surface["ocean"].values[nearest].astype(bool) if surface.attrs.get("has_ocean", True) else None
+    ice_sheet = ice_top = None
+    if "ice_thickness" in surface and (surface["ice_thickness"].values > 0.0).any():
+        glaciated = (surface["ice_thickness"].values > 0.0).astype(float)
+        ice_sheet = np.clip(sampler.interpolate(glaciated, verts, weights), 0.0, 1.0)
+        top = surface["elevation"].values + np.where(glaciated > 0.0, surface["ice_surface"].values, 0.0)
+        ice_top = sampler.interpolate(top, verts, weights)
+    sea_ice = sampler.interpolate(surface["sea_ice"].values, verts, weights) if "sea_ice" in surface else None
 
     return InheritedRegion(
         grid=region,
         radius_m=float(surface.attrs["radius_m"]),
         elevation=elevation,
-        ocean=elevation < 0.0,
+        ocean=connected_sea(region, elevation, sea),
         fabric=fabric,
         temperature_k=temperature,
         wind=prevailing_wind(queries, world.state),
+        ruggedness=np.clip(sampler.interpolate(surface_ruggedness(world), verts, weights), 0.0, 1.0),
         precipitation_m=precipitation,
         evaporation_m=evaporation,
         categorical=categorical,
+        sea=sea,
+        ice_sheet=ice_sheet,
+        ice_top_m=ice_top,
+        snowline_m=sampler.interpolate(surface_snowline(world), verts, weights),
+        sea_ice=sea_ice,
     )
 
 

@@ -136,6 +136,34 @@ def _hillshade(elev: np.ndarray, valid: np.ndarray, pixel_m: float, relief_m: fl
     return LightSource(azdeg=315, altdeg=40).hillshade(filled, vert_exag=exaggeration, dx=pixel_m, dy=pixel_m)
 
 
+def elevation_colours(world: World, elev: np.ndarray, ocean: np.ndarray,
+                      limits: Optional[tuple[float, float]] = None, sea_ice: Optional[np.ndarray] = None):
+    """Return RGB colours of elevations on the world's colour scale, plus the colormap and norm.
+
+    ``limits`` (lowest, highest elevation) default to the world's range, so a
+    colour means the same height on every map of the world. ``sea_ice`` is the
+    sea-ice fraction at each point, if known.
+    """
+    ds = world.surface
+    lo, hi = limits if limits is not None else (float(ds["elevation"].min()), float(ds["elevation"].max()))
+    land = land_palette(world)
+    e = np.nan_to_num(elev)
+    if not ds.attrs["has_ocean"]:
+        norm = Normalize(lo, hi)
+        return land(norm(e))[..., :3], land, norm
+    norm = TwoSlopeNorm(vmin=min(lo, -1.0), vcenter=0.0, vmax=max(hi, 1.0))
+    cmap = ListedColormap(np.vstack([_OCEAN(np.linspace(0, 1, 256)), land(np.linspace(0, 1, 256))]), name="world")
+    depth = 1.0 - np.clip(e / norm.vmin, 0, 1)
+    water = _OCEAN(depth)[..., :3]
+    if sea_ice is not None:
+        ice = np.clip((np.clip(sea_ice, 0.0, 1.0) - 0.3) / 0.4, 0.0, 1.0)[..., None]
+        water = (1.0 - ice) * water + ice * _ICE(depth)[..., :3]
+    elif ds.attrs["frozen_ocean"]:
+        water = _ICE(depth)[..., :3]
+    rgb = np.where(np.asarray(ocean)[..., None], water, land(np.clip(e / norm.vmax, 0, 1))[..., :3])
+    return rgb, cmap, norm
+
+
 def elevation_image(world: World, proj: ccrs.Projection, width: int, hillshade: bool = True,
                     limits: Optional[tuple[float, float]] = None):
     """Return an RGBA image of elevation in a projection, plus the colormap and norm for a colour bar.
@@ -155,26 +183,8 @@ def elevation_image(world: World, proj: ccrs.Projection, width: int, hillshade: 
     else:
         ocean = np.zeros_like(valid)
     lo, hi = limits if limits is not None else (float(ds["elevation"].min()), float(ds["elevation"].max()))
-    land = land_palette(world)
-
-    if not ds.attrs["has_ocean"]:
-        norm = Normalize(lo, hi)
-        cmap = land
-        rgb = land(norm(np.nan_to_num(elev)))[..., :3]
-    else:
-        norm = TwoSlopeNorm(vmin=min(lo, -1.0), vcenter=0.0, vmax=max(hi, 1.0))
-        cmap = ListedColormap(np.vstack([_OCEAN(np.linspace(0, 1, 256)), land(np.linspace(0, 1, 256))]),
-                              name="world")
-        e = np.nan_to_num(elev)
-        depth = 1.0 - np.clip(e / norm.vmin, 0, 1)
-        water = _OCEAN(depth)[..., :3]
-        if "sea_ice" in ds:
-            ice = np.clip(np.nan_to_num(sampler.sample(ds["sea_ice"].values)), 0.0, 1.0)[..., None]
-            ice = np.clip((ice - 0.3) / 0.4, 0.0, 1.0)
-            water = (1.0 - ice) * water + ice * _ICE(depth)[..., :3]
-        elif ds.attrs["frozen_ocean"]:
-            water = _ICE(depth)[..., :3]
-        rgb = np.where(ocean[..., None], water, land(np.clip(e / norm.vmax, 0, 1))[..., :3])
+    sea_ice = np.nan_to_num(sampler.sample(ds["sea_ice"].values)) if "sea_ice" in ds else None
+    rgb, cmap, norm = elevation_colours(world, elev, ocean, (lo, hi), sea_ice)
     if hillshade:
         # Pixel size in metres on this planet (projection units are metres on Earth's radius).
         pixel_m = (sampler.extent[1] - sampler.extent[0]) / width * world.state.bulk.radius_m / 6.371e6

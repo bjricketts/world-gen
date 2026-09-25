@@ -132,3 +132,15 @@ def test_cell_area_is_positive_and_scales_with_radius():
     area = grid.cell_area_m2(R_EARTH)
     assert area > 0.0
     assert grid.cell_area_m2(2 * R_EARTH) == pytest.approx(4 * area, rel=1e-6)
+
+
+def test_halo_nodes_lie_on_the_neighbouring_region_lattice():
+    """A padded region's halo coincides exactly with the neighbouring region's nodes."""
+    region = region_grid(4, 5, 10, 10, 10, 10, nodes_per_tile=16)
+    padded = region.padded(3)
+    assert padded.shape == (region.shape[0] + 6, region.shape[1] + 6)
+    assert np.array_equal(padded.points[region.inner_index(3)], region.points)
+    assert padded.tiles() == region.tiles() and padded.bounds() == region.bounds()
+    right = region_grid(4, 5, 11, 10, 11, 10, nodes_per_tile=16)
+    shared = {tuple(p) for p in right.points} & {tuple(p) for p in padded.points}
+    assert len(shared) >= 3 * region.shape[0]                  # the halo's three columns plus the edge

@@ -247,3 +247,48 @@ def test_water_setting_uses_the_annual_climate(grid):
     b = climate_rain(grid, z, z < 0, seasonal=False)
     np.testing.assert_array_equal(a.precipitation_m, b.precipitation_m)
     assert a.monthly_precipitation_m is None
+
+
+def test_priority_breach_drains_shallow_hollows_and_keeps_deep_basins():
+    """A hollow behind a low sill is cut through; one behind a high sill is left to fill as a lake."""
+    from worldgen.hydrology.graph import priority_breach, priority_flood
+    from worldgen.zoom import region_grid
+
+    grid = region_grid(4, 5, 10, 10, 10, 10, nodes_per_tile=30)
+    rows, cols = grid.shape
+    r, c = np.divmod(np.arange(grid.size), cols)
+    z = 5.0 * c.astype(float)                                   # a slope down to the left edge
+    outlet = c == 0
+    hollow = (np.abs(r - rows // 2) < 4) & (np.abs(c - 15) < 4)
+    z[hollow] -= 30.0                                           # a 30 m hollow behind a ~15 m cut
+    adj = grid.neighbours
+
+    def pooled(surface):
+        return (priority_flood(surface, adj.indptr, adj.indices, outlet, 1e-3) - surface > 1.0).any()
+
+    assert pooled(z)
+    assert not pooled(priority_breach(z, adj.indptr, adj.indices, outlet, 100.0, 1e-3))   # breached
+    assert pooled(priority_breach(z, adj.indptr, adj.indices, outlet, 5.0, 1e-3))         # too deep: a lake
+    breached = priority_breach(z, adj.indptr, adj.indices, outlet, 100.0, 1e-3)
+    assert (breached <= z + 1e-9).all()                         # breaching only ever lowers ground
+
+
+def test_open_edge_exports_sediment_instead_of_raising_the_edge():
+    """On a local grid, sediment reaching the open edge leaves; it is not piled on the edge cells."""
+    from worldgen.hydrology import erode
+    from worldgen.zoom import region_grid
+
+    grid = region_grid(4, 6, 20, 20, 20, 20, nodes_per_tile=24)
+    rows, cols = grid.shape
+    r, c = np.divmod(np.arange(grid.size), cols)
+    height = 400.0 + 10.0 * np.sin(r / 3.0) * np.cos(c / 4.0)          # rolling ground
+    height += 3.0 * np.minimum.reduce([r, rows - 1 - r, c, cols - 1 - c])   # a dome draining to the frame
+    edge = np.zeros(grid.size, bool)
+    edge[(r == 0) | (r == rows - 1) | (c == 0) | (c == cols - 1)] = True
+    area = grid.cell_area_m2(6.371e6)
+    result = erode(grid, 6.371e6, height, np.zeros(grid.size, bool), np.full(grid.size, 0.5), 5.0, 1.0, 1.0,
+                   cell_area_m2=area, creep_m2_per_myr=1e4, edge=edge)
+    assert np.abs(result.height_m[edge] - height[edge]).max() < 1e-9          # the edge is untouched
+    eroded = result.eroded_m.sum() * area
+    assert eroded > 0.0 and result.exported_m3 > 0.0
+    assert abs(eroded - result.deposited_m.sum() * area - result.exported_m3) < 1e-6 * eroded

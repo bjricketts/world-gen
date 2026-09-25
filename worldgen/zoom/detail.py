@@ -1,14 +1,18 @@
 """Synthesise sub-grid relief when a region is zoomed (milestone 7).
 
-The global surface resolves relief down to the grid spacing; zoom adds the
-detail below it. Detail is fractal noise (``worldgen.noise``) evaluated at the
-region's own points, so it is a pure function of position and the planet's
-seed: it continues the global surface seamlessly and any region regenerates
-identically. Landform type sets its amplitude — rough hills on land, gentler
-texture on the sea floor — and the inherited structural fabric orients it, so
-mountain and abyssal-hill relief runs along the grain rather than as isotropic
-blobs. The coastline is refined for free: the detailed elevation crossing sea
-level gives a crenellated shore.
+The global surface resolves relief down to its grid spacing; zoom continues its
+relief spectrum below that, one octave at a time down to the region's own
+resolution. An octave of wavelength λ has a standard deviation that grows as
+λ^H and is set by how rugged the ground is (mountains hundreds of metres,
+plains a few), so a region shows the relief a real landscape of that kind has
+at those scales. The octaves are fixed functions of position and the planet's
+seed, starting at the global grid spacing whatever the zoom level: regions
+agree where they meet, any region regenerates identically, and zooming deeper
+only adds finer octaves to the same field. The sample positions are
+domain-warped so valleys meander instead of following the lattice, orogens
+take a ridged character, and the inherited structural fabric stretches relief
+along the grain. The coastline is refined for free: the detailed elevation
+crossing sea level gives a crenellated shore.
 """
 
 from __future__ import annotations
@@ -19,16 +23,21 @@ from typing import Optional
 import numpy as np
 
 from .. import heuristics as h
-from ..noise import fbm, ridged
-from .inherit import InheritedRegion, downscale_climate, inherit_region
+from ..noise import fbm, warp
+from .inherit import InheritedRegion, connected_sea, downscale_climate, inherit_region
 from .tiles import RegionGrid
 
+# Amplitude of the synthesised relief relative to the Earth-like calibration.
+RUGGEDNESS = {"earth": 1.0, "dramatic": 1.9, "gentle": 0.45}
+# Statistics of one noise octave (Perlin / 0.7), used to give every octave unit variance.
+OCTAVE_STD = 0.384
+RIDGE_MEAN, RIDGE_STD = 0.687, 0.223
 
-def _detail_octaves(global_spacing_rad: float, region_spacing_rad: float) -> int:
-    """Return how many octaves of detail to add: more the deeper the zoom."""
-    ratio = max(global_spacing_rad / max(region_spacing_rad, 1e-30), 1.0)
-    octaves = np.log2(ratio) + h.ZOOM_DETAIL_BASE_OCTAVES
-    return int(np.clip(octaves, h.ZOOM_DETAIL_BASE_OCTAVES, h.ZOOM_DETAIL_MAX_OCTAVES))
+
+def _detail_octaves(coarse_rad: float, fine_rad: float) -> int:
+    """Return how many octaves fit between a coarse wavelength and twice a lattice spacing."""
+    octaves = int(np.floor(np.log2(max(coarse_rad / (2.0 * max(fine_rad, 1e-30)), 1e-30)))) + 1
+    return int(np.clip(octaves, h.ZOOM_DETAIL_MIN_OCTAVES, h.ZOOM_DETAIL_MAX_OCTAVES))
 
 
 def _elongate(region: RegionGrid, values: np.ndarray, fabric: np.ndarray, strength: np.ndarray) -> np.ndarray:
@@ -56,23 +65,34 @@ def _elongate(region: RegionGrid, values: np.ndarray, fabric: np.ndarray, streng
     return out
 
 
-def synthesize_detail(world, region: RegionGrid, inherited: InheritedRegion) -> np.ndarray:
-    """Return the sub-grid relief (m) to add to the inherited coarse elevation."""
+def synthesize_detail(world, region: RegionGrid, inherited: InheritedRegion, ruggedness: str = "earth") -> np.ndarray:
+    """Return the sub-grid relief (m) to add to the inherited coarse elevation.
+
+    ``ruggedness`` ('earth', 'dramatic' or 'gentle') scales the relief.
+    """
     seed = world.state.draw_seed
-    relief = float(world.surface.attrs.get("relief_factor", 1.0))
-    points = region.points
-    octaves = _detail_octaves(world.grid.mean_spacing(), region.mean_spacing())
-    base_frequency = h.ZOOM_DETAIL_BASE_CELLS / world.grid.mean_spacing()
+    radius_km = inherited.radius_m / 1e3
+    scale = RUGGEDNESS.get(ruggedness, 1.0) * float(world.surface.attrs.get("relief_factor", 1.0))
+    coarse = world.grid.mean_spacing()                        # the first octave's wavelength (radians)
+    # The nominal lattice spacing depends only on the level, so regions at one level add the same octaves.
+    spacing = (np.pi / 2.0) / (1 << region.level) / (region.nodes_per_tile - 1)
+    octaves = _detail_octaves(coarse, spacing)
+    points = warp(region.points, seed, "zoom.warp", strength=h.ZOOM_WARP_FRACTION * coarse, frequency=1.0 / coarse)
 
-    rough = fbm(points, seed, "zoom.rough", frequency=base_frequency, octaves=octaves)
-    ridge = ridged(points, seed, "zoom.ridge", frequency=base_frequency, octaves=max(octaves - 1, 3))
-    strength = np.linalg.norm(inherited.fabric, axis=1)
-    ridge = _elongate(region, ridge, inherited.fabric, strength)
-
-    land = ~inherited.ocean
-    amp_rough = h.ZOOM_DETAIL_ROUGH_M * relief * np.where(land, 1.0, h.ZOOM_OCEAN_ROUGH_FACTOR)
-    amp_ridge = h.ZOOM_DETAIL_RIDGE_M * relief * strength
-    return amp_rough * rough + amp_ridge * (ridge - h.ZOOM_RIDGED_MEDIAN)
+    rugged = inherited.ruggedness
+    sigma_ref = np.where(inherited.ocean,
+                         h.ZOOM_RELIEF_ABYSSAL_M + (h.ZOOM_RELIEF_SEAFLOOR_M - h.ZOOM_RELIEF_ABYSSAL_M) * rugged,
+                         h.ZOOM_RELIEF_PLAIN_M + (h.ZOOM_RELIEF_MOUNTAIN_M - h.ZOOM_RELIEF_PLAIN_M) * rugged)
+    strength = np.clip(np.linalg.norm(inherited.fabric, axis=1), 0.0, 1.0)
+    detail = np.zeros(region.size)
+    for k in range(octaves):
+        wavelength = coarse / 2**k
+        noise = fbm(points, seed, f"zoom.octave.{k}", frequency=1.0 / wavelength, octaves=1)
+        smooth = noise / OCTAVE_STD
+        crest = ((1.0 - np.abs(noise)) - RIDGE_MEAN) / RIDGE_STD      # sharp crests where there is a grain
+        sigma = sigma_ref * (wavelength * radius_km / h.ZOOM_RELIEF_REF_KM) ** h.ZOOM_HURST
+        detail += sigma * ((1.0 - strength) * smooth + strength * crest)
+    return scale * _elongate(region, detail, inherited.fabric, strength)
 
 
 @dataclass
@@ -84,33 +104,56 @@ class DetailedRegion:
     seed: int
     elevation: np.ndarray                        # coarse elevation plus detail, sea level = 0
     detail: np.ndarray                           # the added sub-grid relief
-    ocean: np.ndarray                            # refined coastline: detailed elevation below sea level
+    ocean: np.ndarray                            # refined coastline: detailed ground below sea level open to the sea
     fabric: np.ndarray
     temperature_k: np.ndarray
     wind: np.ndarray
     precipitation_m: Optional[np.ndarray] = None
     evaporation_m: Optional[np.ndarray] = None
     categorical: Optional[dict] = None
+    ice_sheet: Optional[np.ndarray] = None       # share of the surrounding global cells under an ice sheet (0–1)
+    ice_top_m: Optional[np.ndarray] = None       # global ice-sheet surface above sea level
+    snowline_m: Optional[np.ndarray] = None      # present equilibrium-line altitude
+    sea_ice: Optional[np.ndarray] = None
 
 
-def synthesize_region(world, region: RegionGrid, inherited: Optional[InheritedRegion] = None) -> DetailedRegion:
-    """Return the zoomed region with sub-grid relief added and its climate downscaled to it."""
-    if inherited is None:
-        inherited = inherit_region(world, region)
-    detail = synthesize_detail(world, region, inherited)
+HALO = h.ZOOM_DETAIL_SMOOTH_STEPS + 1     # lattice nodes beyond the region that its edge values depend on
+
+
+def synthesize_region(world, region: RegionGrid, ruggedness: str = "earth") -> DetailedRegion:
+    """Return the zoomed region with sub-grid relief added and its climate downscaled to it.
+
+    The work is done on the region plus a halo of lattice nodes and then
+    cropped: the grain smoothing and the local rain shadow look a few nodes
+    around each node, and the halo gives the region's edge the same
+    neighbourhood a neighbouring region sees, so two regions agree exactly
+    where they meet.
+    """
+    padded = region.padded(HALO)
+    inner = region.inner_index(HALO)
+    inherited = inherit_region(world, padded)
+    detail = synthesize_detail(world, padded, inherited, ruggedness)
     elevation = inherited.elevation + detail
     temperature, precipitation, evaporation = downscale_climate(inherited, elevation)
+
+    def crop(values):
+        return None if values is None else values[inner]
+
     return DetailedRegion(
         grid=region,
         radius_m=inherited.radius_m,
         seed=world.state.draw_seed,
-        elevation=elevation,
-        detail=detail,
-        ocean=elevation < 0.0,
-        fabric=inherited.fabric,
-        temperature_k=temperature,
-        wind=inherited.wind,
-        precipitation_m=precipitation,
-        evaporation_m=evaporation,
-        categorical=inherited.categorical,
+        elevation=elevation[inner],
+        detail=detail[inner],
+        ocean=connected_sea(padded, elevation, inherited.sea)[inner],
+        fabric=inherited.fabric[inner],
+        temperature_k=temperature[inner],
+        wind=inherited.wind[inner],
+        precipitation_m=crop(precipitation),
+        evaporation_m=crop(evaporation),
+        categorical={name: values[inner] for name, values in inherited.categorical.items()},
+        ice_sheet=crop(inherited.ice_sheet),
+        ice_top_m=crop(inherited.ice_top_m),
+        snowline_m=crop(inherited.snowline_m),
+        sea_ice=crop(inherited.sea_ice),
     )
