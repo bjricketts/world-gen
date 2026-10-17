@@ -35,6 +35,7 @@ class WaterSetting:
     land_albedo: Optional[np.ndarray] = field(default=None, repr=False)   # snow-free, on the surface grid
     moisture_decay_km: Optional[np.ndarray | float] = field(default=None, repr=False)
     control: Optional["TemperatureControl"] = None   # mean temperature held by the greenhouse (weathering)
+    marine_life: float = 0.0          # 0–1: how established sea life is (biogenic sediment in the plate simulation)
 
     def surface_climate(self, grid: SphereGrid, height_m: np.ndarray, ocean: np.ndarray, seasonal: bool = True,
                         glacier: Optional[np.ndarray] = None) -> "SurfaceClimate":
@@ -51,11 +52,11 @@ class WaterSetting:
 
 
 def erode_surface(grid: SphereGrid, setting: WaterSetting, height_m: np.ndarray, ocean: np.ndarray,
-                  duration_myr: float, step_myr: float) -> ErosionResult:
+                  duration_myr: float, step_myr: float, accommodation_m: np.ndarray | None = None) -> ErosionResult:
     """Return a surface (``height_m`` above sea level) after erosion under its own annual climate.
 
     Land far above the snowline is worn down toward it; with liquid water,
-    rivers then erode and deposit.
+    rivers then erode and deposit, filling any ``accommodation_m`` made by subsidence.
     """
     from ..climate.ice import buzzsaw   # imported here: the climate package builds on this one
 
@@ -65,8 +66,9 @@ def erode_surface(grid: SphereGrid, setting: WaterSetting, height_m: np.ndarray,
         zero = np.zeros(grid.size)
         return ErosionResult(height_m=lowered, eroded_m=height_m - lowered, deposited_m=zero)
     result = erode(grid, setting.radius_m, lowered, ocean, climate.rainfall.runoff_m, duration_myr, setting.relief,
-                   step_myr)
+                   step_myr, accommodation_m=accommodation_m)
     result.eroded_m += height_m - lowered
+    result.temperature_k = climate.rainfall.temperature_k
     return result
 
 

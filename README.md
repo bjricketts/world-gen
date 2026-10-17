@@ -7,8 +7,14 @@ then reports where every value came from and anything that doesn't add up.
 Implemented so far (see [DESIGN.md](DESIGN.md)): the global physics core in snapshot mode (milestones 1
 and 1.1), global surface maps with non-plate landforms (milestone 2), a plate-tectonic simulation
 for mobile-lid planets (milestone 3), water: sea level from the planet's water, rivers, lakes and river
-erosion (milestone 4), and climate, ice sheets, life and biomes (milestone 5). Known gaps and
-planned fixes are in [OPEN_POINTS.md](OPEN_POINTS.md).
+erosion (milestone 4), climate, ice sheets, life and biomes (milestone 5), history mode (milestone 6),
+and zoomed local maps of any region (milestone 7), and culture placed from a user spec (milestone 8):
+every cell has a tectonic setting and a potential for fifteen resource classes, and each culture gets a
+population density map, settlements, roads, polities and names, carried down to villages, local roads
+and refined borders on zoomed maps. Milestone 9 (organic cultures that emerge from a simulated history)
+is under way: the spec, the history's time steps, the kept epochs (task 9.1), the land's suitability (task 9.2) the growth and spread of people (task 9.3), farming and development (task 9.4), states that form, expand and break apart (task 9.5), rulers, wars between states and alliances (task 9.6), settlements, roads and trade through time (task 9.7), and colonists among natives (task 9.8) are in place.
+Known gaps and planned fixes are in
+[OPEN_POINTS.md](OPEN_POINTS.md).
 
 ## Install
 
@@ -44,10 +50,32 @@ worldgen generate planet.yaml --mode history --epochs "0.5,1,2" --save kestrel
 worldgen history kestrel life.png -f life   # or -f climate (default) or -f interior
 worldgen map kestrel relicts.png -f relicts # shorelines, dry valleys and scoured ground of its past
 worldgen report kestrel --timeline         # every event, and the planet at each epoch
+
+# Zoom: the local map of a region
+worldgen zoom kestrel local.png --lat=48.5 --lon=12        # ~0.75 km lattice over ~150 km or more
+worldgen zoom kestrel close.png --lat=48.5 --lon=12 -r 150 --half-width 10 -f biome --cache
+worldgen zoom kestrel_settled town.png --lat=48.5 --lon=12  # with villages, roads and borders (--no-culture: without)
+
+# Culture: people, settlements, roads, polities and names on a saved world
+worldgen culture kestrel culture.yaml --save kestrel_settled --map culture.png   # 2x2 culture overview
+worldgen map kestrel_settled political.png -f political -p orthographic --lon 20 --lat 40
+worldgen map kestrel_settled copper.png -f resources:copper
+worldgen report kestrel_settled            # planet report plus the culture section
+
+# Organic history: a culture section with mode: organic and history.epochs
+worldgen culture kestrel organic.yaml --save kestrel_history
+worldgen chronicle kestrel_history --since 3000 --until 1000   # major entries, minor ones counted per period
+worldgen chronicle kestrel_history --kind independence --culture Corin
+worldgen epochs kestrel_history epochs.png -f political         # a field at the kept epochs; .gif animates
+worldgen epochs kestrel_history timeline.png --timeline         # people, levels and events against time
+worldgen map kestrel_history old.png -f political --epoch 2000  # --epoch also works for report and zoom
 ```
 
 Map fields: `elevation`, `terrain`, `plates`, `crust_age`, `orogeny_age`, `temperature`, `rainfall`, `basins`,
-`biomes`, `koppen`, `ice`, `relicts` (history mode), or `overview` and `climate` (multi-panel). Rivers are drawn on elevation, terrain, rainfall and basin maps.
+`biomes`, `koppen`, `ice`, `relicts` (history mode), the culture layers `political`, `population`, `cultures`,
+`polities`, `settlements`, `roads`, `habitat` and `resources:<name>`, or `overview`, `climate` and `culture`
+(multi-panel). Rivers are drawn on elevation, terrain, rainfall and basin maps and under the political,
+settlement and road layers.
 Projections: `equirectangular`, `mollweide`, `robinson`, `orthographic`, `north_polar`, `south_polar`.
 Resolutions: `preview` (10k cells), `standard` (40k), `high` (160k), or a cell count.
 
@@ -100,9 +128,24 @@ timeline.series          # sampled values through the run, for figures
 print(format_timeline(timeline, state))
 plot_climate_history(timeline)
 plot_life_history(timeline)
+
+# Zoom: the local map of the region around a place
+from worldgen.zoom import zoom_region
+from worldgen.render import plot_local_map
+
+region = zoom_region(world, 48.5, 12.0)                     # or resolution_m=150, half_width_km=10
+plot_local_map(world, region)                               # mode="biome" for biome colours
+region.elevation, region.river_order, region.ice_thickness_m, region.lake   # fields on the region lattice
+
+# Culture on a zoomed region of a world that has one
+from worldgen.culture.local import zoom_culture
+
+local = zoom_culture(world, region)                         # villages, footprints, local roads, borders
+plot_local_map(world, region, culture=local)
 ```
 
-A guided tour is in `notebooks/01_quickstart.ipynb`.
+A guided tour is in `notebooks/01_quickstart.ipynb`; `notebooks/02_organic_history.ipynb` runs an organic history
+and reads its chronicle, series and epochs.
 
 ## Surfaces
 
@@ -156,7 +199,8 @@ closest approach in the year (Earth: 283).
 
 ### Ice sheets and life
 
-- **Ice sheets** grow where snowfall beats degree-day melt; their thickness follows a plastic profile
+- **Ice sheets** grow where snowfall beats degree-day melt (the year's snow melts first, at about half
+  the rate of ice); their thickness follows a plastic profile
   from the ice margin, and the ice surface feeds back into the climate. Mountains well above the
   snowline are worn down toward it, in the tectonic simulation and on the finished surface.
 - **Life** (`biosphere` spec section) follows rules unless set: planets older than 1 Gyr with liquid
@@ -185,7 +229,12 @@ Frozen and dry planets get no rivers.
 
 A saved world is a folder with `spec.yaml`, `state.yaml` and `surface.zarr`; a history-mode world also
 carries `timeline.yaml` (its events and sampled series) and one state file per epoch under `epochs/`.
-Worlds saved before milestone 6 use an older format and need to be generated again.
+Zoomed regions kept with `--cache` (or `cache_dir`) live under `regions/`. A world with inhabitants keeps
+its civilisation under `culture/`: `culture.yaml` (spec, cultures, polities, chronicle) and `culture.zarr`
+(per-cell layers, settlement and road tables), with the earlier epochs of an organic history saved the
+same way under `culture/epochs/<years ago>/` (culture format 2; format 1 still loads). This is format 6. Worlds saved by milestone 7 (format 5) load
+without a civilisation, and those saved by milestone 6 (format 4) also load, with the structural fabric the
+zoom needs computed from their surface. Older worlds need to be generated again.
 
 ### Plate-tectonic simulation
 
@@ -200,10 +249,14 @@ with their plate:
 - Every 20 Myr the crust is re-mapped onto the grid; gaps become new sea floor whose age grows away from
   the ridge, and sea-floor depth follows its age.
 - Hotspots at fixed mantle positions leave volcanic island chains. Mountains erode over about 100 Myr.
+- On planets with rivers, continents subside where they were stretched at rifting (McKenzie 1978) and
+  beside mountain belts (foreland flexure, DeCelles & Giles 1996), and river sediment fills the space.
+  On planets with sea life, the sea adds its own sediment: carbonate platforms in warm shallow water,
+  carbonate on shelves and slopes, and pelagic rain on the deep sea floor.
 
 The start is one supercontinent or scattered cratons (`surface.tectonics_start`, drawn per seed if
-unset). `orogeny_age` records when each region last saw mountain building; old orogens appear as
-highlands. With `--snapshots N` (or `snapshot_interval_myr`) the saved world also holds elevation,
+unset). `orogeny_age` records when each region last saw mountain building and `orogeny_kind` what kind
+(Andean, arc or collision); old orogens appear as highlands. `sediment` holds the sediment thickness. With `--snapshots N` (or `snapshot_interval_myr`) the saved world also holds elevation,
 plates and crust type every N Myr.
 
 Typical run times (400 Myr, including climate, rivers, ice and erosion): see DESIGN.md section 5.2;
@@ -235,6 +288,35 @@ Earth, Mars and Venus have example specs (`examples/*_history.yaml`); `scripts/v
 checks them against the real planets and `scripts/history_sensitivity.py` ranks which poorly
 constrained parameters move the outcome.
 
+## Zoom and local maps
+
+`zoom_region(world, lat, lon)` (or `worldgen zoom`) builds a local map of the region around a place:
+
+- **Tiles.** The planet is covered by a cube-sphere quadtree. A region is a block of tiles on one cube
+  face with a regular lattice (128 nodes per tile edge); the level is chosen from the requested spacing
+  (`resolution_m`, 750 m by default), giving a spacing between half the request and the request, and the
+  block covers `half_width_km` (75 km by default) around the place. Each tile has its own seed from the planet's seed, so a region is the same whenever it is built,
+  and neighbouring regions agree exactly where they meet.
+- **Detail.** The global surface is interpolated on the planet grid's triangles, and the relief finer
+  than the global grid is added: fractal noise that continues the planet's relief spectrum, stretched
+  along the structural grain (fold belts, sea-floor fabric) and scaled by how rugged the ground is.
+  `ruggedness` is `earth` (default), `dramatic` or `gentle`. The climate is downscaled to the detail
+  (lapse rate, local rain shadow).
+- **Erosion.** Rivers erode the region for 15 Myr with its edge pinned to the inherited surface; rivers
+  from the global network enter across the edge at their real size. Glaciers then work the ground at the
+  snowline of the coldest epoch the planet remembers (the present one without a history record), cutting
+  U-shaped valleys and basins that hold lakes once the ice has gone. The present ice (inherited ice sheets
+  and local glaciers) is laid on last.
+- **Streams.** A channel starts where its catchment reaches a slope-dependent size (steep ground
+  needs less) and is perennial where its mean flow reaches 0.1 m³/s; drier channels are dry washes.
+- **Map.** `plot_local_map` draws relief or biome tints on the world's colour scale, hillshading, the
+  coast, lakes, ice, perennial streams (width by discharge) and dashed dry washes. How much of the
+  network is drawn follows the map scale, so zooming in shows smaller streams.
+
+A default region (~146k nodes) takes 10–15 s to build; with `--cache` it is stored in the world
+folder and loads in about a second next time. The cache is keyed to the world and the request; delete
+`regions/` after changing heuristics or upgrading.
+
 ## Spec files
 
 YAML, in user-friendly units (solar masses, AU, Earth masses, bar, hours, degrees). Each numeric
@@ -249,6 +331,148 @@ Resolution order for each value:
    give instellation as a position across the star's habitable zone rather than an absolute value.
 4. **prior**: drawn from broad base priors
 5. **derived / heuristic / default**: computed by the physics modules
+
+### Culture section
+
+A spec may carry a `culture:` section (or the same section in its own file, applied to a saved world
+with `apply_culture`). It lists one or more cultures, each with:
+
+- `inhabitants`: `native` or `colonist` (colonists add `colony: {founded_years_ago, origin, landing_sites}`; organic colonies also take `immigrants_per_year`, `immigration_years` and `independence_years`);
+- `development` on three axes, each with six levels. Axes left out take the mean level of those given:
+  - energy: `foraging`, `farming`, `water_wind`, `fossil`, `electric`, `fusion`;
+  - transport: `foot`, `pack_and_boat`, `wheel_and_sail`, `rail_and_steam`, `motor_and_air`, `spaceflight`;
+  - communication: `oral`, `writing`, `print`, `telegraph`, `digital`, `interplanetary`;
+- `population`, an optional `homeland` (centre and radius), `settlements: {zipf_exponent, largest_population}`
+  and `polities: {count, type, capitals, territories}`.
+
+Numeric fields follow the spec convention (number, range or omitted). `culture.seed` redraws the culture
+alone. `worldgen template` shows a commented example.
+
+Each culture has a `mode`: `scoped` (the default, placed from its entry as described here) or `organic`
+(milestone 9, in progress). An organic culture emerges from a simulated history: its development,
+population, settlements and polities are not given (values given are ignored with a warning); a native
+one starts as foragers in its `homeland` or on the land it takes, and an organic colony keeps its
+`development` as the level it lands with. The optional `history: {start_years_ago, epochs}` block sets the
+span (12 000 years by default) and the dates, in years before the present, whose state is kept besides
+the present. The history steps one generation (25 years) at a time, and 5 years once any organic culture
+burns fossil fuel. Scoped cultures can sit beside organic ones; a scoped colony appears at the epochs
+after its founding, other scoped cultures only at the present. People grow up to the land's capacity at their
+level and spread into empty land at the speed of the Neolithic farming front (~0.8 km/yr on flat ground,
+after Pinhasi et al. 2005), slower in rough country, and across the sea once they have boats. Farming begins
+where many foragers hold arable land and spreads as a front; knowledge grows with the number of people in
+contact (after Kremer 1993), so large connected populations advance first, and industry needs coal or oil
+within reach. `history: {pace: 2}` doubles the pace of knowledge. States form where literate people live
+densely and take neighbouring land (after Turchin et al. 2013), the further from their capital the harder
+unless their communication reaches far; before states, each cell holds a count of bands, tribes or chiefdoms
+(`subpolity_count`). A state may rule people of several cultures. Rulers reign about 11 years, 21 once a
+state adopts primogeniture (Kokkonen & Sundell 2012), and at a succession a state may break into its
+provinces. States go to war when one is three times stronger at their border, wars spread to neighbours and
+allies (after Cederman 2003), and taking a capital takes the state. States keep their ids, founding dates and
+parents across epochs and record their rulers; the largest states, wars and break-ups enter the chronicle.
+Settlements keep their ids, names and founding dates from one kept epoch to the next (a cell's largest
+settlement dates from the cell's first farmers), roads of an earlier epoch are reused and dated, and each
+epoch stores its trade links (`civ.trade`: settlement pairs, flow, route length and travel time), with trade
+falling off with distance faster before rail than after. Where cultures share land, the one the land holds more
+of displaces the other. An organic colony lands with 10⁴ founders and a colonial state, can receive
+`immigrants_per_year`, is backed by its home power until independence (`independence_years`, or else at the
+decolonisation rate of Strang 1991, five times faster while the home state is at war and at once if it falls),
+spreads at the speed of its transport, and brings epidemics that kill 90% of the natives of each landmass it
+reaches within a century (after the Americas, Koch et al. 2019). Colonists die at a settler mortality that rises
+with malaria suitability (Acemoglu et al. 2001), so they fill temperate land. States with ocean-going sail and
+print found colonies of their own on other landmasses. Peoples ruled by a more advanced culture take its
+technology with the adoption lags of Comin & Hobijn (2010) unless the rulers hold them apart (supremacy, drawn
+per ruling and likelier the further ahead the rulers are); people shift between cultures sharing land as
+languages do (Abrams & Strogatz 2003); under rulers who are not supremacists some become bilingual (Mira &
+Paredes 2005), and a pair's bilinguals become a new creole culture; regions of a state where another literate
+culture holds two thirds of the people break away. The planet's events press on the history: eruptions
+at the planet's volcanic activity cool a hemisphere for five to ten years (after the ice-core record of Toohey
+& Sigl 2017 and Sigl et al. 2015), droughts dry regions for decades to centuries, and both cut the land's
+capacity, raise war and break-up (14% per standard deviation, Hsiang et al. 2013) and push people to move;
+pandemics arise at the rate and size of Marani et al. (2021) and follow the travel network; small impacts
+strike at the rate of Brown et al. (2002); and peoples too few or too isolated lose their levels (Henrich
+2004). `history: {planet_events: false}` turns these off, and `history.events` places events by hand:
+
+```yaml
+history:
+  events:
+    - {kind: eruption, years_ago: 1500, size: 50}           # Tg of stratospheric sulfur
+    - {kind: drought, years_ago: 4200, lat_deg: 35, lon_deg: 40, size: 0.4, radius_km: 1500, duration_years: 250}
+    - {kind: pandemic, years_ago: 700, size: 20}             # ‰ of the world's people dying a year
+    - {kind: impact, years_ago: 300, lat_deg: 61, lon_deg: 102, size: 10}   # Mt
+    - {kind: sea_level, years_ago: 8000, size: 20}           # metres of rise; floods low land for good
+```
+
+The civilisation of an organic history carries its kept epochs (`civ.at_epoch(years)`, or
+`world_at_epoch(world, years)` for maps and reports), its chronicle and a series table (`civ.series`: per culture
+and step, people, settled area, states, the largest state and mean levels). `format_chronicle(civ)` reads the
+chronicle by period: origins, firsts, colonies, independence, creoles, planet events and the largest wars and
+break-ups in full, other entries counted. `plot_epochs`, `animate_epochs` and `plot_chronicle` draw the history; a
+state or culture keeps its colour across epochs. The report ends with a table of the epochs.
+The history rates every land cell for fresh water, arable land (crop season, moisture, slope and permafrost,
+after Zabel et al. 2014), access by coast and river, resources, climate and defensibility (rugged ground,
+coasts and large rivers); each epoch stores these as `suitability_component`.
+
+A civilisation carries two layers from the planet: `tectonic_setting` (craton, sag basin, passive
+margin, rift, foreland, strike-slip or subduction margin, orogen, volcanic) and `resource_potential`, a
+0–1 potential per cell for copper, gold, tin–tungsten, iron, lead–zinc, hydrocarbons, coal,
+evaporites, laterite, timber, uranium, chromite and platinum metals, rare earths, geothermal heat and
+placer gold. Potentials follow the geological setting, the sediment, the climate and the planet's past
+(a lifeless planet has no coal or oil).
+
+Each culture then gets `suitability` (its carrying capacity relative to its best cell) and
+`population_density` (people/km²). Capacity follows productivity, river water, the coast, elevation and
+heat, weighted by the culture's energy level; colonists ignore productivity and seek resources instead,
+and natives need land life. People gather where others already live. A homeland confines a culture, a
+colony spreads from its landing sites with age, and natives without a homeland divide the remaining land.
+A population left open follows Earth's population at the culture's energy level (4.4 million foragers
+to 7.3 billion at `electric`), scaled by the productive land the culture holds; a colony grows from
+10 000 founders. On the Earth example a modern culture puts 36% of its people below 100 m and half within
+200 km of the coast, as on Earth (`scripts/validate_culture.py`).
+
+Settlements come in regional rank-size systems: each culture's land is split into regions (larger with
+better transport), and each region's people live in settlements whose sizes fall as 1/rank^(1/ζ) from
+50 people up (`zipf_exponent`, default 1). The largest settlement follows from the region's population,
+or the spec's `largest_population` sets the number of regions. Settlements down to about one per
+occupied cell are listed with position, population, form (hamlet to metropolis), region and rank;
+larger ones keep central-place distances from each other. The rest stay as each cell's
+`dispersed_density`. Foragers live dispersed, in camps that zoomed maps draw.
+
+Roads join each culture's settlements and every other cell where at least 500 of its people live.
+Every node links to its strongest gravity partners nearby, and the links are routed by travel time
+(Tobler's hiking function, slowed by slope, rivers and ice; boats from `pack_and_boat` on). Busy
+links are routed first and later ones reuse them, so trunks form. Each road segment has a path of
+grid cells, a length, the flow it carries and a class (track, road, trunk, highway or sea route) that
+depends on the flow and the transport level. The global grid holds the main roads; minor roads belong
+to zoomed maps.
+
+Polities divide each culture's land. Capitals are the largest settlements (or those the spec names),
+and each cell joins the capital with the most influence: larger capitals reach further, and travel
+time counts against them, so borders fall along mountains, wide rivers and straits. Without a
+`polities.count`, the number of polities follows Earth's political fragmentation at the culture's
+communication level. Each polity has a capital, type, population and area; territories are the
+`polity` layer, and spec `territories` override them.
+
+Zoomed regions carry the culture down to villages. Each cell's dispersed people become villages and
+hamlets, sized so the rank-size law continues below the listed settlements and placed on flat ground
+near water; every settlement gets a built-up footprint that grows with its population. Local tracks
+and roads link neighbouring settlements by the same gravity-and-reuse routing on the region's real
+slopes, the global main roads run through the towns they pass, and polity borders are redrawn by
+travel time, so they follow large rivers and ridges. `worldgen zoom` draws all this when the world has
+a culture.
+
+Every culture gets its own sound system: a consonant and vowel inventory, a syllable shape and a
+spelling, drawn so that across many cultures they match the world's languages (WALS and PHOIBLE).
+Settlements, polities and the culture itself (unless the spec names it) are named from it, and places
+by rivers, coasts, lakes or hills sometimes carry the culture's word for that feature. Names are unique
+within a culture, and the sound system is saved with it.
+
+Colonists live where the planet lets them. Each land cell is open (breathable air, comfortable pressure
+and temperature, enough air overhead to stop cosmic rays), domed, underground (air too thin to shield)
+or uninhabitable (too hot or cold), stored as the `habitat` layer. Colonies land on low, flat,
+low-latitude ground, favour open cells, and name their settlements outposts, domes or underground
+habitats accordingly; on low-gravity volcanic ground lava tubes help. Where a space elevator could
+stand, the spacefaring colony's largest settlement near the equator becomes its anchor. A planet with no
+survivable surface, like Venus, cannot take colonists.
 
 ## Archetypes and constraints
 
@@ -267,7 +491,7 @@ the spec like any other value.
 
 | Module | Role |
 |---|---|
-| `spec.py` | Spec schema, YAML load/save, template |
+| `spec.py`, `spec_base.py` | Spec schema, YAML load/save, template; shared section base |
 | `priors/` | Archetypes, distributions, sampling, outcome constraints, occupiability score |
 | `star.py` | Luminosity, radius, temperature, lifetime, XUV activity |
 | `orbit.py` | Period, instellation, habitable zone, tidal locking, spin |
@@ -281,8 +505,10 @@ the spec like any other value.
 | `climate/` | Insolation, Tier 0 and Tier 1 energy balance, moisture and precipitation, ice sheets and snowline erosion |
 | `biosphere/` | Life and its gases, pigment colour, vegetation, biomes and Köppen classes, climate–ice–vegetation coupling |
 | `hydrology/` | Water balance, drainage, lakes, rivers, river erosion and sediment |
-| `tectonics/` | Plate simulation: crust points, Numba kernels, processes, re-mapping, conversion to a surface |
-| `render/` | Cartopy map projections, colour schemes, hillshading, smoothed rivers, drift figures and animations, history figures |
+| `tectonics/` | Plate simulation: crust points, Numba kernels, processes, re-mapping, subsidence, biogenic sediment, conversion to a surface |
+| `render/` | Cartopy map projections, colour schemes, hillshading, smoothed rivers, drift figures and animations, history figures, local maps of zoomed regions |
+| `zoom/` | Cube-sphere quadtree tiles and region lattices, inherited surface and downscaled climate, sub-grid detail, local erosion, glaciers and drainage, the `zoom_region` request and saved regions |
+| `culture/` | Culture spec, development axes, resolved cultures, tectonic settings and resource potentials, suitability, population density, settlements, roads, polities and names, the civilisation data model (cultures, polities, settlement and road tables, per-cell layers, chronicle) and its storage; `culture/history/` the organic mode (history spec, steps, state, run, kept epochs) |
 | `world.py` | World container, save and load |
 | `history/` | The history ODE system: per-planet constants, thermal evolution, volatiles, Tier 0 climate table, biosphere, integration, states at epochs |
 | `evolve/` | Snapshot evolver and history evolver behind one interface |
@@ -310,6 +536,7 @@ Run from the `scripts/` folder:
 | `validate_earth.py` | Earth example against Earth over several seeds (hypsometry, ocean, plates, rivers, lakes, climate, ice, Köppen shares); `--set NAME=VALUE` overrides a heuristic for a sweep |
 | `archetype_fidelity.py` | Archetype outcomes over many draws: temperatures, water phase, open ocean, estimated land, life, redraws |
 | `validate_history.py` | History-mode Earth, Mars and Venus against the real planets, and Earth against its snapshot build; exits non-zero if a check misses |
+| `validate_culture.py` | Culture on Earth worlds against Earth (population, settlements, roads, polities), sound systems against WALS and PHOIBLE, zoomed regions, and colonies on hostile worlds (`--hostile`); known gaps are shown but not counted; exits non-zero if a check misses |
 | `history_sensitivity.py` | Ranks the poorly constrained history parameters by how far they move the outcome, one at a time over each prior |
 | `hypsometry_table.py` | Reference land fraction against ocean volume, for `worldgen/water.py` |
 | `render_examples.py` | The example figures in "Claude outputs" |
@@ -318,13 +545,19 @@ Run from the `scripts/` folder:
 ## Tests
 
 ```bash
-pytest                   # full suite, ~4-5 min on two cores
+pytest                   # full suite, ~9 min on one core (~5.5 min with -n 2)
 pytest -n auto           # in parallel (needs pytest-xdist, included in the dev extras)
-pytest -m "not slow"     # skip tests that generate worlds, ~27 s
+pytest -m "not slow"     # skip tests that generate worlds, ~25 s
 ```
 
 The suite checks each relation against published values, runs Earth, Venus and Mars through the full
 pipeline, checks that every archetype meets its constraints, and covers grids, terrain for every regime,
 the tectonic simulation's rules and outputs, the water inventory, drainage, lakes and erosion,
 the climate tiers (insolation, energy balance, moisture, snowball bistability, day–night contrast), ice
-sheets, life, vegetation, biomes and Köppen classes, saving and loading, and rendering in every projection.
+sheets, life, vegetation, biomes and Köppen classes, saving and loading, rendering in every projection,
+and the zoom: tile addressing and seams, inheritance, detail, local erosion, glaciers, streams, saved and
+cached regions, and local maps; subsidence and biogenic sediment; and the culture spec, its resolution,
+tectonic settings, resource potentials, carrying capacity, clustering, culture ranges, default
+populations, settlement regions and placement, travel costs, routing and road classes, polity partitions, counts and types,
+sound systems and names, colonist habitats and elevators, the saved civilisation, and the organic
+history's spec, steps, kept epochs and their storage, its suitability components, the growth and spread of people, and farming and development.

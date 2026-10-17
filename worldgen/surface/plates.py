@@ -196,6 +196,11 @@ def build_plate_terrain(fields: SurfaceFields, activity: float, land_fraction: f
                          elevation)
     fields.elevation[:] = elevation
 
+    # Kind of mountain building: whichever belt raised the cell most.
+    belts = np.stack([andean_up, arc, collision_up * continental])
+    raised = belts.max(axis=0) > h.OROGENY_KIND_MIN_UPLIFT_M * relief
+    fields.orogeny_kind[:] = np.where(raised, belts.argmax(axis=0) + 1, 0).astype(np.int8)
+
     fields.terrain[:] = Terrain.PLAIN
     fields.terrain[continental & (elevation > 1500)] = Terrain.HIGHLAND
     fields.terrain[~continental & (ridge_dist < 1.5 * fields.spacing_km)] = Terrain.RIDGE

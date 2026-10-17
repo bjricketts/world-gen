@@ -18,12 +18,13 @@ from ..surface.fields import Boundary, Crust, Terrain
 from ..surface.relicts import Relict
 from ..world import World
 from .raster import projected_sampler
+from .culture import CULTURE_FIELDS, culture_image, draw_culture_overlays, is_culture_field, split_field
 from .rivers import LAKE_COLOUR, draw_rivers
 
 PROJECTIONS = ("equirectangular", "mollweide", "robinson", "orthographic", "north_polar", "south_polar")
 GLOBE_PROJECTIONS = ("orthographic", "north_polar", "south_polar")
 FIELDS = ("elevation", "terrain", "plates", "crust_age", "orogeny_age", "temperature", "rainfall", "basins",
-          "biomes", "koppen", "ice", "relicts")
+          "biomes", "koppen", "ice", "relicts") + CULTURE_FIELDS
 SEASON_NAMES = {1: "month 1 (northern winter)", 7: "month 7 (northern summer)"}
 DEFAULT_WIDTH = {"map": 1100, "globe": 700}
 
@@ -328,6 +329,7 @@ def field_image(world: World, field: str, proj: ccrs.Projection, width: int, mon
     return rgba, extra, sampler.extent
 
 
+CULTURE_COLORBAR_LABELS = {"population": "population density (people/km²)", "resources": "resource potential (0–1)"}
 TEMPERATURE_NORM = TwoSlopeNorm(vmin=213.15, vcenter=273.15, vmax=318.15)
 COLORBAR_LABELS = {"crust_age": "oceanic crust age (Myr)", "rainfall": "precipitation (m/yr)",
                    "ice": "ice-sheet thickness (m); sea shaded by sea-ice cover",
@@ -384,6 +386,24 @@ def plot_map(world: World, field: str = "elevation", projection_name: str = "mol
         ax.imshow(rgba, transform=proj, extent=extent, origin="upper", interpolation="bilinear")
         if colorbar:
             _elevation_colorbar(ax, cmap, norm)
+    elif is_culture_field(field):
+        name = split_field(field)[0]
+        if name in ("settlements", "roads"):
+            rgba, _, _, extent = elevation_image(world, proj, width, hillshade)
+            rgba[..., :3] = 0.45 * rgba[..., :3] + 0.55
+            extra = []
+        else:
+            rgba, extra, extent = culture_image(world, field, proj, width)
+        ax.imshow(rgba, transform=proj, extent=extent, origin="upper", interpolation="nearest")
+        if isinstance(extra, list) and extra and legend:
+            ax.legend(handles=extra, loc="center left" if legend == "right" else "lower left",
+                      bbox_to_anchor=(1.0, 0.5) if legend == "right" else None, fontsize=7,
+                      frameon=legend != "right")
+        elif isinstance(extra, tuple) and colorbar:
+            sm = plt.cm.ScalarMappable(norm=extra[1], cmap=extra[0])
+            cb = plt.colorbar(sm, ax=ax, orientation="horizontal", fraction=0.04, pad=0.04, shrink=0.6)
+            cb.set_label(CULTURE_COLORBAR_LABELS.get(name, name))
+        draw_culture_overlays(ax, world, field, proj, globe)
     else:
         rgba, extra, extent = field_image(world, field, proj, width, month)
         ax.imshow(rgba, transform=proj, extent=extent, origin="upper", interpolation="nearest")
@@ -399,7 +419,7 @@ def plot_map(world: World, field: str = "elevation", projection_name: str = "mol
             sm = plt.cm.ScalarMappable(norm=extra[1], cmap=extra[0])
             cb = plt.colorbar(sm, ax=ax, orientation="horizontal", fraction=0.04, pad=0.04, shrink=0.6)
             cb.set_label(COLORBAR_LABELS[field])
-    if rivers and field in ("elevation", "terrain", "rainfall", "basins"):
+    if rivers and field in ("elevation", "terrain", "rainfall", "basins", "political", "settlements", "roads"):
         draw_rivers(ax, world, proj, width_scale=1.0 if not globe else 0.9)
 
     ax.gridlines(color="white", alpha=0.3, linewidth=0.5)

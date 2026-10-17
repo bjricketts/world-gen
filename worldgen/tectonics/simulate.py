@@ -16,6 +16,8 @@ from ..hydrology import WaterSetting, erode_surface
 from ..surface.sealevel import ocean_fill
 from .crust import Crust, Plates, elevation, typical_speed_m_myr
 from .initial import initial_state
+from .biogenic import lay_biogenic
+from .subsidence import subside, unfilled_subsidence
 from .processes import StepContext, StepStats, age_and_erode, hotspots, interact, merge_colliding, move, \
     update_motion, uplift
 from .remap import absorb_small_plates, balance_continents, initiate_subduction, remap, rift, tidy_plates
@@ -64,20 +66,32 @@ def _resize(history: np.ndarray, size: int) -> np.ndarray:
     return out
 
 
-def erode_crust(crust: Crust, grid: SphereGrid, water: WaterSetting, duration_myr: float) -> None:
-    """Apply river erosion and sedimentation to crust that lies on the grid cells."""
+def erode_crust(crust: Crust, grid: SphereGrid, water: WaterSetting, duration_myr: float,
+                sank_m: np.ndarray | None = None) -> None:
+    """Apply river erosion, river sediment and the sea's own sediment to crust that lies on the grid cells.
+
+    ``sank_m`` is how far each point subsided this interval, which decides
+    whether a carbonate platform kept pace.
+    """
     raw = elevation(crust, water.relief)
     fill = ocean_fill(grid, raw, water.radius_m)
     level = fill.level_for_volume(water.ocean_volume_m3)
     height = raw - level
     ocean = fill.pass_level < level
-    result = erode_surface(grid, water, height, ocean, duration_myr, h.SIM_EROSION_STEP_MYR)
+    result = erode_surface(grid, water, height, ocean, duration_myr, h.SIM_EROSION_STEP_MYR,
+                           accommodation_m=unfilled_subsidence(crust))
     change = result.height_m - height
     # Isostasy: the crust rises as material is removed and sinks under the weight of sediment.
     change = np.where(change < 0.0, change * h.EROSION_ISOSTATIC_FACTOR, change * h.SEDIMENT_ISOSTATIC_FACTOR)
     cont = crust.continental
     crust.cont_elev[cont] += change[cont]
     crust.sediment[~cont] += change[~cont]
+    # Continental basins keep a record of their fill; erosion strips it first.
+    fill = crust.basin_fill[cont] + result.deposited_m[cont]
+    crust.basin_fill[cont] = np.maximum(fill - result.eroded_m[cont], 0.0)
+    if water.marine_life > 0.0:
+        sank = np.zeros(grid.size) if sank_m is None else sank_m
+        lay_biogenic(crust, result.height_m, sank, result.temperature_k, duration_myr, water.marine_life)
 
 
 def run(grid: SphereGrid, radius_m: float, activity: float, continental_fraction: float, relief: float,
@@ -141,7 +155,8 @@ def run(grid: SphereGrid, radius_m: float, activity: float, continental_fraction
             tidy_plates(crust, plates, grid)
             balance_continents(crust, grid, continental_fraction)
             if water is not None:
-                erode_crust(crust, grid, water, since_remap * ctx.dt)
+                sank = subside(crust, grid, radius_m, since_remap * ctx.dt, first=step == since_remap)
+                erode_crust(crust, grid, water, since_remap * ctx.dt, sank)
             absorb_small_plates(crust, plates, grid)
             if step < steps:
                 rift(crust, plates, grid, since_remap * ctx.dt, ctx, stats, target_count, seed, step)

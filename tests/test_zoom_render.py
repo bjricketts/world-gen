@@ -125,3 +125,11 @@ def test_wider_lines_carry_more_water(eroded):
     world, region = eroded
     segments, widths, wets = _river_lines(region, 1, 0.0)
     assert min(widths) < max(widths)
+
+
+def test_drawn_channels_step_between_neighbours(eroded):
+    """Water routed across a depression to its exit is not drawn as a straight line."""
+    world, region = eroded
+    segments, _, _ = _river_lines(region, 1, 0.0)
+    for line in segments:
+        assert np.abs(np.diff(line, axis=0)).max() <= 1.0 + 1e-9

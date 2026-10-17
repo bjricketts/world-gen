@@ -40,6 +40,11 @@ def remap(crust: Crust, plates: Plates, grid: SphereGrid, elapsed_myr: float, ct
         new.ocean_age[gap] = np.clip(age, 0.0, elapsed_myr)
         new.ocean_extra[gap] = 0.0
         new.sediment[gap] = 0.0
+        new.basin_fill[gap] = 0.0
+        new.stretch[gap] = 0.0
+        new.margin_age[gap] = 0.0
+        new.thermal_subsidence[gap] = 0.0
+        new.flexure[gap] = 0.0
         new.cont_elev[gap] = 0.0
         new.orogeny_age[gap] = np.nan
         new.orogeny_kind[gap] = 0
@@ -115,12 +120,16 @@ def balance_continents(crust: Crust, grid: SphereGrid, target_fraction: float) -
             crust.continental[chosen] = True
             crust.cont_elev[chosen] = h.CONTINENT_BASE_M + np.maximum(crust.ocean_extra[chosen]
                                                                       + h.OCEAN_RIDGE_DEPTH_M, 0.0)
+            crust.basin_fill[chosen] = crust.sediment[chosen]
             crust.sediment[chosen] = 0.0
         else:
             candidates = np.flatnonzero(coast & cont)
             chosen = candidates[np.argsort(crust.cont_elev[candidates], kind="stable")[:excess]]
             crust.continental[chosen] = False
             crust.ocean_extra[chosen] = 0.0
+            crust.stretch[chosen] = 0.0
+            crust.thermal_subsidence[chosen] = 0.0
+            crust.flexure[chosen] = 0.0
             neighbour_age = np.zeros(grid.size)
             ocean_i, ocean_j = ~cont[i], ~cont[j]
             np.maximum.at(neighbour_age, j[ocean_i], crust.ocean_age[i[ocean_i]])

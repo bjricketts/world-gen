@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from .culture import apply_culture
 from .evolve import evolve
 from .spec import PlanetSpec
 from .state import PlanetState, Timeline
@@ -22,11 +23,15 @@ def generate_world(spec: PlanetSpec, resolution: int | str = "standard",
     """Return a planet with its global surface at the given grid resolution.
 
     ``snapshot_interval_myr`` stores the tectonic history at that interval
-    (simulated plate tectonics only).
+    (simulated plate tectonics only). A spec with a culture section also gets
+    its civilisation.
     """
     state, timeline = evolve(spec, t_target_gyr)
     surface = build_surface(state, resolution, snapshot_interval_myr, timeline)
-    return World(spec=spec, state=state, surface=surface, timeline=timeline)
+    world = World(spec=spec, state=state, surface=surface, timeline=timeline)
+    if spec.culture is not None and surface is not None:
+        world = apply_culture(world)
+    return world
 
 
 def candidates(spec: PlanetSpec, n: int) -> list[PlanetState]:

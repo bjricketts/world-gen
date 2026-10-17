@@ -9,7 +9,8 @@ from typer.testing import CliRunner  # noqa: E402
 
 from worldgen import PlanetSpec, generate_world, load_world, save_world  # noqa: E402
 from worldgen.cli import app  # noqa: E402
-from worldgen.render import FIELDS, PROJECTIONS, plot_map, plot_overview, projection, save_figure, to_raster  # noqa: E402
+from worldgen.render import (CULTURE_FIELDS, FIELDS, PROJECTIONS, plot_map, plot_overview,  # noqa: E402
+                             projection, save_figure, to_raster)
 from worldgen.render.raster import projected_sampler  # noqa: E402
 from worldgen.report import state_to_plain  # noqa: E402
 
@@ -68,6 +69,8 @@ def test_equirectangular_raster(small_world):
 def test_every_field_renders(small_world, field):
     if field == "relicts":
         pytest.skip("relicts exist only in history mode; tests/test_relicts.py renders them")
+    if field in CULTURE_FIELDS:
+        pytest.skip("culture layers need a civilisation; tests/test_culture_render.py renders them")
     ax = plot_map(small_world, field, "mollweide", width=200)
     assert ax.get_title().endswith(field)
     matplotlib.pyplot.close(ax.figure)

@@ -28,6 +28,11 @@ class Crust:
     ocean_extra: np.ndarray     # relief on oceanic crust above its age-depth (m)
     ocean_age: np.ndarray       # age of oceanic crust (Myr)
     sediment: np.ndarray        # sediment on oceanic crust (m)
+    basin_fill: np.ndarray      # sediment laid on continental crust and not yet eroded (m)
+    stretch: np.ndarray         # β − 1 of a stretched (rifted) margin, 0 if never stretched
+    margin_age: np.ndarray      # time since the margin was stretched (Myr)
+    thermal_subsidence: np.ndarray  # thermal subsidence applied so far (m)
+    flexure: np.ndarray         # flexural deflection under a nearby mountain load currently applied (m)
     orogeny_age: np.ndarray     # time since last mountain building (Myr), NaN if none
     orogeny_kind: np.ndarray    # OROGENY_* code of the last mountain building
     volcanic: np.ndarray        # built by a hotspot
@@ -55,6 +60,11 @@ class Crust:
             ocean_extra=np.zeros(n),
             ocean_age=np.zeros(n),
             sediment=np.zeros(n),
+            basin_fill=np.zeros(n),
+            stretch=np.zeros(n),
+            margin_age=np.zeros(n),
+            thermal_subsidence=np.zeros(n),
+            flexure=np.zeros(n),
             orogeny_age=np.full(n, np.nan),
             orogeny_kind=np.zeros(n, dtype=np.int8),
             volcanic=np.zeros(n, dtype=bool),

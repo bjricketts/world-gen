@@ -5,6 +5,7 @@ import pytest
 from scipy.spatial import cKDTree
 
 from worldgen import PlanetSpec, heuristics as h
+from worldgen.hydrology.erosion import creep
 from worldgen.zoom import erode_region, region_for, region_grid, synthesize_region
 
 
@@ -133,3 +134,44 @@ def test_channels_continue_downstream(wet_world):
     ends = (down == channel) | out.ocean[down] | out.lake[down] | out.grid.boundary()[down] \
         | (out.ice_thickness_m[down] > 0.0)
     assert ((out.river_order[down] > 0) | ends).all()
+
+
+def test_creep_smooths_short_waves_and_holds_fixed_nodes():
+    region = region_grid(4, 10, 300, 300, 300, 300, nodes_per_tile=32)
+    rows, cols = region.shape
+    r, c = np.divmod(np.arange(region.size), cols)
+    ripple = 10.0 * np.cos(np.pi * c) * np.cos(np.pi * r)                 # a two-step checkerboard
+    edge = region.boundary()
+    step = region.mean_spacing(6.371e6)
+    out = creep(region, 6.371e6, ripple, step**2, 1.0, edge)                # diffusion length one step
+    assert np.array_equal(out[edge], ripple[edge])
+    assert np.abs(out[~edge]).max() < 0.1 * np.abs(ripple).max()
+
+
+def test_texture_is_even_across_the_edge_fade(wet_world):
+    """Creep acts up to the pinned edge, so the fade band keeps no more fine texture than the interior."""
+    from scipy.ndimage import uniform_filter
+
+    from worldgen.zoom.erode import _edge_distance
+
+    s = wet_world.surface
+    elevation = s["elevation"].values
+    clear = (~s["ocean"].values) & (s["ice_thickness"].values == 0.0) & (elevation < s["snowline"].values - 1000.0)
+    cells = np.flatnonzero(clear)
+    hill = int(cells[np.argsort(elevation[cells])[int(0.9 * cells.size)]])
+    radius = float(s.attrs["radius_m"])
+    region = region_grid(*region_for(wet_world.grid.points[hill], 12, radius, tiles_each_side=2), nodes_per_tile=20)
+    detailed = synthesize_region(wet_world, region)
+    out = erode_region(wet_world, detailed)
+    rows, cols = region.shape
+    distance = _edge_distance(region).reshape(rows, cols)
+    blend = max(h.ZOOM_EDGE_BLEND_KM * 1e3 / region.mean_spacing(radius), h.ZOOM_EDGE_BLEND_MIN_CELLS)
+    band, inner = (distance >= 3) & (distance < blend / 2), distance >= blend
+
+    def kept(z, mask):
+        fine = z.reshape(rows, cols) - uniform_filter(z.reshape(rows, cols), 5)
+        return fine[mask].std()
+
+    ratio = (kept(out.elevation, band) / kept(detailed.elevation, band)) / (
+        kept(out.elevation, inner) / kept(detailed.elevation, inner))
+    assert 0.7 < ratio < 1.5                  # fading creep with the rivers gave 2–3 (1.42 on the task-8.2 surface)

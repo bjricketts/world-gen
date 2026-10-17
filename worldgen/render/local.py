@@ -112,11 +112,14 @@ def _river_lines(region, min_order: int, min_area_km2: float, min_discharge_m3_s
     cols = region.grid.shape[1]
     order, receiver = region.river_order, region.receiver
     discharge = region.discharge_m3_s
+    index = np.arange(region.grid.size)
+    # Water crossing a depression is routed straight to its exit; those steps are not drawn as channels.
+    step = np.maximum(np.abs(receiver // cols - index // cols), np.abs(receiver % cols - index % cols))
+    adjacent = step <= 1
     wet = region.perennial if region.perennial is not None else order > 0
     river = (order >= min_order) & ((region.drainage_area_km2 >= min_area_km2) | (discharge >= min_discharge_m3_s))
-    index = np.arange(region.grid.size)
     # A stretch starts at a source, where the stream order changes, or where the channel turns wet.
-    ups = np.flatnonzero(river & (receiver != index))
+    ups = np.flatnonzero(river & (receiver != index) & adjacent)
     down = receiver[ups]
     same = river[down] & (order[down] == order[ups]) & (wet[down] == wet[ups])
     donor_same = np.zeros(region.grid.size, dtype=bool)
@@ -128,7 +131,7 @@ def _river_lines(region, min_order: int, min_area_km2: float, min_discharge_m3_s
         cells, cell = [start], start
         while True:
             nxt = receiver[cell]
-            if nxt == cell or region.lake[nxt]:
+            if nxt == cell or region.lake[nxt] or not adjacent[cell]:
                 break
             cells.append(nxt)
             if not river[nxt] or order[nxt] != order[start] or wet[nxt] != wet[start]:
@@ -147,14 +150,15 @@ def _river_lines(region, min_order: int, min_area_km2: float, min_discharge_m3_s
 def plot_local_map(world, region, *, mode: str = "relief", hillshade: bool = True, rivers: bool = True,
                    min_stream_order: int = 1, min_stream_area_km2: Optional[float] = None,
                    min_stream_discharge_m3_s: Optional[float] = None, graticule: bool = True,
-                   title: Optional[str] = None, figsize: float = 7.0):
+                   title: Optional[str] = None, figsize: float = 7.0, culture=None):
     """Return a stylised 2D map figure of an eroded region.
 
     ``mode`` is 'relief' (hypsometric tints) or 'biome' (biome colours).
     Channels are drawn once their catchment or discharge is large enough for
     the map's scale; ``min_stream_area_km2`` and ``min_stream_discharge_m3_s``
     override those thresholds and ``min_stream_order`` drops the smallest
-    orders. Perennial streams are blue; dry channels are dashed.
+    orders. Perennial streams are blue; dry channels are dashed. ``culture``
+    (from ``culture.local.zoom_culture``) adds settlements, roads and borders.
     """
     import matplotlib.pyplot as plt
 
@@ -209,6 +213,9 @@ def plot_local_map(world, region, *, mode: str = "relief", hillshade: bool = Tru
         if wet:
             ax.add_collection(LineCollection([segments[k] for k in wet], linewidths=[widths[k] for k in wet],
                                              colors=RIVER_COLOUR, capstyle="round", joinstyle="round"))
+    if culture is not None:
+        from .culture import draw_local_culture
+        draw_local_culture(ax, region, culture)
     return fig
 
 

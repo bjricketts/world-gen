@@ -119,6 +119,7 @@ def build_surface(state: PlanetState, resolution: int | str = "standard",
         eroded = erode_surface(grid, setting, height, fill.pass_level < level, h.FINAL_EROSION_MYR,
                                h.EROSION_STEP_MYR)
         fields.elevation[:] = eroded.height_m + level
+        fields.sediment_m[:] = np.maximum(fields.sediment_m + eroded.deposited_m - eroded.eroded_m, 0.0)
         fill, level = _sea_level(state, fields, has_ocean, target, report=True)
     ocean = apply_sea_level(fields, fill, level)
     snapshot_volume = state.water.ocean_volume_m3 if has_ocean else 0.0
@@ -256,8 +257,13 @@ def _water_setting(state: PlanetState, relief: float, target: Optional[float], c
     radius = state.bulk.radius_m
     volume = (state.water.ocean_volume_m3 if target is None
               else water_model.volume_for_land_fraction(target, radius, relief, state.interior.tectonic_regime))
+    bio = state.biosphere
+    marine = 0.0
+    if bio is not None and bio.life in ("surface", "ocean"):
+        low, high = h.BIOGENIC_LIFE_GYR
+        marine = float(np.clip((bio.age_gyr - low) / (high - low), 0.0, 1.0))
     return WaterSetting(radius_m=radius, ocean_volume_m3=volume, climate=climate_setting, zonal=zonal, relief=relief,
-                        rivers=rivers, control=planet_control(state, zonal))
+                        rivers=rivers, control=planet_control(state, zonal), marine_life=marine)
 
 
 def _life_features(coupled: CoupledSurface, ocean: np.ndarray) -> dict:

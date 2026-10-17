@@ -138,6 +138,10 @@ def build_simulated_terrain(fields: SurfaceFields, activity: float, land_fractio
     fields.crust[:] = np.where(cont, CrustType.CONTINENTAL, CrustType.OCEANIC)
     fields.crust_age_myr[:] = np.where(cont, np.nan, crust.ocean_age)
     fields.orogeny_age_myr[:] = crust.orogeny_age
+    fields.orogeny_kind[:] = crust.orogeny_kind
+    # Oceanic sediment is stored as the surface rise it causes; report its thickness.
+    fields.sediment_m[:] = np.where(cont, crust.basin_fill,
+                                    np.maximum(crust.sediment, 0.0) / h.SEDIMENT_ISOSTATIC_FACTOR)
     fields.elevation[:], mountains = _elevation(fields, cont, crust.cont_elev, crust.ocean_age, crust.ocean_extra,
                                                 crust.sediment, relief, seed)
     # Snapshots omit the surface detail, which is fixed in place and would not move with the plates.

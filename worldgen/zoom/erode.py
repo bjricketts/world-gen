@@ -25,6 +25,7 @@ from scipy.spatial import cKDTree
 
 from .. import heuristics as h
 from ..hydrology import build_drainage, erode
+from ..hydrology.erosion import creep
 from ..hydrology.drainage import _strahler
 from ..hydrology.graph import accumulate, priority_breach
 from ..hydrology.rainfall import Rainfall, fu_runoff
@@ -140,9 +141,12 @@ def erode_region(world, detailed: DetailedRegion, duration_myr: float = h.ZOOM_E
     eroded_m = deposited_m = glacial_m = np.zeros(region.size)
     exported = 0.0
     sheet = detailed.ice_sheet
-    fade = np.clip(_edge_distance(region) / h.ZOOM_EDGE_BLEND_CELLS, 0.0, 1.0)
+    blend_cells = max(h.ZOOM_EDGE_BLEND_KM * 1e3 / region.mean_spacing(radius), h.ZOOM_EDGE_BLEND_MIN_CELLS)
+    fade = np.clip(_edge_distance(region) / blend_cells, 0.0, 1.0)
     if runoff is not None:
         adj = region.neighbours
+        spacing = region.mean_spacing(radius)
+        diffusivity = min(h.ZOOM_CREEP_M2_PER_MYR, (h.ZOOM_CREEP_MAX_STEPS * spacing) ** 2 / max(duration_myr, 1e-9))
         # No river forms under an ice sheet.
         river_runoff = runoff if sheet is None else runoff * (1.0 - sheet)
         # Cut outlets through the hollows the detail noise leaves, except where the cut would be deeper
@@ -150,11 +154,13 @@ def erode_region(world, detailed: DetailedRegion, duration_myr: float = h.ZOOM_E
         breached = priority_breach(height, adj.indptr, adj.indices, outlet, h.ZOOM_BREACH_MAX_M, 1e-3)
         flow = _open_edges(region, breached, boundary)
         result = erode(region, radius, flow, detailed.ocean, river_runoff, duration_myr, relief,
-                       h.ZOOM_EROSION_STEP_MYR, cell_area_m2=cell_area, creep_m2_per_myr=h.ZOOM_CREEP_M2_PER_MYR,
-                       edge=boundary)
-        # The outer edge stays pinned to the inherited surface, and erosion fades in over a few cells
-        # inside it, so the frame neither steps nor disagrees with a neighbouring region.
-        height = breached + fade * (result.height_m - flow)
+                       h.ZOOM_EROSION_STEP_MYR, cell_area_m2=cell_area, creep_m2_per_myr=diffusivity,
+                       edge=boundary, stream_power_k=h.ZOOM_STREAM_POWER_K)
+        # The outer edge stays pinned to the inherited surface, and river erosion and deposition fade in over
+        # a few kilometres inside it, so the frame neither steps nor disagrees with a neighbouring region.
+        # Creep is local, so it acts in full up to the edge and the texture stays even across the fade.
+        smoothed = creep(region, radius, breached, diffusivity, duration_myr, outlet)
+        height = breached + fade * (result.height_m - flow) + (1.0 - fade) * (smoothed - breached)
         # Creep partly refills the narrow outlets the breach cut, rebuilding low sills; cut them again.
         height = priority_breach(height, adj.indptr, adj.indices, outlet, h.ZOOM_BREACH_MAX_M, 1e-3)
         eroded_m, deposited_m, exported = result.eroded_m, result.deposited_m, result.exported_m3

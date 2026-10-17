@@ -6,6 +6,7 @@ import math
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 import yaml
 
 from . import constants as c
@@ -378,3 +379,98 @@ def save_state(state: PlanetState, path: str | Path) -> None:
     """Write the full planet state (SI units) to a YAML file."""
     with open(path, "w", encoding="utf-8") as f:
         yaml.safe_dump(state_to_plain(state), f, sort_keys=False, allow_unicode=True)
+
+
+def _people(n: float) -> str:
+    """Return a population with a thousands, millions or billions suffix."""
+    for scale, unit in ((1e9, " G"), (1e6, " M"), (1e3, " k")):
+        if n >= scale:
+            return f"{n / scale:.3g}{unit}"
+    return f"{n:.0f}"
+
+
+def format_history(civ) -> str:
+    """Return a table of an organic history's kept epochs: people, cultures, states, the largest state and the
+    highest levels any culture reached."""
+    from .culture.development import COMMUNICATION_LEVELS, ENERGY_LEVELS, TRANSPORT_LEVELS
+
+    rows = ["", "History", f"  {'epoch':<18}{'people':>9}{'cultures':>10}{'states':>8}  {'largest state':<30}"
+                           f"highest levels"]
+    for c in [*civ.epochs, civ]:
+        living = [k for k in c.cultures if (k.population or 0) > 0]
+        people = sum(k.population for k in living)
+        when = "present" if c.epoch_years_ago <= 0 else f"{c.epoch_years_ago:,.0f} years ago"
+        big = max(c.polities, key=lambda p: p.area_km2 or 0, default=None)
+        largest = f"{big.name or big.id} ({(big.area_km2 or 0) / 1e6:.2f} M km²)" if big is not None else "-"
+        top = [max((getattr(k.development, axis) for k in living), default=0)
+               for axis in ("energy", "transport", "communication")]
+        levels = ", ".join(names[t].replace("_", " ") for names, t in
+                           zip((ENERGY_LEVELS, TRANSPORT_LEVELS, COMMUNICATION_LEVELS), top))
+        rows.append(f"  {when:<18}{_people(people):>9}{len(living):>10}{len(c.polities):>8}  {largest:<30}{levels}")
+    if civ.chronicle:
+        from .culture.chronicle import is_major
+        rows.append(_row("chronicle", f"{len(civ.chronicle)} entries, {sum(map(is_major, civ.chronicle))} major "
+                                      f"(`worldgen chronicle`)"))
+    return "\n".join(rows)
+
+
+def format_culture(civ, world=None) -> str:
+    """Return a text report of a civilisation: per culture its development, people, settlements, polities and roads."""
+    from .culture.habitats import Habitat, elevator_taper
+    from .culture.model import ROAD_KINDS, SETTLEMENT_FORMS
+
+    lines = ["", "Culture", _row("cultures", str(len(civ.cultures))),
+             _row("settlements listed", str(len(civ.settlements))), _row("polities", str(len(civ.polities)))]
+    if civ.epoch_years_ago or civ.epochs:
+        lines.append(_row("epoch", f"{civ.epoch_years_ago:,.0f} years ago" if civ.epoch_years_ago else "present"))
+    if civ.epochs:
+        lines.append(_row("earlier epochs kept", ", ".join(f"{e.epoch_years_ago:,.0f}" for e in civ.epochs)
+                          + " years ago"))
+    st, roads = civ.settlements, civ.roads
+    for c in civ.cultures:
+        mine = np.flatnonzero(st.culture == c.id)
+        mode = ", organic" if c.mode == "organic" else ""
+        lines += ["", f"  {c.name or f'culture {c.id}'} ({c.inhabitants}{mode})"]
+        dev = c.development.to_names()
+        lines.append(_row("development", f"{dev['energy']}, {dev['transport']}, {dev['communication']}"))
+        if c.population is not None:
+            lines.append(_row("population", _people(c.population)))
+        if c.inhabitants == "colonist":
+            lines.append(_row("founded", f"{c.founded_years_ago or 0:.0f} years ago"))
+            for site in c.landing_sites:
+                lines.append(_row("landing site", f"{site['lat_deg']:.1f}°, {site['lon_deg']:.1f}°"))
+        if mine.size:
+            top = mine[np.argsort(-st.population[mine])][:5]
+            lines.append(_row("largest settlements", ", ".join(
+                f"{st.name[k]} ({_people(st.population[k])})" for k in top)))
+            forms = np.bincount(st.form[mine], minlength=len(SETTLEMENT_FORMS))
+            lines.append(_row("settlement forms", ", ".join(
+                f"{SETTLEMENT_FORMS[f]} {n}" for f, n in enumerate(forms) if n)))
+        polities = [p for p in civ.polities if p.culture == c.id]
+        if polities:
+            big = sorted(polities, key=lambda p: -(p.area_km2 or 0))[:5]
+            lines.append(_row("polities", f"{len(polities)}; largest " + ", ".join(
+                f"{p.name} ({p.type}, {(p.area_km2 or 0) / 1e6:.2f} M km²)" for p in big)))
+        if len(roads):
+            ours = roads.culture == c.id
+            km = {ROAD_KINDS[k]: roads.length_km[ours & (roads.kind == k)].sum() for k in np.unique(roads.kind[ours])}
+            if km:
+                lines.append(_row("roads (grid, km)", ", ".join(
+                    f"{k.replace('_', ' ')} {v:,.0f}" for k, v in km.items())))
+        if c.phonology:
+            ph = c.phonology
+            lines.append(_row("sound system", f"{len(ph['consonants'])} consonants, {len(ph['vowels'])} vowels, "
+                                              f"{ph['syllables']} syllables"))
+    if world is not None and "habitat" in civ.layers and any(c.inhabitants == "colonist" for c in civ.cultures):
+        hab = civ.layers["habitat"].values
+        land = ~world.surface["ocean"].values
+        lines.append("")
+        lines.append(_row("colonist habitats (land)", ", ".join(
+            f"{k.name.lower()} {np.mean(hab[land] == k):.0%}" for k in Habitat)))
+        taper = elevator_taper(world.state)
+        from . import heuristics as h
+        lines.append(_row("space elevator", "not possible" if taper > h.ELEVATOR_MAX_TAPER
+                          else f"taper ratio {taper:.3g}"))
+    if civ.epochs or civ.chronicle:
+        lines.append(format_history(civ))
+    return "\n".join(lines)

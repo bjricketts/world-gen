@@ -36,6 +36,15 @@ class Crust(IntEnum):
     PRIMARY = 2        # single-plate (non-plate-tectonic) crust
 
 
+class OrogenyKind(IntEnum):
+    """Kind of the last mountain building on a cell (codes shared with the plate simulation)."""
+
+    NONE = 0
+    ANDEAN = 1         # continental margin above a subduction zone
+    ARC = 2            # island arc above oceanic subduction
+    COLLISION = 3      # continents colliding
+
+
 class Boundary(IntEnum):
     """Plate boundary type of each grid cell."""
 
@@ -64,6 +73,8 @@ class SurfaceFields:
     boundary: np.ndarray = field(init=False)
     crust_age_myr: np.ndarray = field(init=False)
     orogeny_age_myr: np.ndarray = field(init=False)
+    orogeny_kind: np.ndarray = field(init=False)
+    sediment_m: np.ndarray = field(init=False)
     fabric: np.ndarray = field(init=False)
 
     def __post_init__(self) -> None:
@@ -76,6 +87,8 @@ class SurfaceFields:
         self.boundary = np.full(n, Boundary.NONE, dtype=np.int8)
         self.crust_age_myr = np.full(n, np.nan)
         self.orogeny_age_myr = np.full(n, np.nan)
+        self.orogeny_kind = np.full(n, OrogenyKind.NONE, dtype=np.int8)
+        self.sediment_m = np.zeros(n)
         self.fabric = np.zeros((n, 3))
 
     @property
@@ -99,6 +112,10 @@ class SurfaceFields:
                               {"units": "Myr", "long_name": "oceanic crust age"}),
                 "orogeny_age": ("cell", self.orogeny_age_myr.astype(np.float32),
                                 {"units": "Myr", "long_name": "time since last mountain building"}),
+                "orogeny_kind": ("cell", self.orogeny_kind,
+                                 {"long_name": "kind of the last mountain building", **_enum_attrs(OrogenyKind)}),
+                "sediment": ("cell", self.sediment_m.astype(np.float32),
+                             {"units": "m", "long_name": "sediment thickness laid down by rivers and on the sea floor"}),
                 "fabric": (("vec", "cell"), self.fabric.T.astype(np.float32),
                            {"long_name": "structural grain as a tangent vector (x, y, z in the grid frame); "
                                          "length 0 to 1 is the grain strength, 0 where there is no grain"}),

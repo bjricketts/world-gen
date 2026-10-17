@@ -17,8 +17,9 @@ from typing import Literal, Optional, Union
 import yaml
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
-Range = tuple[float, float]
-Param = Optional[Union[float, Range]]
+from .culture.spec import CultureSpec
+
+from .spec_base import Param, Range, Section as _Section  # noqa: F401
 
 TectonicRegime = Literal["mobile_lid", "stagnant_lid", "episodic", "heat_pipe", "inactive", "fluid"]
 Composition = Literal["n2_o2", "n2_co2", "co2", "n2_ch4", "h2_he", "none"]
@@ -28,21 +29,6 @@ TectonicStart = Literal["supercontinent", "cratons"]
 LifeMode = Literal["surface", "ocean", "subsurface", "none"]
 Biochemistry = Literal["oxygenic", "methanogenic", "alien"]
 AlienProduct = Literal["o2", "ch4", "none"]
-
-
-class _Section(BaseModel):
-    """Base for spec sections: rejects unknown keys and checks ranges."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    @field_validator("*", mode="after")
-    @classmethod
-    def _check_range(cls, v):
-        """Reject ranges whose low value exceeds the high value."""
-        if isinstance(v, tuple) and len(v) == 2 and all(isinstance(x, (int, float)) for x in v):
-            if v[0] > v[1]:
-                raise ValueError(f"range low value {v[0]} exceeds high value {v[1]}")
-        return v
 
 
 class StarSpec(_Section):
@@ -191,6 +177,7 @@ class PlanetSpec(BaseModel):
     biosphere: BiosphereSpec = BiosphereSpec()
     history: HistorySpec = HistorySpec()
     priors: PriorSpec = PriorSpec()
+    culture: Optional[CultureSpec] = None   # inhabitants placed after the planet is built (DESIGN 4.8)
 
 
 # Fields describing the planet's present state rather than its initial
@@ -322,4 +309,33 @@ atmosphere: {}
   # surface_temperature_k: 290
   # volatile_richness: 1.0
   # weathering_target_k: 288      # temperature CO2 regulation settles at (plate tectonics + water)
+
+# culture:                        # inhabitants, placed after the planet is built; can also be its own file
+#   # seed: 7                     # redraw the culture alone (default: the planet seed)
+#   # history:                    # for organic cultures: span and the epochs kept (years before the present)
+#   #   start_years_ago: 12000
+#   #   epochs: [5000, 2000, 500]
+#   #   pace: 1.0                 # speeds up (>1) or slows (<1) the growth of knowledge
+#   cultures:
+#     - name: Vessari
+#       mode: scoped              # scoped (placed from this entry) | organic (emerges from a simulated history)
+#       inhabitants: native       # native | colonist
+#       development:              # axes left out take the mean level of those given
+#         energy: farming         # foraging | farming | water_wind | fossil | electric | fusion
+#         transport: wheel_and_sail  # foot | pack_and_boat | wheel_and_sail | rail_and_steam | motor_and_air | spaceflight
+#         communication: writing  # oral | writing | print | telegraph | digital | interplanetary
+#       population: [1.0e7, 5.0e7]
+#       # homeland: {lat_deg: 20, lon_deg: 40, radius_km: 1500}
+#       settlements: {zipf_exponent: 1.0, largest_population: 2.0e5}
+#       polities:
+#         count: [3, 8]
+#         type: kingdom           # band | tribe | chiefdom | city_state | kingdom | empire | federation | republic | corporate | colony
+#         # capitals: [{lat_deg: 21, lon_deg: 38, name: Aru}]
+#     - inhabitants: colonist
+#       development: {energy: fusion, transport: spaceflight}
+#       colony: {founded_years_ago: 150, origin: Sol, landing_sites: [{lat_deg: -5, lon_deg: 100}]}
+#       # organic colonies: colony: {..., immigrants_per_year: 1000, immigration_years: 100, independence_years: 200}
+#     # - name: Oru
+#     #   mode: organic           # development, population, settlements and polities emerge from the history
+#     #   homeland: {lat_deg: -10, lon_deg: 20, radius_km: 3000}   # where its foragers start
 """

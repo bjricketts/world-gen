@@ -25,7 +25,9 @@ EARTH_SPEC = Path(__file__).resolve().parent.parent / "examples" / "earth.yaml"
 # Name, reference value on Earth (or None), and how to print it. Köppen main-class shares of
 # land (Antarctica included) are from Peel et al. (2007). Antarctica alone holds 58 m of sea-level
 # equivalent (Fretwell et al. 2013). The ocean carries 22% of the poleward transport at 35° N
-# (Trenberth & Caron 2001).
+# (Trenberth & Caron 2001). Continental sediment is from the CRUST1.0 sediment layers (Laske et al. 2013;
+# crystalline crust at least 20 km thick counts as continental); oceanic sediment on crust younger than
+# 83 Myr is compared with the age–latitude law of GlobSed (Straume et al. 2019).
 COLUMNS = [
     ("land fraction", 0.29, "{:.2f}"),
     ("continental crust fraction", 0.41, "{:.2f}"),
@@ -66,6 +68,10 @@ COLUMNS = [
     ("  Df", None, "{:.2f}"),
     ("  Dw", None, "{:.2f}"),
     ("vegetated share of land", None, "{:.2f}"),
+    ("continental crust >1 km sediment", 0.38, "{:.2f}"),
+    ("mean continental sediment (km)", 1.46, "{:.2f}"),
+    ("mean oceanic sediment (km)", 0.75, "{:.2f}"),
+    ("oceanic <83 Myr / GlobSed law", 1.0, "{:.2f}"),
     ("coupling passes", None, "{:.0f}"),
     ("run time (s)", None, "{:.1f}"),
 ]
@@ -75,6 +81,20 @@ def _ocean_share(features: dict) -> float:
     """Return the ocean's share of the poleward heat transport at 35° N."""
     ocean = features.get("ocean_heat_transport_35n_pw", np.nan)
     return ocean / (ocean + features.get("atmosphere_heat_transport_35n_pw", np.nan))
+
+
+def _sediment_statistics(s) -> list[float]:
+    """Return sediment statistics: continental share above 1 km, continental and oceanic means, GlobSed ratio."""
+    if "sediment" not in s:
+        return [np.nan] * 4
+    sed = s.sediment.values.astype(float)
+    cont = s.crust.values == 1
+    age = s.crust_age.values.astype(float)
+    lat = np.abs(s.lat.values.astype(float))
+    young = ~cont & np.isfinite(age) & (age < 83) & (lat < 70)
+    law = np.sqrt(age[young]) * (52 - 2.46 * lat[young] + 0.045 * lat[young] ** 2)
+    ratio = sed[young].mean() / law.mean() if young.any() else np.nan
+    return [np.mean(sed[cont] > 1000), sed[cont].mean() / 1e3, sed[~cont].mean() / 1e3, ratio]
 
 
 def surface_statistics(world, seconds: float) -> list[float]:
@@ -128,6 +148,7 @@ def surface_statistics(world, seconds: float) -> list[float]:
         np.mean(sub == "Df"),
         np.mean(sub == "Dw"),
         s.vegetation_cover.values[land].mean(),
+        *_sediment_statistics(s),
         f.get("climate_coupling_passes", np.nan),
         seconds,
     ]
