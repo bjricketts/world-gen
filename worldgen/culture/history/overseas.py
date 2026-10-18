@@ -47,7 +47,7 @@ class Overseas:
         self.survival = np.exp(-excess * h.OVERSEAS_MORTALITY_HORIZON_YEARS)
         self.colonies: dict[tuple[int, int], int] = {}     # (home culture id, landmass) -> colonist culture id
         template = Culture(id=-1, name=None, inhabitants="colonist", development=Development(0, 0, 0), mode="organic")
-        self.capacity = capacity_by_level(template, cov)
+        self.capacity = capacity_by_level(template, cov, world)
 
     def step(self, ctx, state, years: float) -> None:
         """Let seafaring states found colonies."""

@@ -24,6 +24,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=7", "pytest-xdist>=3", "nbclient>=0.9", "nbformat>=5.9", "ipykernel>=6"]
 notebooks = ["jupyterlab>=4"]
+explore = ["ipywidgets>=8", "ipympl>=0.9"]
 
 [project.scripts]
 worldgen = "worldgen.cli:app"

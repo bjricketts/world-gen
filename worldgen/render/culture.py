@@ -1,4 +1,6 @@
-"""Culture layers on global maps: population, cultures, polities, settlements, roads, habitats, resources.
+"""Culture layers on global maps: population, cultures, polities, settlements, roads, habitats, resources, the
+suitability of the land, and an organic history's development levels, bands and chiefdoms, livestock and the
+components of the land's suitability.
 
 The political map combines polity colours and borders with roads, sea routes,
 settlements and the names of the largest places and polities.
@@ -11,7 +13,7 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import LineCollection
-from matplotlib.colors import LogNorm, to_rgb
+from matplotlib.colors import LogNorm, PowerNorm, to_rgb
 from matplotlib.patches import Patch
 
 from ..culture.habitats import Habitat
@@ -19,7 +21,13 @@ from ..culture.model import ROAD_KINDS, SETTLEMENT_FORMS
 from .raster import projected_sampler
 from .rivers import smooth_line
 
-CULTURE_FIELDS = ("population", "cultures", "polities", "settlements", "roads", "political", "habitat", "resources")
+CULTURE_FIELDS = ("population", "cultures", "polities", "settlements", "roads", "political", "habitat", "resources",
+                  "suitability")
+# layers only an organic history leaves (task 9.16)
+HISTORY_LAYER_FIELDS = ("energy", "transport", "communication", "bands", "livestock", "land")
+LEVEL_AXES = {"energy": 0, "transport": 1, "communication": 2}
+RESOURCE_BEST_MIN = 0.5          # resources:best colours a cell by its richest resource of at least this potential
+LIVESTOCK_COLOURS = {"farming without herds": "#b8d39a", "herds kept": "#8c510a", "herds brought by settlers": "#d8b365"}
 OCEAN_COLOUR = "#2f5a8a"
 EMPTY_LAND = "#d9d2c3"
 ROAD_STYLE = {   # kind: (colour, width, zorder)
@@ -41,8 +49,44 @@ def split_field(field: str) -> tuple[str, Optional[str]]:
 
 
 def is_culture_field(field: str) -> bool:
-    """Return whether a map field is one of the culture layers."""
-    return split_field(field)[0] in CULTURE_FIELDS
+    """Return whether a map field is one of the culture layers (including an organic history's)."""
+    return split_field(field)[0] in CULTURE_FIELDS + HISTORY_LAYER_FIELDS
+
+
+def _culture_id(civ, option: Optional[str]) -> Optional[int]:
+    """Return the id of the culture an option names (by name or id), or None for no option."""
+    if option is None:
+        return None
+    for c in civ.cultures:
+        if (c.name and c.name.lower() == option.lower()) or str(c.id) == option:
+            return c.id
+    names = ", ".join(c.name or str(c.id) for c in civ.cultures)
+    raise ValueError(f"no culture '{option}'; choose from {names}")
+
+
+def _history_layer(civ, name: str):
+    """Return a layer an organic history leaves, or raise a clear error."""
+    if name not in civ.layers:
+        raise ValueError(f"this civilisation has no '{name}' layer: the map needs an organic history")
+    return civ.layers[name]
+
+
+def level_codes(civ, axis: str, culture: Optional[int] = None) -> np.ndarray:
+    """Return the development level in force per cell on one axis: the highest among the organic cultures living
+    there, or one culture's (−1 where no one lives)."""
+    from ..culture.history.state import in_force
+
+    dev = _history_layer(civ, "development_level")
+    density = civ.layers["population_density"]
+    ids = [int(i) for i in dev["organic"].values if int(i) in set(density["culture"].values.tolist())]
+    if culture is not None:
+        ids = [i for i in ids if i == culture]
+    out = np.full(dev.sizes["cell"], -1)
+    for i in ids:
+        lived = density.sel(culture=i).values > 0
+        level = in_force(dev.sel(organic=i).values[LEVEL_AXES[axis]])
+        out = np.where(lived, np.maximum(out, level), out)
+    return out
 
 
 def _civ(world):
@@ -133,14 +177,80 @@ def culture_image(world, field: str, proj, width: int):
     elif name == "resources":
         pot = civ.layers["resource_potential"]
         names = list(pot["resource"].values)
+        if option == "best":
+            values = pot.values
+            best = np.where(values.max(axis=0) >= RESOURCE_BEST_MIN, np.argmax(values, axis=0), -1)
+            codes = sampler.sample(best, categorical=True)
+            palette = plt.get_cmap("tab20")(np.arange(len(names)) % 20)[:, :3]
+            rgb[codes >= 0] = palette[codes[codes >= 0]]
+            rgb[ocean] = to_rgb(OCEAN_COLOUR)
+            rgba = np.concatenate([rgb, valid[..., None].astype(float)], axis=-1)
+            shown = np.unique(codes[codes >= 0])
+            return rgba, [Patch(color=palette[k], label=names[k].replace("_", " ")) for k in shown], sampler.extent
         if option is None or option not in names:
-            raise ValueError(f"choose a resource as resources:<name>, one of {', '.join(names)}")
+            raise ValueError(f"choose a resource as resources:<name> or resources:best, one of {', '.join(names)}")
         img = sampler.sample(pot.sel(resource=option).values)
         cmap = plt.get_cmap("YlOrBr")
         rgb = cmap(np.clip(np.nan_to_num(img), 0, 1))[..., :3]
         extra = (cmap, plt.Normalize(0, 1))
+    elif name == "suitability":
+        suit = civ.layers["suitability"]
+        cid = _culture_id(civ, option)
+        if cid is None:
+            people = civ.layers["population_density"].sum(dim="cell")
+            cid = int(people["culture"].values[int(np.argmax(people.values))])
+        if cid not in set(suit["culture"].values.tolist()):
+            raise ValueError(f"culture {cid} has no suitability layer (it has no people at this epoch)")
+        img = sampler.sample(suit.sel(culture=cid).values)
+        cmap = plt.get_cmap("viridis")
+        norm = PowerNorm(0.5, vmin=0.0, vmax=1.0)          # most land holds a small share of the best cell
+        rgb = cmap(norm(np.clip(np.nan_to_num(img), 0, 1)))[..., :3]
+        extra = (cmap, norm)
+    elif name in LEVEL_AXES:
+        from ..culture.development import COMMUNICATION_LEVELS, ENERGY_LEVELS, TRANSPORT_LEVELS
+
+        names = {"energy": ENERGY_LEVELS, "transport": TRANSPORT_LEVELS, "communication": COMMUNICATION_LEVELS}[name]
+        codes = sampler.sample(level_codes(civ, name, _culture_id(civ, option)), categorical=True)
+        palette = plt.get_cmap("YlOrRd")(np.linspace(0.15, 0.95, len(names)))[:, :3]
+        lived = codes >= 0
+        rgb[lived] = palette[np.clip(codes[lived], 0, len(names) - 1)]
+        shown = np.unique(codes[lived])
+        extra = [Patch(color=palette[k], label=names[k].replace("_", " ")) for k in shown if 0 <= k < len(names)]
+    elif name == "bands":
+        counts = _history_layer(civ, "subpolity_count").values.sum(axis=0)
+        img = sampler.sample(counts)
+        live = np.nan_to_num(img) >= 1
+        norm = LogNorm(vmin=1.0, vmax=max(2.0, float(counts.max())))
+        cmap = plt.get_cmap("YlGn")
+        rgb[live] = cmap(norm(img[live]))[..., :3]
+        ruled = sampler.sample((_owner(civ) >= 0).astype(float), categorical=True).astype(bool)
+        rgb[ruled & ~live] = (0.72, 0.72, 0.72)
+        extra = (cmap, norm)
+    elif name == "livestock":
+        herds = _history_layer(civ, "livestock").values
+        dev = civ.layers["development_level"]
+        density = civ.layers["population_density"]
+        ids = [int(i) for i in dev["organic"].values if int(i) in set(density["culture"].values.tolist())]
+        farmed = np.zeros(herds.size, dtype=bool)
+        for i in ids:
+            farmed |= (density.sel(culture=i).values > 0) & (dev.sel(organic=i).values[0] >= 0.5)
+        code = np.where(herds == 1, 1, np.where(herds == 2, 2, np.where(farmed, 0, -1)))
+        codes = sampler.sample(code, categorical=True)
+        colours = list(LIVESTOCK_COLOURS.values())
+        for k in range(3):
+            rgb[codes == k] = to_rgb(colours[k])
+        extra = [Patch(color=c, label=label) for label, c in LIVESTOCK_COLOURS.items()]
+    elif name == "land":
+        comp = _history_layer(civ, "suitability_component")
+        names = [str(c) for c in comp["component"].values]
+        if option is None or option not in names:
+            raise ValueError(f"choose a component as land:<name>, one of {', '.join(names)}")
+        img = sampler.sample(comp.sel(component=option).values)
+        cmap = plt.get_cmap("YlGnBu")
+        rgb = cmap(np.clip(np.nan_to_num(img), 0, 1))[..., :3]
+        extra = (cmap, plt.Normalize(0, 1))
     else:
-        raise ValueError(f"unknown culture field '{field}'; choose from {', '.join(CULTURE_FIELDS)}")
+        raise ValueError(f"unknown culture field '{field}'; choose from {', '.join(CULTURE_FIELDS + HISTORY_LAYER_FIELDS)}")
     rgb[ocean] = 0.5 * rgb[ocean] + 0.5 * np.array(to_rgb(OCEAN_COLOUR)) if name == "resources" else to_rgb(OCEAN_COLOUR)
     rgba = np.concatenate([rgb, valid[..., None].astype(float)], axis=-1)
     return rgba, extra, sampler.extent

@@ -12,6 +12,9 @@ from ..model import ChronicleEntry
 AXIS_NAMES = tuple(AXES)
 
 
+LIVESTOCK_NONE, LIVESTOCK_KEPT, LIVESTOCK_BROUGHT = 0, 1, 2      # codes of HistoryState.livestock
+
+
 def in_force(level: np.ndarray) -> np.ndarray:
     """Return the level in force for real-valued levels: level k holds from k − 0.5 to k + 0.5."""
     return np.floor(np.asarray(level, dtype=float) + 0.5).astype(int)
@@ -58,17 +61,20 @@ class HistoryState:
     active: np.ndarray                       # culture present yet (colonists land during the history)
     owner: np.ndarray = None                 # state polity id per cell, −1 where none (one state per cell)
     polities: list = field(default_factory=list)   # HistoryPolity records, alive and ended
+    livestock: np.ndarray = None             # per cell: 0 no herds, 1 herds kept (LIVESTOCK_KEPT), 2 brought by settlers
 
     def __post_init__(self):
-        """Start with no states."""
+        """Start with no states and no herds."""
         if self.owner is None:
             self.owner = np.full(self.population.shape[1], -1, dtype=np.int64)
+        if self.livestock is None:
+            self.livestock = np.zeros(self.population.shape[1], dtype=np.int8)
 
     def copy(self) -> "HistoryState":
         """Return an independent copy."""
         return replace(self, culture_ids=list(self.culture_ids), population=self.population.copy(),
                        development=self.development.copy(), active=self.active.copy(), owner=self.owner.copy(),
-                       polities=[replace(p) for p in self.polities])
+                       polities=[replace(p) for p in self.polities], livestock=self.livestock.copy())
 
     def index(self, culture_id: int) -> int:
         """Return the row of a culture in the state arrays."""

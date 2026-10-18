@@ -30,12 +30,16 @@ def test_level_in_force_rounds_half_up():
     assert list(in_force(np.array([0.0, 0.49, 0.5, 1.2, 2.5]))) == [0, 0, 1, 1, 3]
 
 
-def test_capacity_is_the_anchor_at_integers_and_geometric_between():
+def test_capacity_is_the_anchor_at_integers_and_log_linear_between():
     levels = np.array([[10.0, 0.0], [1000.0, 50.0], [4000.0, 80.0]])
     k = cell_capacity(levels, np.array([1.0, 1.0]))
     assert list(k) == [1000.0, 50.0]
-    assert cell_capacity(levels, np.array([0.5, 0.5]))[0] == pytest.approx(100.0)
-    assert cell_capacity(levels, np.array([0.5, 0.5]))[1] == 0.0          # no capacity below: lower anchor holds
+    assert cell_capacity(levels, np.array([1.5, 1.5]))[0] == pytest.approx(2000.0)
+    start = cell_capacity(levels, np.full(2, h.FARMING_START_ENERGY))
+    assert start[0] == pytest.approx(10.0 * 100.0 ** h.EARLY_FARMING_LOG_SHARE)    # early farming's share of the step
+    assert start[1] == 0.0                                                    # no capacity below: lower anchor holds
+    e = np.array([0.25, 0.5, 0.75, 0.99])
+    assert np.all(np.diff(cell_capacity(np.repeat(levels[:, :1], 4, axis=1), e)) > 0)          # rises through the start
 
 
 def test_companion_levels_follow_earths_pairing():
@@ -47,6 +51,34 @@ def test_knowledge_log_and_gaps_follow_the_anchors():
     anchors = np.log([h.POPULATION_ANCHOR[n] for n in ENERGY_LEVELS])
     assert knowledge_log(np.array([0.0, 2.0]))[1] == pytest.approx(anchors[2] - anchors[0])
     assert capacity_gap(np.array([1.3]))[0] == pytest.approx(anchors[2] - anchors[1])
+
+
+def test_knowledge_without_fuel_stops_short_of_fossil():
+    from worldgen.culture.history.development import WITHOUT_FUEL_MAX
+
+    assert WITHOUT_FUEL_MAX < h.INDUSTRIAL_FROM_ENERGY and in_force(np.array([WITHOUT_FUEL_MAX]))[0] == 2
+
+
+def test_the_front_into_forager_land_slows_with_arable_land():
+    n, km, years = 30, 100.0, 25.0
+
+    class Links:
+        rows = np.r_[np.arange(n - 1), np.arange(1, n)]
+        cols = np.r_[np.arange(1, n), np.arange(n - 1)]
+        flat_km = np.full(rows.size, km)
+
+    def arrival(arable):
+        level = np.zeros(n); level[0] = 1.2
+        progress, credit = np.zeros(n), np.zeros(n)
+        for step in range(2000):
+            level, progress, credit, _ = advance_levels(level, progress, credit, Links, years, arable)
+            if level[-1] > 0:
+                return step
+        return None
+
+    full, half = arrival(np.ones(n)), arrival(np.full(n, 0.5))
+    assert half == pytest.approx(full / 0.5 ** h.FARMING_FRONT_ARABLE_EXPONENT, rel=0.1)
+    assert arrival(np.r_[np.ones(n // 2), np.zeros(n - n // 2)]) is None                 # no crops, no farming front
 
 
 def test_energy_rate_needs_farming_fuel_for_industry_and_scales_with_pace():

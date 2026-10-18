@@ -50,6 +50,7 @@ class Culture:
     immigrants_per_year: float = 0.0                    # organic colonies: arrivals per year after landing
     immigration_years: Optional[float] = None           # for how long (None: to the present)
     independence_years: Optional[float] = None          # organic colonies: years tied to the home power (None: by turmoil)
+    crowd_diseases: bool = False                        # organic colonies from off the planet: carry crowd diseases
     home_culture: Optional[int] = None                  # organic colonies founded from this planet: the home culture's id
     creole_of: list[int] = field(default_factory=list)  # a creole culture: the ids of the two cultures it formed from
     phonology: Optional[dict] = None
@@ -250,14 +251,28 @@ class Civilisation:
     chronicle: list[ChronicleEntry] = field(default_factory=list)
     epoch_years_ago: float = 0.0
     epochs: list["Civilisation"] = field(default_factory=list)   # earlier states kept by an organic history, oldest first
+    previous_epoch_years_ago: Optional[float] = None   # set by ``at_epoch`` on the epoch it returns (not saved)
 
     def at_epoch(self, years_ago: float) -> "Civilisation":
         """Return the civilisation as it stood at a kept epoch (0: the present)."""
-        for civ in [self, *self.epochs]:
+        dates = [c.epoch_years_ago for c in self.epochs]
+        for k, civ in enumerate([*self.epochs, self]):
             if abs(civ.epoch_years_ago - years_ago) < 1e-6:
+                if civ is not self:
+                    civ.previous_epoch_years_ago = dates[k - 1] if k > 0 else None
                 return civ
         kept = ", ".join(f"{c.epoch_years_ago:g}" for c in [*self.epochs, self])
         raise KeyError(f"no epoch {years_ago:g} years ago (kept: {kept})")
+
+    def event_window(self) -> tuple[float, float]:
+        """Return (since, until) years ago: from the previous kept epoch (or the start of the history) to this one."""
+        if self.previous_epoch_years_ago is not None:
+            since = self.previous_epoch_years_ago
+        elif self.epochs:
+            since = self.epochs[-1].epoch_years_ago
+        else:
+            since = float(self.spec.history_or_default().start_years_ago)
+        return float(since), float(self.epoch_years_ago)
 
     def culture(self, culture_id: int) -> Culture:
         """Return the culture with the given id."""

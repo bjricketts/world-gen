@@ -90,7 +90,8 @@ def epoch_people(world, cov, cultures: list[Culture], state: HistoryState, seed:
 
 
 def history_layers(state: HistoryState, cultures: list[Culture], cell_area_km2: float) -> xr.Dataset:
-    """Return the history's own per-cell fields at a snapshot, by organic culture id: development level on each axis and sub-cell polity counts."""
+    """Return the history's own per-cell fields at a snapshot: development level on each axis and sub-cell polity
+    counts by organic culture id, and the cells' livestock."""
     ids = [c.id for c in cultures if c.mode == "organic" and c.id in state.culture_ids]
     if not ids:
         return xr.Dataset()
@@ -103,7 +104,9 @@ def history_layers(state: HistoryState, cultures: list[Culture], cell_area_km2: 
             coords={"organic": ids, "axis": ["energy", "transport", "communication"]},
             attrs={"long_name": "development level reached (integer part: level in force)"}),
         "subpolity_count": xr.DataArray(counts, dims=("organic", "cell"), coords={"organic": ids}, attrs={
-            "long_name": "bands, tribes or chiefdoms in cells without a state"})})
+            "long_name": "bands, tribes or chiefdoms in cells without a state"}),
+        "livestock": xr.DataArray(state.livestock.astype("int8"), dims=("cell",), attrs={
+            "long_name": "herd animals kept (0 none, 1 kept, 2 brought by settlers)"})})
 
 
 def state_development(state: HistoryState, row: int, cell: int):

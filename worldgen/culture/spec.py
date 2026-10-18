@@ -84,6 +84,7 @@ class ColonySpec(Section):
     immigrants_per_year: float = Field(default=0.0, ge=0)          # organic colonies: arrivals after landing
     immigration_years: Optional[float] = Field(default=None, gt=0)   # how long they keep arriving (None: to the present)
     independence_years: Optional[float] = Field(default=None, gt=0)  # organic colonies: years tied to the home power
+    crowd_diseases: bool = False     # organic colonies from off the planet: carry crowd diseases from herd animals
 
 
 EventKind = Literal["eruption", "drought", "pandemic", "impact", "sea_level"]

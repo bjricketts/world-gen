@@ -18,13 +18,14 @@ from ..surface.fields import Boundary, Crust, Terrain
 from ..surface.relicts import Relict
 from ..world import World
 from .raster import projected_sampler
-from .culture import CULTURE_FIELDS, culture_image, draw_culture_overlays, is_culture_field, split_field
+from .culture import CULTURE_FIELDS, HISTORY_LAYER_FIELDS, culture_image, draw_culture_overlays, is_culture_field, split_field
 from .rivers import LAKE_COLOUR, draw_rivers
 
 PROJECTIONS = ("equirectangular", "mollweide", "robinson", "orthographic", "north_polar", "south_polar")
 GLOBE_PROJECTIONS = ("orthographic", "north_polar", "south_polar")
 FIELDS = ("elevation", "terrain", "plates", "crust_age", "orogeny_age", "temperature", "rainfall", "basins",
-          "biomes", "koppen", "ice", "relicts") + CULTURE_FIELDS
+          "biomes", "koppen", "ice", "relicts") + CULTURE_FIELDS + HISTORY_LAYER_FIELDS + ("events",)
+HISTORY_FIELDS = HISTORY_LAYER_FIELDS + ("events",)          # fields that need an organic history
 SEASON_NAMES = {1: "month 1 (northern winter)", 7: "month 7 (northern summer)"}
 DEFAULT_WIDTH = {"map": 1100, "globe": 700}
 
@@ -329,7 +330,10 @@ def field_image(world: World, field: str, proj: ccrs.Projection, width: int, mon
     return rgba, extra, sampler.extent
 
 
-CULTURE_COLORBAR_LABELS = {"population": "population density (people/km²)", "resources": "resource potential (0–1)"}
+CULTURE_COLORBAR_LABELS = {"population": "population density (people/km²)", "resources": "resource potential (0–1)",
+                           "suitability": "carrying capacity relative to the best cell (0–1)",
+                           "bands": "bands, tribes and chiefdoms per cell (grey: ruled by a state)",
+                           "land": "suitability component (0–1)"}
 TEMPERATURE_NORM = TwoSlopeNorm(vmin=213.15, vcenter=273.15, vmax=318.15)
 COLORBAR_LABELS = {"crust_age": "oceanic crust age (Myr)", "rainfall": "precipitation (m/yr)",
                    "ice": "ice-sheet thickness (m); sea shaded by sea-ice cover",
@@ -362,13 +366,17 @@ def _elevation_colorbar(ax, cmap, norm) -> None:
 def plot_map(world: World, field: str = "elevation", projection_name: str = "mollweide", ax=None,
              central_longitude: float = 0.0, central_latitude: float = 20.0, width: Optional[int] = None,
              hillshade: bool = True, title: Optional[str] = None, colorbar: bool = True,
-             legend: str | None = "right", rivers: bool = True, month: Optional[int] = None):
+             legend: str | None = "right", rivers: bool = True, month: Optional[int] = None,
+             events=None):
     """Draw one field of the world's surface on a map projection and return the axes.
 
     ``legend`` places the legend for categorical fields: "right" (outside the
     map), "inside" (lower left), or None. ``rivers`` draws rivers over the
     elevation, terrain, rainfall and basin maps. ``month`` (1–12) shows one
-    month of the temperature or rainfall fields.
+    month of the temperature or rainfall fields. ``events`` draws the planet
+    events of an organic history over the map: True for those since the
+    previous kept epoch, or a (since, until) pair of years ago. The field
+    "events" draws them over a pale relief map.
     """
     if world.surface is None:
         raise ValueError(f"{world.state.name} has no solid surface to map")
@@ -381,7 +389,14 @@ def plot_map(world: World, field: str = "elevation", projection_name: str = "mol
         ax = fig.add_subplot(1, 1, 1, projection=proj)
     ax.set_global()
 
-    if field == "elevation":
+    if field == "events":
+        if world.culture is None:
+            raise ValueError(f"{world.state.name} has no culture: the events field needs an organic history")
+        rgba, _, _, extent = elevation_image(world, proj, width, hillshade)
+        rgba[..., :3] = 0.45 * rgba[..., :3] + 0.55
+        ax.imshow(rgba, transform=proj, extent=extent, origin="upper", interpolation="bilinear")
+        events = True if events is None else events
+    elif field == "elevation":
         rgba, cmap, norm, extent = elevation_image(world, proj, width, hillshade)
         ax.imshow(rgba, transform=proj, extent=extent, origin="upper", interpolation="bilinear")
         if colorbar:
@@ -422,7 +437,17 @@ def plot_map(world: World, field: str = "elevation", projection_name: str = "mol
     if rivers and field in ("elevation", "terrain", "rainfall", "basins", "political", "settlements", "roads"):
         draw_rivers(ax, world, proj, width_scale=1.0 if not globe else 0.9)
 
+    if events:
+        from .events import draw_events, event_window
+
+        since, until = event_window(world) if events is True else events
+        draw_events(ax, world, since, until, proj)
     ax.gridlines(color="white", alpha=0.3, linewidth=0.5)
+    if title is None and field == "events":
+        from .events import event_window
+
+        since, until = event_window(world) if events is True else events
+        title = f"{world.state.name}: events, {since:,.0f} to {until:,.0f} years ago"
     ax.set_title(title if title is not None else f"{world.state.name}: {field}", fontsize=11)
     return ax
 

@@ -22,6 +22,8 @@ Known gaps and planned fixes are in
 pip install -e ".[dev,notebooks]"
 ```
 
+The history explorer notebook also needs `pip install -e ".[explore]"` (ipywidgets and ipympl).
+
 Requires Python 3.10+. Maps use Cartopy, which installs from wheels on Windows, macOS and Linux.
 
 ## Command line
@@ -69,11 +71,15 @@ worldgen chronicle kestrel_history --kind independence --culture Corin
 worldgen epochs kestrel_history epochs.png -f political         # a field at the kept epochs; .gif animates
 worldgen epochs kestrel_history timeline.png --timeline         # people, levels and events against time
 worldgen map kestrel_history old.png -f political --epoch 2000  # --epoch also works for report and zoom
+worldgen map kestrel_history events.png -f events --epoch 2000  # planet events since the previous kept epoch
+worldgen map kestrel_history wars.png -f political --events      # the same events over any field
 ```
 
 Map fields: `elevation`, `terrain`, `plates`, `crust_age`, `orogeny_age`, `temperature`, `rainfall`, `basins`,
 `biomes`, `koppen`, `ice`, `relicts` (history mode), the culture layers `political`, `population`, `cultures`,
-`polities`, `settlements`, `roads`, `habitat` and `resources:<name>`, or `overview`, `climate` and `culture`
+`polities`, `settlements`, `roads`, `habitat`, `resources:<name>` (or `resources:best`) and `suitability[:<culture>]`, an organic history's
+`energy`, `transport` and `communication[:<culture>]`, `bands`, `livestock`, `land:<component>` (fresh_water, arable, access,
+resources, climate, defensibility) and `events`, or `overview`, `climate` and `culture`
 (multi-panel). Rivers are drawn on elevation, terrain, rainfall and basin maps and under the political,
 settlement and road layers.
 Projections: `equirectangular`, `mollweide`, `robinson`, `orthographic`, `north_polar`, `south_polar`.
@@ -145,7 +151,9 @@ plot_local_map(world, region, culture=local)
 ```
 
 A guided tour is in `notebooks/01_quickstart.ipynb`; `notebooks/02_organic_history.ipynb` runs an organic history
-and reads its chronicle, series and epochs.
+and reads its chronicle, series and epochs; `notebooks/03_history_explorer.ipynb` browses a history with a widget:
+field and epoch controls, planet events, the values of the cell under the cursor and a timeline
+(`HistoryExplorer(world).widget()`).
 
 ## Surfaces
 
@@ -337,7 +345,7 @@ Resolution order for each value:
 A spec may carry a `culture:` section (or the same section in its own file, applied to a saved world
 with `apply_culture`). It lists one or more cultures, each with:
 
-- `inhabitants`: `native` or `colonist` (colonists add `colony: {founded_years_ago, origin, landing_sites}`; organic colonies also take `immigrants_per_year`, `immigration_years` and `independence_years`);
+- `inhabitants`: `native` or `colonist` (colonists add `colony: {founded_years_ago, origin, landing_sites}`; organic colonies also take `immigrants_per_year`, `immigration_years`, `independence_years` and `crowd_diseases`, whether a colony from off the planet brings herd animals' diseases, default false);
 - `development` on three axes, each with six levels. Axes left out take the mean level of those given:
   - energy: `foraging`, `farming`, `water_wind`, `fossil`, `electric`, `fusion`;
   - transport: `foot`, `pack_and_boat`, `wheel_and_sail`, `rail_and_steam`, `motor_and_air`, `spaceflight`;
@@ -375,9 +383,12 @@ epoch stores its trade links (`civ.trade`: settlement pairs, flow, route length 
 falling off with distance faster before rail than after. Where cultures share land, the one the land holds more
 of displaces the other. An organic colony lands with 10⁴ founders and a colonial state, can receive
 `immigrants_per_year`, is backed by its home power until independence (`independence_years`, or else at the
-decolonisation rate of Strang 1991, five times faster while the home state is at war and at once if it falls),
-spreads at the speed of its transport, and brings epidemics that kill 90% of the natives of each landmass it
-reaches within a century (after the Americas, Koch et al. 2019). Colonists die at a settler mortality that rises
+decolonisation rate of Strang 1991, five times faster while the home state is at war and at once if it is
+conquered; a home state that breaks up passes the colony to its heir), spreads at the speed of its transport, and,
+if its home keeps herd animals, brings crowd diseases that kill 90% of the people without livestock of each
+landmass it reaches within a century (after the Americas, Koch et al. 2019; Wolfe et al. 2007), who then do not
+grow for 250 years. Each farming origin draws whether it has herd animals, more often amid open grassland, and the
+herds spread with farming. Colonists die at a settler mortality that rises
 with malaria suitability (Acemoglu et al. 2001), so they fill temperate land. States with ocean-going sail and
 print found colonies of their own on other landmasses. Peoples ruled by a more advanced culture take its
 technology with the adoption lags of Comin & Hobijn (2010) unless the rulers hold them apart (supremacy, drawn
@@ -428,6 +439,9 @@ A population left open follows Earth's population at the culture's energy level 
 to 7.3 billion at `electric`), scaled by the productive land the culture holds; a colony grows from
 10 000 founders. On the Earth example a modern culture puts 36% of its people below 100 m and half within
 200 km of the coast, as on Earth (`scripts/validate_culture.py`).
+`scripts/validate_organic.py` checks organic histories on six Earth worlds against HYDE 3.2, Taagepera,
+Arbesman, Clauset, the ice-core eruption record and Koch et al.; development there runs ahead of Earth's
+(known gaps, DESIGN.md 5.2).
 
 Settlements come in regional rank-size systems: each culture's land is split into regions (larger with
 better transport), and each region's people live in settlements whose sizes fall as 1/rank^(1/ζ) from

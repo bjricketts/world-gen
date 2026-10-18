@@ -7,12 +7,18 @@ belongs to the culture that founded it and may rule people of others.
   (bands, tribes, chiefdoms) as a count per culture and cell; they enter the
   effective number and the epoch maps but are not tracked one by one.
 - *Formation.* A state forms in a cell without one where a culture has
-  writing and lives densely enough, at a small rate per year.
+  writing and lives densely enough, at a small rate per year. On steppe next
+  to a state's farmland, herders with horses form confederations without
+  writing or density, with full cohesion (after Turchin 2009's mirror empires);
+  states with their capital on the steppe ride faster over it.
 - *Expansion* (after Turchin et al. 2013). Each year every border cell of a
   state may attack a neighbouring occupied cell without a state. The
   attacker's power is 1 + β·c·S, S its area in Turchin's 100 km × 100 km cells
-  and c its cohesion, weakened by exp(−d / reach) with d the distance from its
-  capital and the reach set by the communication level at its capital; the
+  and c its cohesion, weakened by exp(−d / reach) with d the travel time from
+  its capital over the travel graph of its transport level, in km at that
+  level's flat-ground speed (so slopes, rivers and seas weigh as they do for
+  travellers), and the reach rising with the communication level at its
+  capital (log-linear between the levels, so it grows within an era); the
   defender's is 1 plus γ times the cell's defensibility (Turchin's elevation
   term). The attack succeeds with probability (P_att − P_def)/(P_att + P_def).
 - *Wars between states* (``wars.py``, after Cederman 2003).
@@ -36,9 +42,10 @@ from __future__ import annotations
 
 import numpy as np
 from scipy import sparse
-from scipy.sparse.csgraph import connected_components
+from scipy.sparse.csgraph import connected_components, dijkstra
 
 from ... import heuristics as h
+from ..roads import TravelGraph, tobler_kmh
 from .rulers import province_count, provinces, reign_years, succession_times
 from .state import HistoryPolity, in_force
 
@@ -68,6 +75,23 @@ def effective_number_with_subpolities(owner: np.ndarray, people: np.ndarray, ene
     return float(total**2 / squares) if squares > 0 else 0.0
 
 
+def steppe_cells(world) -> np.ndarray:
+    """Return which land cells have a steppe climate (Köppen BSk or BSh); none on a world without climate classes."""
+    from ...biosphere import KOPPEN_CODES
+
+    s = world.surface
+    if "koppen" not in s:
+        return np.zeros(world.grid.size, dtype=bool)
+    codes = [KOPPEN_CODES.index(c) for c in h.STEPPE_KOPPEN]
+    return np.isin(s["koppen"].values, codes) & ~s["ocean"].values.astype(bool)
+
+
+def reach_km(communication: np.ndarray, anchors: np.ndarray) -> np.ndarray:
+    """Return the reach (km) at real-valued communication levels: the anchors apply at the integers, log-linear between."""
+    c = np.clip(np.asarray(communication, dtype=float), 0.0, anchors.size - 1)
+    return np.exp(np.interp(c, np.arange(anchors.size), np.log(anchors)))
+
+
 def arc_km(points: np.ndarray, a, b, radius_km: float) -> np.ndarray:
     """Return great-circle distances between cells ``a`` and ``b`` (arrays of indices)."""
     return radius_km * np.arccos(np.clip((points[a] * points[b]).sum(axis=-1), -1.0, 1.0))
@@ -90,7 +114,11 @@ class Polities:
         self.radius_km = cov.radius_km
         self.area = cov.cell_area_km2
         self.defence = ctx.suit.defensibility if ctx.suit is not None else np.zeros(cov.land.size)
-        self.reach = np.asarray(h.POLITY_REACH_KM)
+        self.reach = np.asarray(h.POLITY_REACH_KM, dtype=float)
+        self.world = world
+        self.steppe = steppe_cells(world)
+        self._graphs: dict[tuple[int, bool], tuple] = {}  # (transport, mounted) -> (travel-time matrix, flat km/h)
+        self._travel: dict[tuple[int, int], np.ndarray] = {}   # (polity, transport) -> travel km from its capital
         self.wars = Wars(self)
         self._capitals = np.zeros(0, dtype=np.int64)     # per polity id; capitals and cultures never change
         self._cultures = np.zeros(0, dtype=np.int64)
@@ -128,15 +156,35 @@ class Polities:
         first = len(state.polities) if culture.id not in self._founders else -1
         if new.size:
             self._founders.add(culture.id)
-        for c in new:
+        nomads = np.setdiff1d(self._confederations(state, row, rng, years), new)
+        if nomads.size:
+            self._founders.add(culture.id)
+        cohesion = np.r_[np.full(new.size, h.POLITY_COHESION_START), np.full(nomads.size, h.STEPPE_CONFEDERATION_COHESION)]
+        for c, start in zip(np.r_[new, nomads].astype(int), cohesion):
             polity = HistoryPolity(id=len(state.polities), culture=culture.id, capital=int(c),
-                                   founded_years_ago=state.years_ago, cohesion=h.POLITY_COHESION_START)
+                                   founded_years_ago=state.years_ago, cohesion=float(start))
             state.polities.append(polity)
             owner[c] = polity.id
             if polity.id == first:
                 ctx.chronicle.add(state.years_ago, "first_state",
                                   f"The first state arises at {self.lat[c]:.1f}°, {self.lon[c]:.1f}°",
                                   culture=culture.id, polity=polity.id, cell=int(c))
+
+    def _confederations(self, state, row: int, rng, years: float) -> np.ndarray:
+        """Return the steppe cells where a culture's herders form a confederation this step (after Turchin 2009's
+        mirror empires): stateless occupied steppe next to a state's farmland, with horses (transport level
+        STEPPE_RIDE_TRANSPORT) and energy STEPPE_CONFEDERATION_ENERGY, at STEPPE_CONFEDERATION_RATE per year,
+        needing neither writing nor density."""
+        owner, people = state.owner, state.population[row]
+        if not self.steppe.any():
+            return np.zeros(0, dtype=np.int64)
+        able = (in_force(state.development[row, 1]) >= h.STEPPE_RIDE_TRANSPORT) & \
+               (state.development[row, 0] >= h.STEPPE_CONFEDERATION_ENERGY)
+        near = np.zeros(owner.size, dtype=bool)
+        edge = (owner[self.er] >= 0) & ~self.steppe[self.er]
+        near[self.ec[edge]] = True
+        cand = (owner < 0) & self.steppe & (people > 0) & able & near
+        return np.flatnonzero(cand & (rng.random(owner.size) < -np.expm1(-h.STEPPE_CONFEDERATION_RATE * years)))
 
     def sizes(self, state) -> np.ndarray:
         """Return each polity's area S in POLITY_UNIT_KM2 (indexed by polity id)."""
@@ -170,7 +218,7 @@ class Polities:
         return out
 
     def capital_reach(self, state) -> tuple[np.ndarray, np.ndarray]:
-        """Return each polity's capital cell and the reach (km) of the communication in force there."""
+        """Return each polity's capital cell and the reach (km) of the communication there."""
         n = len(state.polities)
         if self._capitals.size < n:
             rows_of = {c: i for i, c in enumerate(state.culture_ids)}
@@ -178,14 +226,45 @@ class Polities:
             self._capitals = np.r_[self._capitals, [p.capital for p in new]].astype(np.int64)
             self._cultures = np.r_[self._cultures, [rows_of[p.culture] for p in new]].astype(np.int64)
         capitals, rows = self._capitals[:n], self._cultures[:n]
-        communication = np.clip(in_force(state.development[rows, 2, capitals]), 0, self.reach.size - 1)
-        return capitals, self.reach[communication]
+        return capitals, reach_km(state.development[rows, 2, capitals], self.reach)
 
     def projected(self, state, power, attackers, targets, capital_reach=None) -> np.ndarray:
-        """Return attackers' power at target cells: (1 + β·c·S)·exp(−d / reach), d from the capital."""
+        """Return attackers' power at target cells: (1 + β·c·S)·exp(−d / reach), d the travel distance from the
+        capital (``travel_km``)."""
         capitals, reach = capital_reach if capital_reach is not None else self.capital_reach(state)
-        d = arc_km(self.points, capitals[attackers], targets, self.radius_km)
-        return (1.0 + power[attackers]) * np.exp(-d / reach[attackers])
+        out = np.empty(np.size(attackers))
+        rows = self._cultures[:len(state.polities)]
+        for a in np.unique(attackers):
+            mine = attackers == a
+            transport = int(np.clip(in_force(state.development[rows[a], 1, capitals[a]]), 0, len(h.LAND_SPEED_FACTOR) - 1))
+            d = self.travel_km(state, int(a), int(capitals[a]), transport, float(reach[a]))[targets[mine]]
+            out[mine] = (1.0 + power[a]) * np.exp(-d / reach[a])
+        return out
+
+    def travel_km(self, state, polity: int, capital: int, transport: int, reach: float) -> np.ndarray:
+        """Return the travel time from a capital to every cell at a transport level, as km at the level's
+        flat-ground speed (slopes, river crossings and sea passages lengthen it), out to
+        POLITY_TRAVEL_LIMIT_REACHES reaches (beyond: infinite). A state with its capital on the steppe rides
+        STEPPE_RIDE_FACTOR times faster between steppe cells from transport level STEPPE_RIDE_TRANSPORT on.
+        Kept per polity and level while the polity lives."""
+        key = (polity, transport)
+        if key not in self._travel:
+            mounted = bool(self.steppe[capital]) and transport >= h.STEPPE_RIDE_TRANSPORT
+            if (transport, mounted) not in self._graphs:
+                g = TravelGraph(self.world, transport)
+                hours = g.base_hours
+                if mounted:
+                    hours = np.where(self.steppe[g.row] & self.steppe[g.col], hours / h.STEPPE_RIDE_FACTOR, hours)
+                self._graphs[transport, mounted] = (g.matrix(hours),
+                                                    float(tobler_kmh(np.array(0.0))) * h.LAND_SPEED_FACTOR[transport])
+            matrix, speed = self._graphs[transport, mounted]
+            hours = dijkstra(matrix, indices=capital, limit=h.POLITY_TRAVEL_LIMIT_REACHES * reach / speed)
+            self._travel[key] = (hours * speed).astype(np.float32)
+            if len(self._travel) > h.POLITY_TRAVEL_CACHE:
+                alive = {p.id for p in state.polities if p.alive}
+                for k in [k for k in self._travel if k[0] not in alive]:
+                    del self._travel[k]
+        return self._travel[key]
 
     def annex(self, ctx, state, cells, winners) -> None:
         """Give cells to their conquerors; taking a state's capital annexes the whole state."""
@@ -194,6 +273,8 @@ class Polities:
             if not state.polities[winner].alive:          # absorbed earlier in this batch
                 continue
             loser = int(owner[cell])
+            if loser == winner:                            # came with a state annexed earlier in this batch
+                continue
             owner[cell] = winner
             q = state.polities[loser] if loser >= 0 else None
             if q is None or not q.alive or q.capital != cell:

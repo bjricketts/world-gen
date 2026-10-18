@@ -3,19 +3,22 @@
 - *Origins.* Foragers begin farming at a rate proportional to their numbers
   and the arable land they hold (the surplus view of Kavanagh et al. 2018),
   except where farmers already live within the interaction sphere; a new origin
-  starts at early farming (energy 0.5).
+  starts at early farming (energy 0.5) and draws whether it keeps herd animals
+  (``livestock.py``).
 - *Growth of knowledge.* In farming cells, energy rises as knowledge does in
   Kremer's (1993) model with Jones's damping: the log of knowledge grows at
   g · (people in the interaction sphere)^λ · A^(φ−1), and a cell's energy
   moves by the log of capacity that knowledge buys between the level anchors.
   Past water_wind, energy rises only where coal or hydrocarbons lie within the
-  sphere, at a faster industrial rate; electric follows fossil.
+  sphere, at a faster industrial rate (without fuel a cell's own knowledge
+  stops just short of fossil); electric follows fossil.
 - *Loss of knowledge* (after Henrich 2004). Above farming, a cell whose
   sphere holds fewer people than its level needs loses energy, faster the
   larger the shortfall.
 - *Spread.* A cell takes a neighbour's higher level in force once a front,
   advancing at the population front speed times the transport level's speed
-  factor, has crossed the link between them (demic and cultural diffusion).
+  factor, has crossed the link between them (demic and cultural diffusion);
+  into forager land the front slows with the destination's arable component.
 - Transport and communication follow energy along Earth's pairing of levels.
 
 New origins and each culture's first cell at each level enter the chronicle.
@@ -29,9 +32,12 @@ from scipy.spatial import cKDTree
 
 from ... import heuristics as h
 from ..development import COMMUNICATION_LEVELS, ENERGY_LEVELS, TRANSPORT_LEVELS
+from .livestock import livestock
 from .population import front_speed_km_yr, population
 from .state import in_force
 
+# Without fuel a cell's own knowledge stops just short of fossil in force (which begins at INDUSTRIAL_FROM_ENERGY).
+WITHOUT_FUEL_MAX = float(np.nextafter(h.INDUSTRIAL_FROM_ENERGY, 0.0))
 LN_ANCHORS = np.log(np.array([h.POPULATION_ANCHOR[name] for name in ENERGY_LEVELS]))
 
 
@@ -69,14 +75,16 @@ def energy_rate(energy: np.ndarray, sphere_people: np.ndarray, fuel: np.ndarray,
 
 
 def advance_levels(level: np.ndarray, progress: np.ndarray, credit: np.ndarray, links,
-                   years: float) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+                   years: float, arable: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Return energy, front progress, time credit and the cells that took a neighbour's higher level after ``years``.
 
     A front leaves each cell toward neighbours at a lower level in force, at the
     population front speed times the speed factor of the source's transport
-    level; once it has crossed the link the neighbour starts at the bottom of
-    the source's level, and keeps the years left over in the step as credit
-    for its own fronts.
+    level; into forager land it runs at that speed times the destination's
+    arable component to the power FARMING_FRONT_ARABLE_EXPONENT (after Silva &
+    Steele 2014), so it stalls where crops grow badly. Once it has crossed the
+    link the neighbour starts at the bottom of the source's level, and keeps the
+    years left over in the step as credit for its own fronts.
     """
     now = in_force(level)
     src, dst = links.rows, links.cols
@@ -84,6 +92,9 @@ def advance_levels(level: np.ndarray, progress: np.ndarray, credit: np.ndarray, 
     src, dst = src[higher], dst[higher]
     transport, _ = companion_levels(level[src])
     factor = np.asarray(h.LAND_SPEED_FACTOR)[np.clip(in_force(transport), 0, 5)] / h.LAND_SPEED_FACTOR[0]
+    if arable is not None:
+        factor = np.where(now[dst] == 0, factor * np.clip(arable[dst], 0.0, 1.0) ** h.FARMING_FRONT_ARABLE_EXPONENT,
+                          factor)
     gain = front_speed_km_yr() * factor * (years + credit[src]) / links.flat_km[higher]
     best = np.zeros(level.size)
     np.maximum.at(best, dst, gain)
@@ -180,13 +191,16 @@ class Development:
                     if not any(self.touch[c, k] for k in keep):
                         keep.append(c)
                 new = np.array(sorted(keep))
+            herd_rng = ctx.rng(f"livestock.{i}", state.step)
             for c in new:
                 energy[c] = h.FARMING_START_ENERGY
                 culture = ctx.cultures[i]
                 lat, lon = ctx.world.grid.lat[c], ctx.world.grid.lon[c]
+                herds = livestock(ctx).originate(state, int(c), herd_rng)
                 ctx.chronicle.add(state.years_ago, "farming_origin",
-                                  f"{culture.name or f'Culture {culture.id}'} begin farming at {lat:.1f}°, {lon:.1f}°",
-                                  culture=culture.id, cell=int(c))
+                                  f"{culture.name or f'Culture {culture.id}'} begin farming at {lat:.1f}°, {lon:.1f}°"
+                                  + (", with herd animals" if herds else ", without herd animals"),
+                                  culture=culture.id, cell=int(c), livestock=int(herds))
 
     def grow_knowledge(self, ctx, state, years: float) -> None:
         """Raise the energy of farming cells with the knowledge their interaction sphere produces."""
@@ -194,8 +208,7 @@ class Development:
             energy = state.development[i, 0]
             sphere = self.sphere_people(state, i)
             rate = energy_rate(energy, sphere, self.fuel_in_reach, ctx.history.pace)
-            ceiling = np.where(self.fuel_in_reach >= h.INDUSTRIAL_FUEL_MIN, h.HISTORY_MAX_ENERGY,
-                               h.INDUSTRIAL_FROM_ENERGY)
+            ceiling = np.where(self.fuel_in_reach >= h.INDUSTRIAL_FUEL_MIN, h.HISTORY_MAX_ENERGY, WITHOUT_FUEL_MAX)
             state.development[i, 0] = np.where(rate > 0, np.minimum(energy + rate * years,
                                                                     np.maximum(ceiling, energy)), energy)
             self._lose(ctx, state, i, sphere, years)
@@ -241,7 +254,7 @@ class Development:
         for i in np.flatnonzero(state.active):
             links = pop.links_for(state.culture_development(i).transport)
             energy, self.progress[i], self.credit[i], _ = advance_levels(
-                state.development[i, 0], self.progress[i], self.credit[i], links, years)
+                state.development[i, 0], self.progress[i], self.credit[i], links, years, self.arable)
             energy = np.where(state.population[i] > 0, energy, np.minimum(energy, state.development[i, 0]))
             state.development[i, 0] = energy
             if ctx.cultures[i].inhabitants == "native":

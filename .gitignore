@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 *.egg-info/
 .pytest_cache/
+papers/
+crust1.0.tar.gz

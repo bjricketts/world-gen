@@ -155,3 +155,65 @@ def test_format_two_civilisations_still_load(organic, saved, tmp_path):
     data["culture_format"] = 2
     path.write_text(yaml.safe_dump(data))
     assert load_world(old).culture.epoch_years_ago == 0.0
+
+
+def test_planet_events_lie_in_each_epochs_window(organic):
+    from worldgen.render.events import EVENT_KINDS, events_between
+
+    civ = organic.culture
+    assert civ.event_window() == (1000.0, 0.0)
+    assert civ.at_epoch(2000).event_window() == (3000.0, 2000.0)
+    assert civ.at_epoch(1000).event_window() == (2000.0, 1000.0)
+    old = civ.at_epoch(1000)
+    shown = events_between(old, *old.event_window())
+    assert all(e.kind in EVENT_KINDS and 1000 <= e.years_ago < 2000 for e in shown)
+    every = [e for e in civ.chronicle if e.kind in EVENT_KINDS]
+    windows = [civ.at_epoch(2000), civ.at_epoch(1000), civ]
+    assert sum(len(events_between(c, *c.event_window())) for c in windows) == len(every)
+
+
+def test_event_maps_draw(organic, saved, tmp_path):
+    from worldgen.render import plot_map
+
+    ax = plot_map(world_at_epoch(organic, 1000), "events")
+    assert "1,000 years ago" in ax.get_title()
+    matplotlib.pyplot.close(ax.figure)
+    ax = plot_map(organic, "political", events=(3000.0, 0.0), legend=None)
+    drawn = [e for e in organic.culture.chronicle if e.kind in ("eruption", "impact", "pandemic")]
+    assert len(ax.collections) >= (1 if drawn else 0)
+    matplotlib.pyplot.close(ax.figure)
+    runner = CliRunner()
+    for args in (["-f", "events", "-e", "2000"], ["-f", "political", "--events"]):
+        png = tmp_path / f"{args[1]}.png"
+        result = runner.invoke(app, ["map", str(saved), str(png), *args])
+        assert result.exit_code == 0 and png.exists(), result.output
+
+
+@pytest.mark.parametrize("field", ["energy", "transport", "communication", "energy:Oru", "bands", "livestock",
+                                   "land:arable", "land:fresh_water", "suitability", "suitability:Oru",
+                                   "resources:best"])
+def test_history_and_land_maps_draw(organic, field):
+    from worldgen.render import plot_map
+
+    ax = plot_map(world_at_epoch(organic, 1000), field, width=200)
+    assert ax.get_title().endswith(field)
+    matplotlib.pyplot.close(ax.figure)
+
+
+def test_level_codes_take_the_highest_culture_in_a_cell(organic):
+    from worldgen.render.culture import level_codes
+
+    civ = organic.culture
+    top = level_codes(civ, "energy")
+    oru = level_codes(civ, "energy", civ.cultures[0].id)
+    assert top.shape == oru.shape and np.all(top >= oru)
+    assert (top >= 0).sum() >= (oru >= 0).sum() > 0
+
+
+def test_unknown_history_options_are_explained(organic):
+    from worldgen.render import plot_map
+
+    with pytest.raises(ValueError, match="land:<name>"):
+        plot_map(organic, "land", width=100)
+    with pytest.raises(ValueError, match="no culture"):
+        plot_map(organic, "energy:Nobody", width=100)

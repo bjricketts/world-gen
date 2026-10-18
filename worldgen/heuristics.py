@@ -924,14 +924,26 @@ SPREAD_LANDFALL_PEOPLE = 1000.0
 # farming, FARMING_START_ENERGY. Calibrated so the Earth example gets about Larson et al.'s (2014) "at
 # least 11" independent centres (see DESIGN.md 4.8).
 FARMING_START_ENERGY = 0.5
+# Early farming (FARMING_START_ENERGY) holds this share of the log step from foraging to farming capacity
+# (0.5 would be the geometric mean of the two anchors), fitted to HYDE 3.2's 19 million people in 5000 BCE over
+# two Earth worlds × two history seeds with the slowed farming front below (task 9.12; 0.5 gave 2.1 × HYDE, 0.37
+# gave 1.17). Heuristic.
+EARLY_FARMING_LOG_SHARE = 0.35
+# The front of a level into forager land runs at its speed × the destination's arable component to this power:
+# Silva & Steele (2014) found the European Neolithic front slowed to 0.1–0.2 of its speed in forest and from
+# ~1.05 to ~0.53 km/yr northward; arable land stands in for the crop package's fit (heuristic).
+FARMING_FRONT_ARABLE_EXPONENT = 1.0
 FARMING_ORIGIN_RATE = 1e-9
 # Knowledge (Kremer 1993 with Jones's damping): in farming cells energy rises at
 # KNOWLEDGE_RATE (S/10⁶)^λ A^(φ−1) / Δln K, S the people within the interaction sphere, A the capacity gained since foraging, Δln K the log step
 # between the anchors around the cell's level. φ = 0 keeps the feedback from running away (φ = 1, pure
 # Kremer, is hyperbolic). Past INDUSTRIAL_FROM_ENERGY (the end of water_wind) energy rises only with
 # coal or hydrocarbons of potential INDUSTRIAL_FUEL_MIN within the sphere, INDUSTRIAL_RATE_FACTOR times
-# faster; it stops at HISTORY_MAX_ENERGY (electric in force). Rates fitted to HYDE 3.2 on Earth worlds.
-KNOWLEDGE_RATE = 0.0235
+# faster; it stops at HISTORY_MAX_ENERGY (electric in force). KNOWLEDGE_RATE was fitted to a median first
+# fossil of ~215 years ago over six Earth worlds × history seeds 0–2 (0.022 after task 9.11). Task 9.12 lowered early
+# farming's capacity and knowledge grows with the people in the sphere, so g is raised provisionally to keep the
+# timing (two worlds × two seeds); the multi-seed refit follows the investigation of the timing spread.
+KNOWLEDGE_RATE = 0.026
 # The interaction sphere weighs people by exp(−d / L) within KNOWLEDGE_SPHERE_REACH lengths, L =
 # KNOWLEDGE_SPHERE_KM × (speed factor of the cell's transport level)^KNOWLEDGE_SPHERE_SPEED_EXP: faster
 # travel puts more people in contact (Kremer's regions without contact innovate apart).
@@ -955,23 +967,52 @@ DEVELOPMENT_PAIRING = ((0.0, 0.0, 0.0), (0.5, 1.0, 0.0), (1.0, 2.0, 1.0), (2.0, 
 # cell without one whose communication has reached POLITY_FORM_COMMUNICATION (writing) and whose density
 # is POLITY_FORM_DENSITY people/km², at POLITY_FORM_RATE per year. Border cells attack a neighbour without a state at
 # POLITY_ATTACK_RATE per year with power 1 + β·c·S (Turchin et al. 2013; β = POLITY_POWER_BETA, S area in
-# POLITY_UNIT_KM2, Turchin's 100 km cells, c cohesion), the attacker's weakened by exp(−d / POLITY_REACH_KM[communication at its capital]); the
+# POLITY_UNIT_KM2, Turchin's 100 km cells, c cohesion), the attacker's weakened by exp(−d / reach), the reach
+# interpolated log-linearly in the real-valued communication at its capital between POLITY_REACH_KM at the
+# integer levels (task 9.13: Taagepera's largest state grew a hundredfold within the writing era); the
 # defender adds POLITY_DEFENCE_GAMMA × defensibility. Cohesion changes per POLITY_PERIOD_YEARS by
 # POLITY_COHESION_GAIN × frontier share − POLITY_COHESION_LOSS × ln(1 + S), within [POLITY_COHESION_MIN, 1].
 # A polity breaks up (at the successions of its rulers) with a chance per period of POLITY_BREAKUP_BASE +
 # POLITY_BREAKUP_SIZE·S·(r_writing/r)^POLITY_BREAKUP_REACH_EXP − POLITY_BREAKUP_COHESION·c, r the reach at its
 # capital (faster communication holds larger states together). Values fitted
-# to Taagepera's largest polities and effective numbers and Arbesman's lifetimes on Earth worlds.
+# to Taagepera's largest polities and effective numbers and Arbesman's lifetimes on Earth worlds (task 9.5);
+# task 9.13 raised POLITY_FORM_DENSITY from 2 (first states ~7200 years ago) and lowered the reach of oral
+# and writing from 1000 and 2500 km (largest state 32 × Taagepera's at 2800 BCE), fitted on two Earth worlds × two
+# history seeds against Taagepera's largest states by date; with travel-time distance (follow-up) the density is 7,
+# fitted on the six-world validation (8 left most worlds stateless at 2800 BCE, 6 gave 5 × Taagepera's).
 SUBPOLITY_FORAGING_KM2 = 1330.0
 SUBPOLITY_FARMING_KM2 = 1e4
 POLITY_FORM_COMMUNICATION = 1
-POLITY_FORM_DENSITY = 2.0
+POLITY_FORM_DENSITY = 7.0
 POLITY_FORM_RATE = 0.005
 POLITY_ATTACK_RATE = 0.04
 POLITY_UNIT_KM2 = 1e4
 POLITY_POWER_BETA = 0.15
 POLITY_DEFENCE_GAMMA = 2.0
-POLITY_REACH_KM = (1000.0, 2500.0, 5000.0, 10000.0, 20000.0, 20000.0)
+POLITY_REACH_KM = (200.0, 1500.0, 5000.0, 10000.0, 20000.0, 20000.0)
+# The distance d in the attacker's power is the travel time from its capital over the travel graph of its
+# capital's transport level, counted in km at that level's flat-ground pace (Tobler on level ground times the
+# level's speed factor; task 9.13 follow-up, great-circle distance before). Travel times are searched out to POLITY_TRAVEL_LIMIT_REACHES reaches
+# and kept for at most POLITY_TRAVEL_CACHE polity-level pairs before ended polities are dropped.
+POLITY_TRAVEL_LIMIT_REACHES = 5.0
+POLITY_TRAVEL_CACHE = 4000
+# Steppe empires (after the task 9.13 follow-up; Ben chose riding and confederations). Turchin (2009): over 90% of
+# the 60-odd empires of at least 10⁶ km² (3000 BCE–1800 CE) arose in or next to the Old World's arid belt, from
+# the interaction of steppe pastoralists and farmers; Currie et al. (2020) find distance from the steppe a leading
+# predictor of imperial density, with horse-based warfare first developed in the steppe's pastoral societies.
+# Steppe is Köppen BSk and BSh. States with their capital on the steppe ride STEPPE_RIDE_FACTOR times faster
+# between steppe cells from transport STEPPE_RIDE_TRANSPORT (wheel_and_sail, which brings horses) on. In stateless
+# occupied steppe cells next to a non-steppe state cell, a confederation forms at STEPPE_CONFEDERATION_RATE per year
+# once the culture there has horses and energy STEPPE_CONFEDERATION_ENERGY, with cohesion
+# STEPPE_CONFEDERATION_COHESION. Values heuristic, chosen on two steppe worlds × three seeds for peaks near the
+# Mongols' 24 Mm² of 133 (riding ×5 alone gave 1.5 ×); confederations wait for water_wind in force (1.5), since
+# from energy 1.25 they doubled the largest state of 500 BCE in the six-world validation.
+STEPPE_KOPPEN = ("BSk", "BSh")
+STEPPE_RIDE_FACTOR = 3.0
+STEPPE_RIDE_TRANSPORT = 2
+STEPPE_CONFEDERATION_RATE = 0.005
+STEPPE_CONFEDERATION_ENERGY = 1.5
+STEPPE_CONFEDERATION_COHESION = 1.0
 POLITY_PERIOD_YEARS = 25.0
 POLITY_COHESION_START = 0.5
 POLITY_COHESION_GAIN = 1.0
@@ -1104,6 +1145,19 @@ LANGUAGE_SHIFT_RATE = 0.086
 LANGUAGE_STATUS = 0.60
 EPIDEMIC_YEARS = 100.0
 EPIDEMIC_SPEED_KM_YR = 500.0
+# Livestock and crowd diseases (task 9.14; Ben chose a terrain-weighted draw). Wolfe, Dunavan & Diamond (2007): 8 of
+# the 15 major temperate diseases probably came from domestic animals; crowd diseases need several hundred thousand
+# people; 13 of the 14 major livestock species are Old World. A farming origin keeps herd animals with probability
+# LIVESTOCK_P_CLOSED + (LIVESTOCK_P_OPEN − LIVESTOCK_P_CLOSED) × the share of LIVESTOCK_OPEN_BIOMES (open land where
+# large grazers live) within LIVESTOCK_NEIGHBOURHOOD_KM (heuristic). Only colonists that carry herds' diseases cause
+# contact epidemics, and only among people of cells without livestock. People struck do not grow for
+# EPIDEMIC_NO_GROWTH_YEARS after the epidemic arrives (Ben chose a slower recovery; heuristic: Jones et al. 2021
+# find decline continuing as long as contact was sustained, e.g. California's missions 1770–1834, without a rate).
+LIVESTOCK_OPEN_BIOMES = ("TEMPERATE_GRASSLAND", "SAVANNA", "WOODLAND_SHRUBLAND")
+LIVESTOCK_NEIGHBOURHOOD_KM = 500.0
+LIVESTOCK_P_CLOSED = 0.1
+LIVESTOCK_P_OPEN = 0.9
+EPIDEMIC_NO_GROWTH_YEARS = 250.0
 EPIDEMIC_CHRONICLE_PEOPLE = 1e5
 # Planet events (task 9.9). Eruptions: VOLCANIC_EVENTS_PER_YEAR large stratospheric sulfur injections (eVolv2k:
 # 106 from 500 BCE to 1900 CE, Toohey & Sigl 2017), times the planet's volcanic activity index. Their sulfur follows

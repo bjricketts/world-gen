@@ -2,7 +2,8 @@
 
 Capacity per cell follows the milestone 8 terms at the energy level each cell
 has reached, scaled so the planet's productive land would hold Earth's
-population at that level (HYDE 3.2). Cultures in one cell grow logistically
+population at that level (HYDE 3.2); early farming holds a fitted share of
+the step from foraging to farming. Cultures in one cell grow logistically
 and compete for it (Lotka–Volterra: each against all the cell's people over
 its own capacity, so the culture with more capacity displaces the others).
 
@@ -36,31 +37,43 @@ from ..roads import TravelGraph
 from ..suitability import Covariates, log_capacity, productive_area_km2
 
 
-def level_terms(culture: Culture, energy: int) -> dict:
-    """Return the capacity terms of a culture at an energy level (natives interpolate foraging to modern)."""
-    if culture.inhabitants == "colonist":
+def in_habitats(culture: Culture, world=None) -> bool:
+    """Return whether a culture lives in built habitats: colonists, unless the world is habitable unaided (there
+    they farm like natives at their level, task 9.14)."""
+    if culture.inhabitants != "colonist":
+        return False
+    occ = getattr(getattr(world, "state", None), "occupiability", None) if world is not None else None
+    return not (occ is not None and occ.habitable_unaided)
+
+
+def level_terms(culture: Culture, energy: int, habitats: bool | None = None) -> dict:
+    """Return the capacity terms of a culture at an energy level (natives interpolate foraging to modern; cultures
+    in built habitats use the colonist terms)."""
+    if culture.inhabitants == "colonist" if habitats is None else habitats:
         return dict(h.DENSITY_TERMS_COLONIST)
     w = min(energy / 4.0, 1.0)
     a, b = h.DENSITY_TERMS_FORAGING, h.DENSITY_TERMS_MODERN
     return {k: (1 - w) * a[k] + w * b[k] for k in b}
 
 
-def capacity_by_level(culture: Culture, cov: Covariates) -> np.ndarray:
+def capacity_by_level(culture: Culture, cov: Covariates, world=None) -> np.ndarray:
     """Return the people each cell holds at each energy level (level × cell) for one culture.
 
     The planet's productive land holds Earth's population at the level per km²
     of productive land; cells share it in proportion to their relative capacity.
+    Cultures in built habitats (``in_habitats``) hold Earth's population per km² of habitable land instead.
     """
     productive = float(productive_area_km2(cov).sum())
-    if culture.inhabitants == "colonist":
+    habitats = in_habitats(culture, world) if world is not None else culture.inhabitants == "colonist"
+    if habitats:
         land = float(np.where(cov.land, cov.cell_area_km2, 0.0).sum())
     out = np.zeros((len(ENERGY_LEVELS), cov.land.size))
     for level, name in enumerate(ENERGY_LEVELS):
-        ln = log_capacity(cov, level_terms(culture, level))
+        ln = log_capacity(cov, level_terms(culture, level, habitats))
         rel = np.where(np.isfinite(ln), np.exp(ln - np.max(np.where(np.isfinite(ln), ln, -np.inf))), 0.0)
         if rel.sum() <= 0:
             continue
-        if culture.inhabitants == "colonist":
+        if habitats:
             total = h.POPULATION_ANCHOR[name] / h.EARTH_HABITABLE_LAND_KM2 * land
         else:
             total = h.POPULATION_ANCHOR[name] / h.EARTH_PRODUCTIVE_LAND_KM2 * productive
@@ -73,12 +86,16 @@ def cell_capacity(levels: np.ndarray, energy: np.ndarray) -> np.ndarray:
 
     The anchor of level k applies at energy k; between two anchors capacity is
     interpolated log-linearly, so knowledge gained within an era raises it
-    gradually. A level without capacity in a cell leaves the lower anchor.
+    gradually. Early farming (FARMING_START_ENERGY) holds EARLY_FARMING_LOG_SHARE
+    of the log step from foraging to farming, so foraging to farming runs through
+    that point. A level without capacity in a cell leaves the lower anchor.
     """
     e = np.clip(np.asarray(energy, dtype=float), 0.0, levels.shape[0] - 1)
     lo = np.floor(e).astype(int)
     hi = np.minimum(lo + 1, levels.shape[0] - 1)
     f = e - lo
+    start, share = h.FARMING_START_ENERGY, h.EARLY_FARMING_LOG_SHARE
+    f = np.where(lo == 0, np.where(f < start, f / start * share, share + (f - start) / (1 - start) * (1 - share)), f)
     idx = np.arange(levels.shape[1])
     a, b = levels[lo, idx], levels[hi, idx]
     both = (a > 0) & (b > 0)
@@ -257,7 +274,7 @@ class Population:
 
     def __init__(self, ctx):
         """Prepare capacities per culture and level, the landmasses and empty fronts."""
-        self.levels = [capacity_by_level(c, ctx.cov) for c in ctx.cultures]
+        self.levels = [capacity_by_level(c, ctx.cov, ctx.world) for c in ctx.cultures]
         self.links: dict[int, SpreadLinks] = {}
         self.landmass = landmasses(ctx.world)
         self.reached = [set() for _ in ctx.cultures]
@@ -269,7 +286,7 @@ class Population:
 
     def add_row(self, ctx, culture) -> None:
         """Extend the per-culture arrays for a culture that arose during the history."""
-        self.levels.append(capacity_by_level(culture, ctx.cov))
+        self.levels.append(capacity_by_level(culture, ctx.cov, ctx.world))
         self.reached.append(set())
         self.progress = np.vstack([self.progress, np.zeros(self.progress.shape[1])])
         self.credit = np.vstack([self.credit, np.zeros(self.credit.shape[1])])

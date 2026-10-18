@@ -8,7 +8,7 @@ import pytest
 from worldgen import heuristics as h
 from worldgen.culture import CultureSpec, build_civilisation, resolve_cultures
 from worldgen.culture.build import geology_layers
-from worldgen.culture.history.polities import (Polities, effective_number_with_subpolities, subpolity_counts)
+from worldgen.culture.history.polities import (Polities, effective_number_with_subpolities, reach_km, subpolity_counts)
 from worldgen.culture.history.rulers import province_count
 from worldgen.culture.history.run import HistoryContext, initial_state
 from worldgen.culture.history.suitability import build_suitability
@@ -162,3 +162,80 @@ def test_epochs_keep_the_historys_states(organic):
     kinds = {e.kind for e in organic.chronicle}
     assert "first_state" in kinds
     assert sum(e.kind == "first_state" and e.refs.get("culture") == 0 for e in organic.chronicle) == 1
+
+
+def test_reach_rises_within_a_communication_level():
+    anchors = np.asarray(h.POLITY_REACH_KM, dtype=float)
+    r = reach_km(np.array([0.0, 0.5, 1.0, 1.4, 2.0, 9.0]), anchors)
+    assert r[0] == pytest.approx(anchors[0]) and r[2] == pytest.approx(anchors[1]) and r[4] == pytest.approx(anchors[2])
+    assert r[1] == pytest.approx(np.sqrt(anchors[0] * anchors[1]))                 # log-linear between levels
+    assert r[1] < r[2] < r[3] < r[4] and r[5] == pytest.approx(anchors[-1])
+
+
+def test_a_state_retaking_its_capital_in_the_same_batch_lives_on():
+    from types import SimpleNamespace
+
+    from worldgen.culture.history.state import HistoryPolity
+
+    # state 1's capital (cell 0) is held by state 2; state 1 takes state 2's capital (cell 1) and then cell 0
+    polities = [HistoryPolity(id=0, culture=0, capital=3, founded_years_ago=0.0),
+                HistoryPolity(id=1, culture=0, capital=0, founded_years_ago=0.0),
+                HistoryPolity(id=2, culture=0, capital=1, founded_years_ago=0.0)]
+    state = SimpleNamespace(owner=np.array([2, 2, 1, 0]), polities=polities, years_ago=0.0)
+    me = SimpleNamespace(area=1.0, wars=SimpleNamespace(polity_ended=lambda pid: None), _end=Polities._end)
+    Polities.annex(me, SimpleNamespace(chronicle=None), state, np.array([1, 0]), np.array([1, 1]))
+    assert polities[1].alive and not polities[2].alive
+    assert list(state.owner) == [1, 1, 1, 0]
+
+
+def test_power_fades_with_travel_time_over_terrain(earth):
+    from worldgen.culture.history.polities import arc_km
+    from worldgen.culture.history.state import HistoryPolity
+
+    ctx, state = _setup(earth, 1.0)
+    polities = Polities(ctx)
+    land = np.flatnonzero(ctx.cov.land)
+    capital = int(land[np.argmin(polities.defence[land])])                   # an open, flat cell
+    state.polities.append(HistoryPolity(id=0, culture=0, capital=capital, founded_years_ago=5000.0))
+    reach = float(h.POLITY_REACH_KM[1])
+    km = polities.travel_km(state, 0, capital, 2, reach)
+    near = land[np.isfinite(km[land]) & (km[land] > 0)]
+    straight = arc_km(polities.points, np.full(near.size, capital), near, polities.radius_km)
+    assert np.all(km[near] >= 0.9 * straight)                                 # never much shorter than a straight line
+    assert np.median(km[near] / straight) > 1.0                               # slopes and rivers lengthen it
+    assert np.isinf(km[land]).any() or km[land].max() <= h.POLITY_TRAVEL_LIMIT_REACHES * reach * 1.01
+    p = polities.projected(state, np.zeros(1), np.zeros(near.size, dtype=np.int64), near)
+    assert np.allclose(p, np.exp(-km[near] / polities.capital_reach(state)[1][0]))
+
+
+def test_steppe_states_ride_faster_and_herders_confederate(earth):
+    from scipy.sparse.csgraph import dijkstra
+
+    from worldgen.culture.history.state import HistoryPolity
+    from worldgen.culture.roads import TravelGraph
+
+    ctx, state = _setup(earth, 0.0)                                           # no writing anywhere
+    state.development[0, 0] = h.STEPPE_CONFEDERATION_ENERGY + 0.25
+    polities = Polities(ctx)
+    if polities.steppe.sum() < 10:
+        pytest.skip("no steppe on this world")
+    steppe = np.flatnonzero(polities.steppe)
+    capital = int(steppe[0])
+    state.polities.append(HistoryPolity(id=0, culture=0, capital=capital, founded_years_ago=5000.0))
+    reach = float(h.POLITY_REACH_KM[1])
+    ride = polities.travel_km(state, 0, capital, 2, reach)
+    g = TravelGraph(earth, 2)
+    walk = dijkstra(g.matrix(g.base_hours), indices=capital) * polities._graphs[2, True][1]
+    reached = np.isfinite(ride)
+    assert np.all(ride[reached] <= walk[reached] + 1e-3)
+    assert (ride[steppe] < 0.9 * walk[steppe]).any()                         # faster across the steppe
+    # a farmers' state next to the steppe: herders with horses form confederations beside it
+    edge = polities.steppe[polities.ec] & ~polities.steppe[polities.er]
+    farm = int(polities.er[edge][0])
+    state.owner[farm] = 0
+    state.polities[0].capital = farm
+    new = polities._confederations(state, 0, np.random.default_rng(1), 1e4)
+    assert new.size and np.all(polities.steppe[new]) and np.all(state.owner[new] < 0)
+    assert set(new.tolist()) <= set(polities.ec[polities.er == farm].tolist())
+    state.development[0, 0] = h.STEPPE_CONFEDERATION_ENERGY - 0.5
+    assert polities._confederations(state, 0, np.random.default_rng(1), 1e4).size == 0

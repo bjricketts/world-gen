@@ -69,6 +69,7 @@ def resolve_culture(entry: CultureEntry, index: int, seed: int) -> Culture:
         immigrants_per_year=colony.immigrants_per_year if colony else 0.0,
         immigration_years=colony.immigration_years if colony else None,
         independence_years=colony.independence_years if colony else None,
+        crowd_diseases=bool(colony.crowd_diseases) if colony else False,
         mode=entry.mode,
     )
 

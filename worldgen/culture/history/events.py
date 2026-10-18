@@ -130,6 +130,7 @@ class Events:
         self.activity = float(getattr(interior, "activity_index", 1.0) or 0.0)
         self.land_km2 = float(self.land.sum() * self.cell_km2)
         self.shocks: list[Shock] = []
+        self.log: list[tuple] = []          # (kind, years ago, size, people killed) of every event, for validation
         self.flooded = np.zeros(self.land.size, dtype=bool)
         self.elevation = s["elevation"].values if "elevation" in s else np.zeros(self.land.size)
         self.scripted = sorted(ctx.history.events, key=lambda e: -e.years_ago)
@@ -220,6 +221,7 @@ class Events:
             cells = np.flatnonzero(self.land & (np.sign(self.lat) == np.sign(lat)))
         sigma = cooling / h.SUMMER_TEMPERATURE_SD_K
         loss = min(h.CAPACITY_LOSS_PER_SIGMA * sigma, 1.0)
+        self.log.append(("eruption", when, float(sulfur), 0.0))
         self.shocks.append(Shock("eruption", when, when - length, cells, np.full(cells.size, sigma),
                                  np.full(cells.size, loss)))
         if scripted or sulfur >= h.VOLCANIC_COOLING_REF_TG:
@@ -296,6 +298,7 @@ class Events:
         share = np.clip(base * uneven, 0.0, h.PANDEMIC_MAX_DEATH_SHARE)
         killed = float((people[reached] * share).sum())
         state.population[:, reached] *= 1.0 - share
+        self.log.append(("pandemic", state.years_ago, float(intensity), killed))
         if scripted or killed >= h.PANDEMIC_CHRONICLE_PEOPLE:
             ctx.chronicle.add(state.years_ago, "pandemic",
                               f"A pandemic starting at {self.lat[cell]:.1f}°, {ctx.world.grid.lon[cell]:.1f}° kills "

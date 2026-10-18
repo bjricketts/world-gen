@@ -53,7 +53,17 @@ def test_a_faster_front_crosses_more_links():
     assert reached[0] == pytest.approx(1 + 40 * 25 * front_speed_km_yr() / 100, abs=2)
 
 
-def _history(earth, **colony):
+def _history(earth, herds: float = 0.0, **colony):
+    """Run natives and a colony from off the planet that carries crowd diseases (unless told otherwise); natives'
+    farming origins keep herd animals with probability ``herds``."""
+    colony = {"crowd_diseases": True, **colony}
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(h, "LIVESTOCK_P_CLOSED", herds)
+        mp.setattr(h, "LIVESTOCK_P_OPEN", herds)
+        return _run(earth, colony)
+
+
+def _run(earth, colony):
     spec = CultureSpec.model_validate({"history": {"start_years_ago": 3000, "epochs": [300, 200, 150]}, "cultures": [
         {"name": "Natives", "mode": "organic", "homeland": {"lat_deg": 45, "lon_deg": 10, "radius_km": 3000}},
         {"name": "Settlers", "mode": "organic", "inhabitants": "colonist",
@@ -87,6 +97,22 @@ def test_contact_epidemics_strike_the_natives_of_the_landmass(colony, earth, mon
     sick = colony.snapshots[2].population[0][mass == home].sum()            # 150 years ago, 150 after landing
     well = healthy.snapshots[2].population[0][mass == home].sum()
     assert sick < 0.7 * well
+
+
+def test_no_great_dying_without_herds_or_against_herders(colony, earth):
+    from worldgen.culture.history.livestock import Livestock
+
+    settlers = colony.cultures[1].id
+    assert any(e.kind == "epidemic" and e.refs.get("culture") == settlers for e in colony.chronicle.entries)
+    harmless, herders = _history(earth, crowd_diseases=False), _history(earth, herds=1.0)
+    assert not any(e.kind == "epidemic" and e.refs.get("culture") == settlers for e in harmless.chronicle.entries)
+    origins = [e for e in herders.chronicle.entries if e.kind == "farming_origin"]
+    assert origins and all(e.refs["livestock"] == 1 for e in origins)
+    mass = landmasses(earth)
+    home = mass[np.argmax(colony.snapshots[-1].population[1])]
+    farmed = herders.snapshots[2].population[0][mass == home].sum()
+    struck = colony.snapshots[2].population[0][mass == home].sum()
+    assert farmed > struck                                                  # herders' descendants withstand them
 
 
 def test_immigrants_arrive_for_the_given_years(earth):
@@ -308,3 +334,26 @@ def test_a_culture_joins_at_most_one_creole(earth, monkeypatch):
     assert not contact._may_mix(ctx, state, {}, 0, 1)
     monkeypatch.setattr(h, "CREOLE_CONTACT", "colonial")
     assert not contact._may_mix(ctx, state, {}, 0, 1)             # two natives
+
+
+def test_a_homes_own_colonies_do_not_spare_its_natives_from_foreign_diseases(earth):
+    from dataclasses import replace
+
+    from worldgen.culture.history.colonists import Epidemics
+
+    ctx, state, land = _pair(earth)
+    native = ctx.cultures[0]
+    ctx.cultures[1] = replace(ctx.cultures[1], inhabitants="colonist", home_culture=native.id)   # its own colony
+    ep = Epidemics(ctx)
+    ep.contact = {0: ep.contact.get(0, np.full(state.population.shape[1], np.nan))}
+    state.population[1] = 0.0
+    state.population[1, land[0]] = 100.0
+    ep.step(ctx, state, 25.0)
+    assert np.all(np.isnan(ep.contact[0][land]))                 # the home's own pool: no epidemic
+    from worldgen.culture.history.run import add_culture
+    foreign = replace(ctx.cultures[1], id=7, home_culture=None, name="Others", crowd_diseases=True)
+    row = add_culture(ctx, state, foreign, state.development[1].copy())
+    state.population[row, land[5]] = 100.0
+    ep.step(ctx, state, 25.0)
+    same = land[ep.mass[land] == ep.mass[land[5]]]
+    assert np.all(np.isfinite(ep.contact[0][same]))              # a foreign pool brings its epidemic

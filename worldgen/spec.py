@@ -334,7 +334,8 @@ atmosphere: {}
 #     - inhabitants: colonist
 #       development: {energy: fusion, transport: spaceflight}
 #       colony: {founded_years_ago: 150, origin: Sol, landing_sites: [{lat_deg: -5, lon_deg: 100}]}
-#       # organic colonies: colony: {..., immigrants_per_year: 1000, immigration_years: 100, independence_years: 200}
+#       # organic colonies: colony: {..., immigrants_per_year: 1000, immigration_years: 100, independence_years: 200,
+#       #                            crowd_diseases: true}   # carry herd-animal diseases to natives without livestock
 #     # - name: Oru
 #     #   mode: organic           # development, population, settlements and polities emerge from the history
 #     #   homeland: {lat_deg: -10, lon_deg: 20, radius_km: 3000}   # where its foragers start

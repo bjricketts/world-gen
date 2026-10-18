@@ -5,11 +5,15 @@
 - *Immigration.* An organic colony's ``immigrants_per_year`` arrive where its
   founders landed, in the founders' proportions, for ``immigration_years``
   after landing (or to the present).
-- *Contact epidemics* (after Koch et al. 2019). When a colonist culture first
-  lives on a landmass, an epidemic spreads from its cells there at
-  EPIDEMIC_SPEED_KM_YR; natives in each cell it reaches die at an extra rate
-  that removes EPIDEMIC_DEATH_SHARE of them over EPIDEMIC_YEARS, and they do
-  not grow meanwhile. A native culture meets each landmass's epidemic once.
+- *Contact epidemics* (after Koch et al. 2019 and Wolfe et al. 2007). When a
+  pool of colonists that carries herd animals' crowd diseases first lives on
+  a landmass, an epidemic spreads from its cells there at EPIDEMIC_SPEED_KM_YR
+  through the cells without livestock; people of every other culture in each
+  cell it reaches die at an extra rate that removes EPIDEMIC_DEATH_SHARE of
+  them over EPIDEMIC_YEARS, and they do not grow for EPIDEMIC_NO_GROWTH_YEARS.
+  Colonies of one line of home cultures share one pool of diseases: a
+  landmass meets each pool's epidemic once and a cell is struck once; who is
+  spared is decided by livestock, not by culture.
 - *Settler mortality* (after Acemoglu, Johnson & Robinson 2001). Colonists
   die at the excess settler mortality of their cells, rising with malaria
   suitability, so they settle temperate land and stay few in the wet tropics.
@@ -68,56 +72,88 @@ def immigration_step(ctx, state, years: float) -> None:
 
 
 class Epidemics:
-    """Contact dates per native culture and cell, and the landmasses each has met colonists on."""
+    """Contact dates and death shares per culture and cell, and the landmasses each pool has met."""
 
     def __init__(self, ctx):
         """Label the landmasses; no contact yet."""
         n = ctx.cov.land.size
         self.mass = landmasses(ctx.world)
-        self.contact = {i: np.full(n, np.nan) for i, c in enumerate(ctx.cultures) if c.inhabitants == "native"}
-        self.met: set[int] = set()
+        self.contact = {i: np.full(n, np.nan) for i in range(len(ctx.cultures))}
+        self.share = {i: np.zeros(n) for i in range(len(ctx.cultures))}
+        self.met: set[tuple[int, int]] = set()            # (landmass, pool of colonists) epidemics started
+
+    def add_row(self, ctx, culture) -> None:
+        """Track a culture that arose during the history (an overseas colony or a creole)."""
+        n = ctx.cov.land.size
+        row = len(ctx.cultures) - 1
+        self.contact[row] = np.full(n, np.nan)
+        self.share[row] = np.zeros(n)
 
     def running(self, years_ago: float, years: float) -> dict:
-        """Return, per native culture row, the cells where an epidemic runs during the step starting ``years_ago``."""
+        """Return, per culture row, the cells where people struck by an epidemic do not grow during the step
+        starting ``years_ago`` (EPIDEMIC_NO_GROWTH_YEARS from the epidemic's arrival)."""
         out = {}
         for row, contact in self.contact.items():
             since = contact - years_ago
-            sick = np.isfinite(since) & (since + years > 0.0) & (since < h.EPIDEMIC_YEARS)
+            sick = np.isfinite(since) & (since + years > 0.0) & (since < h.EPIDEMIC_NO_GROWTH_YEARS)
             if sick.any():
                 out[row] = sick
         return out
 
     def step(self, ctx, state, years: float) -> None:
-        """Start epidemics on newly reached landmasses and apply the deaths of the step."""
+        """Start epidemics where a pool of colonists first lives on a landmass, and apply the deaths of the step.
+
+        A pool is a colonist culture's line of home cultures (``empire``): colonies of one home share its
+        diseases, so a landmass meets each pool's epidemic once. A pool brings crowd diseases only if it carries
+        herd animals (``Livestock.carrier``); in each cell it removes EPIDEMIC_DEATH_SHARE of the people of every
+        culture but the pool's own colonists, unless the cell keeps livestock (whose people withstand them), so
+        the home culture's own kin on a landmass without herds are struck too.
+        """
+        from .livestock import livestock
+
         colonists = [i for i, c in enumerate(ctx.cultures) if c.inhabitants == "colonist" and state.active[i]]
-        if not colonists or not self.contact:
+        if not colonists:
             return
-        present = state.population[colonists].sum(axis=0) > 0
+        herds = livestock(ctx)
         pts = ctx.world.grid.points
-        for m in sorted(set(np.unique(self.mass[present]).tolist()) - self.met - {-1}):
-            self.met.add(m)
-            first = np.flatnonzero(present & (self.mass == m))
-            on = np.flatnonzero(self.mass == m)
-            d = ctx.cov.radius_km * np.arccos(np.clip(pts[on] @ pts[first].T, -1.0, 1.0)).min(axis=1)
-            arrival = state.years_ago - d / h.EPIDEMIC_SPEED_KM_YR
-            hit = 0.0
-            sources = {ctx.cultures[i].home_culture for i in colonists}
-            for row, contact in self.contact.items():
-                if ctx.cultures[row].id in sources:                  # the colonists' own people share their diseases
+        pools: dict[int, list[int]] = {}
+        for i in colonists:
+            pools.setdefault(empire(ctx, ctx.cultures[i]), []).append(i)
+        for pool, rows in sorted(pools.items()):
+            present = state.population[rows].sum(axis=0) > 0
+            for m in sorted(set(np.unique(self.mass[present]).tolist()) - {-1}):
+                if (m, pool) in self.met:
                     continue
-                contact[on] = np.where(np.isnan(contact[on]), arrival, contact[on])
-                hit += state.population[row][on].sum()
-            if hit >= h.EPIDEMIC_CHRONICLE_PEOPLE:
-                c = ctx.cultures[colonists[0]]
-                ctx.chronicle.add(state.years_ago, "epidemic",
-                                  f"Diseases brought by {c.name or f'Culture {c.id}'} spread among {hit:,.0f} "
-                                  f"natives on landmass {m + 1}", culture=c.id, landmass=m)
-        rate = -math.log(1.0 - h.EPIDEMIC_DEATH_SHARE) / h.EPIDEMIC_YEARS
+                self.met.add((m, pool))
+                if not herds.carrier(ctx, state, pool):
+                    continue
+                first = np.flatnonzero(present & (self.mass == m))
+                on = np.flatnonzero((self.mass == m) & ~herds.immune(state))
+                if not on.size:
+                    continue
+                d = ctx.cov.radius_km * np.arccos(np.clip(pts[on] @ pts[first].T, -1.0, 1.0)).min(axis=1)
+                arrival = state.years_ago - d / h.EPIDEMIC_SPEED_KM_YR
+                hit = 0.0
+                for row, contact in self.contact.items():
+                    c = ctx.cultures[row]
+                    if c.inhabitants == "colonist" and empire(ctx, c) == pool:    # the pool's own colonists
+                        continue
+                    fresh = np.isnan(contact[on])
+                    contact[on] = np.where(fresh, arrival, contact[on])
+                    self.share[row][on] = np.where(fresh, h.EPIDEMIC_DEATH_SHARE, self.share[row][on])
+                    hit += state.population[row][on][fresh].sum()
+                if hit >= h.EPIDEMIC_CHRONICLE_PEOPLE:
+                    c = ctx.cultures[rows[0]]
+                    ctx.chronicle.add(state.years_ago, "epidemic",
+                                      f"Diseases brought by {c.name or f'Culture {c.id}'} spread among {hit:,.0f} "
+                                      f"people without herd animals on landmass {m + 1}", culture=c.id,
+                                      landmass=int(m), people=round(float(hit)))
         for row, contact in self.contact.items():
             since = contact - state.years_ago                  # years since the epidemic reached the cell
             start = np.clip(since, 0.0, None)
             end = np.clip(since + years, None, h.EPIDEMIC_YEARS)
             exposed = np.where(np.isfinite(since), np.clip(end - start, 0.0, None), 0.0)
+            rate = -np.log1p(-np.clip(self.share[row], 0.0, 0.999)) / h.EPIDEMIC_YEARS
             state.population[row] *= np.exp(-rate * exposed)
 
 
@@ -137,13 +173,26 @@ def home_polity(ctx, state, culture) -> int:
     return max(states, key=lambda p: owned[p.id]).id if states else -1
 
 
+def heir_state(state, polity: int) -> int:
+    """Return the living heir of a state that broke up (the part holding its capital, ``Polities._split``), following
+    heirs of heirs, or −1 if it fell otherwise (conquered or emptied)."""
+    seen = set()
+    while polity >= 0 and not state.polities[polity].alive and polity not in seen:
+        seen.add(polity)
+        capital = state.polities[polity].capital
+        heirs = [p.id for p in state.polities if p.parent == polity and p.capital == capital]
+        polity = heirs[0] if heirs else -1
+    return polity
+
+
 def home_step(ctx, state, years: float) -> None:
     """Process: keep each organic colony tied to its home power until independence; send emigrants from home.
 
     A tied colony becomes independent at the rate of ``independence_rate``,
     TURMOIL_WAR_FACTOR times faster while its home state is at war (a home off
     the planet is at war in a share ABSTRACT_HOME_WAR_SHARE of the years, drawn
-    per step), or at once when its home state ends. A given
+    per step), or at once when its home state ends other than by breaking up
+    (a break-up passes the colony to the heir holding the old capital). A given
     ``colony.independence_years`` overrides this. While tied, a home state on
     the planet sends COLONY_EMIGRATION_RATE of its people a year.
     """
@@ -173,7 +222,11 @@ def home_step(ctx, state, years: float) -> None:
             if elapsed >= c.independence_years:
                 cause = "at the appointed time"
         elif home >= 0 and not state.polities[home].alive:
-            cause = f"as their home state {home} falls"
+            heir = heir_state(state, home)
+            if heir >= 0:                                   # the home state broke up: its heir keeps the colony
+                homes[c.id] = home = heir
+            else:
+                cause = f"as their home state {home} falls"
         else:
             war = home in fighting if home >= 0 else rng.random() < h.ABSTRACT_HOME_WAR_SHARE
             rate = independence_rate(ctx, c, first - state.years_ago) * (h.TURMOIL_WAR_FACTOR if war else 1.0)

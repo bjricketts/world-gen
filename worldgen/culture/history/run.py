@@ -64,6 +64,8 @@ class HistoryResult:
     cultures: list[Culture]                  # the organic cultures, with colonies' landing sites filled
     cells: object = None                     # the cell record (``continuity.CellRecord``), if kept
     series: object = None                    # the series record (``series.SeriesRecord``), if kept
+    conflicts: list = field(default_factory=list)   # finished conflicts (``wars.ConflictRecord``), for validation
+    events: list = field(default_factory=list)      # every planet event (kind, years ago, size, killed), for validation
 
 
 def _levels(dev: Development) -> np.ndarray:
@@ -160,7 +162,9 @@ def run_history(world, cultures: list[Culture], history: HistorySpec, seed: int,
         if after in history.epochs or after == 0.0:
             kept.append(state.copy())
     return HistoryResult(snapshots=kept, chronicle=ctx.chronicle, steps=state.step, cultures=ctx.cultures,
-                         cells=ctx.cache.get("cells"), series=ctx.cache.get("series"))
+                         cells=ctx.cache.get("cells"), series=ctx.cache.get("series"),
+                         conflicts=ctx.cache["polities"].wars.records if "polities" in ctx.cache else [],
+                         events=ctx.cache["events"].log if "events" in ctx.cache else [])
 
 
 def default_processes() -> list[Process]:
@@ -171,10 +175,12 @@ def default_processes() -> list[Process]:
     from .overseas import overseas_step
     from .continuity import record_step
     from .events import events_step
+    from .livestock import livestock_step
     from .polities import polity_step
     from .population import grow_step, spread_step
     from .series import series_step
-    return [events_step, origin_step, knowledge_step, level_spread_step, grow_step, spread_step, immigration_step,
+    return [events_step, origin_step, knowledge_step, level_spread_step, livestock_step, grow_step, spread_step,
+            immigration_step,
             settler_mortality_step, epidemic_step, overseas_step, home_step, transfer_step, shift_step, polity_step,
             record_step, series_step]
 

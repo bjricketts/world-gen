@@ -20,7 +20,9 @@ MAP_HELP = "Write a map image to this file (PNG, JPG, PDF or SVG)."
 PROJECTION_HELP = "Map projection: equirectangular, mollweide, robinson, orthographic, north_polar, south_polar."
 FIELD_HELP = ("Map field: elevation, terrain, plates, crust_age, orogeny_age, temperature, rainfall, basins, "
               "biomes, koppen, ice; culture layers political, population, cultures, polities, settlements, roads, "
-              "habitat, resources:<name>; or 'overview' / 'climate' / 'culture' for a multi-panel figure.")
+              "habitat, resources:<name> or resources:best, suitability[:<culture>]; from an organic history energy, "
+              "transport, communication[:<culture>], bands, livestock, land:<component>, events; or 'overview' / "
+              "'climate' / 'culture' for a multi-panel figure.")
 TECTONICS_HELP = "Plate tectonics: simulated (default) or heuristic (fast, no history)."
 START_HELP = "Initial continents of the simulation: supercontinent or cratons (default: drawn per seed)."
 DURATION_HELP = "Simulated tectonic time in Myr (default 400)."
@@ -80,7 +82,7 @@ def _spec_with_overrides(spec: PlanetSpec, seed: Optional[int] = None, mode: Opt
 
 
 def _write_map(world: World, path: Path, field: str, projection_name: str,
-               central_longitude: float, central_latitude: float) -> None:
+               central_longitude: float, central_latitude: float, events: bool = False) -> None:
     """Draw the requested map of a world and write it to an image file."""
     import matplotlib
 
@@ -98,7 +100,7 @@ def _write_map(world: World, path: Path, field: str, projection_name: str,
         fig = plot_culture(world)
     else:
         fig = plot_map(world, field, projection_name, central_longitude=central_longitude,
-                       central_latitude=central_latitude).figure
+                       central_latitude=central_latitude, events=events or None).figure
     save_figure(fig, path)
     typer.echo(f"map written to {path}")
 
@@ -203,9 +205,15 @@ def map_cmd(
     lon: float = typer.Option(0.0, help="Central longitude of the map (degrees)."),
     lat: float = typer.Option(20.0, help="Central latitude for globe views (degrees)."),
     epoch: Optional[float] = typer.Option(None, "--epoch", "-e", help=EPOCH_HELP),
+    events: bool = typer.Option(False, "--events", help="Draw the planet events since the previous kept epoch "
+                                                          "(organic histories)."),
 ) -> None:
     """Draw a map of a saved world."""
-    _write_map(_at_epoch(load_world(world_dir), epoch), map_path, field, projection_name, lon, lat)
+    world = _at_epoch(load_world(world_dir), epoch)
+    if (events or field == "events") and world.culture is None:
+        typer.echo("error: events need a world with an organic history", err=True)
+        raise typer.Exit(code=1)
+    _write_map(world, map_path, field, projection_name, lon, lat, events)
 
 
 @app.command("drift")
