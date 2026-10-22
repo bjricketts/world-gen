@@ -447,6 +447,308 @@ def epochs_cmd(
     typer.echo(f"history written to {path}")
 
 
+export_app = typer.Typer(help="Export heightfields, region bundles, engine heightmaps, tile pyramids and meshes.",
+                         no_args_is_help=True)
+app.add_typer(export_app, name="export")
+
+RASTER_SUFFIX_HELP = "File type: .tif (GeoTIFF), .png (16-bit) or .raw (16-bit little-endian)."
+REGION_RESOLUTION_HELP = "Lattice spacing in metres (default 750)."
+RUGGEDNESS_HELP = "Sub-grid relief: earth, dramatic or gentle."
+CACHE_HELP = "Keep zoomed regions in the world folder under regions/ and reuse them next time."
+EXAGGERATION_HELP = "Vertical exaggeration of the mesh."
+MAX_ERROR_HELP = "Simplification tolerance in metres (default: 5% of the node spacing)."
+
+
+def _fail(error: Exception) -> None:
+    """Report an error on stderr and stop with exit code 1."""
+    typer.echo(f"error: {error.args[0] if error.args else error}", err=True)
+    raise typer.Exit(code=1)
+
+
+def _fields(value: str) -> list[str]:
+    """Return the field names of a comma-separated option."""
+    return [part for part in value.replace(" ", "").split(",") if part]
+
+
+def _region(world: World, world_dir: Path, lat: float, lon: float, resolution: Optional[float],
+            level: Optional[int], half_width: Optional[float], ruggedness: str, cache: bool):
+    """Zoom into the region around a place of a saved world."""
+    from . import heuristics as h
+    from .world import REGIONS_FOLDER
+    from .zoom import zoom_region
+
+    try:
+        return zoom_region(world, lat, lon, resolution_m=resolution, level=level,
+                           half_width_km=half_width if half_width is not None else h.ZOOM_DEFAULT_HALF_WIDTH_KM,
+                           ruggedness=ruggedness, cache_dir=world_dir / REGIONS_FOLDER if cache else None)
+    except ValueError as e:
+        _fail(e)
+
+
+def _local_culture(world: World, region):
+    """Return the settlements, roads and borders of a region, or None when the world has no culture."""
+    if world.culture is None or "population_density" not in world.culture.layers:
+        return None
+    from .culture.local import zoom_culture
+
+    return zoom_culture(world, region)
+
+
+def _describe(region) -> str:
+    """Return the size, spacing and level of a region."""
+    rows, cols = region.grid.shape
+    spacing = region.grid.mean_spacing(region.radius_m)
+    return (f"{cols * spacing / 1e3:.0f} × {rows * spacing / 1e3:.0f} km at {spacing:.0f} m "
+            f"(level {region.grid.level}, {cols} × {rows} nodes)")
+
+
+@export_app.command("raster")
+def export_raster_cmd(
+    world_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Folder written by --save."),
+    path: Path = typer.Argument(..., help=RASTER_SUFFIX_HELP),
+    field: str = typer.Option("elevation", "--field", "-f", help="Field to export; see `worldgen export fields`."),
+    width: int = typer.Option(2048, help="Width in pixels of the equirectangular raster (height is half)."),
+    colour: bool = typer.Option(False, "--colour", help="Write the map colours (RGB) instead of values."),
+    hillshade: bool = typer.Option(False, "--hillshade", help="Shade the colours by relief."),
+    epoch: Optional[float] = typer.Option(None, "--epoch", "-e", help=EPOCH_HELP),
+) -> None:
+    """Write a global field of a saved world as an equirectangular raster with a JSON sidecar."""
+    from .export import export_global
+
+    try:
+        out = export_global(load_world(world_dir), path, field, width, colour, hillshade, epoch)
+    except (KeyError, ValueError) as e:
+        _fail(e)
+    typer.echo(f"{field} written to {out}")
+
+
+@export_app.command("fields")
+def export_fields_cmd(
+    world_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Folder written by --save."),
+) -> None:
+    """List the global fields a saved world can export, with their units and descriptions."""
+    from .export import EXPORT_FIELDS, export_field
+
+    world = load_world(world_dir)
+    rows = []
+    for name in EXPORT_FIELDS:
+        try:
+            f = export_field(world, name)
+        except (KeyError, ValueError):
+            continue
+        rows.append((name, f.units or "-", f.description))
+    widths = [max(len(r[i]) for r in rows) + 2 for i in (0, 1)]
+    for name, units, description in rows:
+        typer.echo(f"{name:<{widths[0]}}{units:<{widths[1]}}{description}")
+
+
+@export_app.command("region")
+def export_region_cmd(
+    world_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Folder written by --save."),
+    folder: Path = typer.Argument(..., file_okay=False, help="Output folder for the bundle."),
+    lat: float = typer.Option(..., help="Latitude of the region's centre (degrees)."),
+    lon: float = typer.Option(..., help="Longitude of the region's centre (degrees)."),
+    resolution: Optional[float] = typer.Option(None, "--resolution", "-r", help=REGION_RESOLUTION_HELP),
+    level: Optional[int] = typer.Option(None, help="Quadtree level instead of a resolution."),
+    half_width: Optional[float] = typer.Option(None, "--half-width", help="Half-width of the region in km "
+                                                                          "(default 75)."),
+    ruggedness: str = typer.Option("earth", help=RUGGEDNESS_HELP),
+    fields: str = typer.Option("elevation,ocean,lake,rivers,biomes", help="Comma-separated region fields."),
+    suffix: str = typer.Option(".tif", "--format", help=RASTER_SUFFIX_HELP),
+    crs: str = typer.Option("native", help="native (the zoom lattice, georeferenced by control points) or laea "
+                                           "(resampled onto a Lambert azimuthal equal-area grid)."),
+    culture: bool = typer.Option(True, "--culture/--no-culture", help="Add culture layers and GeoJSON vectors "
+                                                                      "when the world has a culture."),
+    cache: bool = typer.Option(False, "--cache", help=CACHE_HELP),
+    epoch: Optional[float] = typer.Option(None, "--epoch", "-e", help=EPOCH_HELP),
+) -> None:
+    """Zoom into a saved world and write the region's fields, colours and vectors into a folder."""
+    from .export import export_region_bundle
+
+    world = _at_epoch(load_world(world_dir), epoch)
+    region = _region(world, world_dir, lat, lon, resolution, level, half_width, ruggedness, cache)
+    local = _local_culture(world, region) if culture else None
+    try:
+        export_region_bundle(world, region, folder, _fields(fields), suffix, local, crs)
+    except (KeyError, ValueError) as e:
+        _fail(e)
+    typer.echo(f"region {_describe(region)} written to {folder}")
+
+
+@export_app.command("engine")
+def export_engine_cmd(
+    world_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Folder written by --save."),
+    path: Path = typer.Argument(..., help="Heightmap file: .r16 or .raw (16-bit little-endian) or .png (16-bit)."),
+    lat: float = typer.Option(..., help="Latitude of the heightmap's centre (degrees)."),
+    lon: float = typer.Option(..., help="Longitude of the heightmap's centre (degrees)."),
+    engine: str = typer.Option("unity", help="Game engine: unity (2ⁿ + 1 sizes) or unreal (k·126 + 1 sizes)."),
+    size: int = typer.Option(513, help="Heightmap size in nodes; see the engine's sizes in the error message."),
+    resolution: Optional[float] = typer.Option(None, "--resolution", "-r", help=REGION_RESOLUTION_HELP),
+    level: Optional[int] = typer.Option(None, help="Quadtree level instead of a resolution."),
+    ruggedness: str = typer.Option("earth", help=RUGGEDNESS_HELP),
+    cache: bool = typer.Option(False, "--cache", help=CACHE_HELP),
+) -> None:
+    """Write a square heightmap sized for a game engine, with its import settings in a JSON sidecar."""
+    from .export import engine_region, export_engine_heightmap
+    from .world import REGIONS_FOLDER
+
+    world = load_world(world_dir)
+    try:
+        region = engine_region(world, lat, lon, engine, size, resolution, level, ruggedness,
+                               world_dir / REGIONS_FOLDER if cache else None)
+        out = export_engine_heightmap(world, region, path, engine)
+    except (KeyError, ValueError) as e:
+        _fail(e)
+    typer.echo(f"{engine} heightmap {_describe(region)} written to {out}")
+
+
+def _places(values: list[str]) -> list[tuple[float, float, int]]:
+    """Return the (latitude, longitude, finest level) of each --place option."""
+    out = []
+    for value in values:
+        try:
+            lat, lon, level = value.replace(" ", "").split(",")
+            out.append((float(lat), float(lon), int(level)))
+        except ValueError:
+            raise typer.BadParameter(f"could not read '{value}' as latitude,longitude,level")
+    return out
+
+
+@export_app.command("pyramid")
+def export_pyramid_cmd(
+    world_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Folder written by --save."),
+    folder: Path = typer.Argument(..., file_okay=False, help="Output folder for the tiles and tileset.json."),
+    top_level: int = typer.Option(3, "--top-level", help="Finest global level, built one block per cube face "
+                                                         "(level 3 takes ~1 min per face)."),
+    place: list[str] = typer.Option([], "--place", help="Refine around a place down to a level: "
+                                                        "'latitude,longitude,level'. Repeatable."),
+    fields: str = typer.Option("elevation", help="Comma-separated tile fields: elevation, ocean, lake, rivers, "
+                                                 "ice."),
+    suffix: str = typer.Option(".png", "--format", help=RASTER_SUFFIX_HELP),
+    meshes: bool = typer.Option(False, "--meshes", help="Also write a GLB mesh per tile under meshes/."),
+    exaggeration: float = typer.Option(1.0, help=EXAGGERATION_HELP),
+    ruggedness: str = typer.Option("earth", help=RUGGEDNESS_HELP),
+    cache: bool = typer.Option(False, "--cache", help=CACHE_HELP),
+) -> None:
+    """Build the tile pyramid of a saved world (global levels and refined chains) and write its tiles."""
+    import time
+
+    from .export import build_pyramid, export_pyramid, export_pyramid_meshes
+    from .world import REGIONS_FOLDER
+
+    world = load_world(world_dir)
+    start = time.perf_counter()
+    try:
+        pyramid = build_pyramid(world, _places(place), top_level, ruggedness,
+                                world_dir / REGIONS_FOLDER if cache else None)
+        export_pyramid(pyramid, world, folder, _fields(fields), suffix)
+        if meshes:
+            export_pyramid_meshes(pyramid, world, folder / "meshes", exaggeration=exaggeration)
+    except (KeyError, ValueError) as e:
+        _fail(e)
+    tiles = sum(len(b.tiles) for blocks in pyramid.levels.values() for b in blocks)
+    typer.echo(f"{tiles:,} tiles on levels {min(pyramid.levels)}–{max(pyramid.levels)} written to {folder} "
+               f"in {time.perf_counter() - start:.0f} s")
+
+
+@export_app.command("mesh")
+def export_mesh_cmd(
+    world_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Folder written by --save."),
+    path: Path = typer.Argument(..., help="Mesh file: .glb, .gltf, .ply or .obj."),
+    lat: Optional[float] = typer.Option(None, help="Latitude of a region to mesh (default: the whole globe)."),
+    lon: Optional[float] = typer.Option(None, help="Longitude of a region to mesh."),
+    level: Optional[int] = typer.Option(None, help="Quadtree level: of the globe's tiles (default 2) or of the "
+                                                   "region."),
+    field: Optional[str] = typer.Option(None, "--field", "-f", help="Vertex colours: a global field for the globe "
+                                                                    "(default elevation); relief (default) or "
+                                                                    "biome for a region."),
+    exaggeration: float = typer.Option(1.0, help=EXAGGERATION_HELP),
+    max_error: Optional[float] = typer.Option(None, "--max-error", help=MAX_ERROR_HELP),
+    sea: bool = typer.Option(True, "--sea/--no-sea", help="Add a sea-level layer over the ocean."),
+    resolution: Optional[float] = typer.Option(None, "--resolution", "-r", help=REGION_RESOLUTION_HELP),
+    half_width: Optional[float] = typer.Option(None, "--half-width", help="Half-width of the region in km "
+                                                                          "(default 75)."),
+    ruggedness: str = typer.Option("earth", help=RUGGEDNESS_HELP),
+    cache: bool = typer.Option(False, "--cache", help=CACHE_HELP),
+    epoch: Optional[float] = typer.Option(None, "--epoch", "-e", help=EPOCH_HELP),
+) -> None:
+    """Write a mesh of the globe or of the region around a place, with vertex colours."""
+    from .export import export_globe_mesh, export_region_mesh
+
+    if (lat is None) != (lon is None):
+        _fail(ValueError("give both --lat and --lon for a region, or neither for the globe"))
+    world = _at_epoch(load_world(world_dir), epoch)
+    try:
+        if lat is None:
+            out = export_globe_mesh(world, path, 2 if level is None else level, field or "elevation", max_error,
+                                    exaggeration, sea)
+            what = f"globe at level {2 if level is None else level}"
+        else:
+            if field not in (None, "relief", "biome"):
+                _fail(ValueError(f"unknown region colouring '{field}'; choose relief or biome"))
+            region = _region(world, world_dir, lat, lon, resolution, level, half_width, ruggedness, cache)
+            out = export_region_mesh(world, region, path, field or "relief", max_error, exaggeration, sea)
+            what = f"region {_describe(region)}"
+    except (KeyError, ValueError) as e:
+        _fail(e)
+    typer.echo(f"{what} written to {out}")
+
+
+@app.command("globe")
+def globe_cmd(
+    world_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Folder written by --save."),
+    out: Optional[Path] = typer.Argument(None, help="An image (.png), an interactive page (.html), or a folder for "
+                                                    "every field and epoch asked for; without it a window opens."),
+    field: str = typer.Option("elevation", "--field", "-f", help="Field to show; comma-separated for a folder."),
+    epoch: Optional[float] = typer.Option(None, "--epoch", "-e", help=EPOCH_HELP),
+    all_epochs: bool = typer.Option(False, "--all-epochs", help="Write every kept epoch into the folder."),
+    level: int = typer.Option(1, help="Quadtree level of the globe's tiles (1 is ~50 km at the Earth's size)."),
+    exaggeration: Optional[float] = typer.Option(None, help="Vertical exaggeration (default 20)."),
+    lat: float = typer.Option(20.0, help="Latitude the camera looks down on (degrees)."),
+    lon: float = typer.Option(0.0, help="Longitude the camera looks down on (degrees)."),
+    region: list[str] = typer.Option([], "--region", help="Drape a zoomed region over the globe: "
+                                                          "'latitude,longitude'. Repeatable."),
+    fmt: str = typer.Option("png", "--format", help="File type in a folder: png or html."),
+) -> None:
+    """Show a saved world as a 3D globe in a window, or write images or interactive pages of it."""
+    from . import heuristics as h
+    from .render import GlobeViewer
+
+    world = load_world(world_dir)
+    try:
+        viewer = GlobeViewer(world, level, exaggeration=h.GLOBE_EXAGGERATION if exaggeration is None else exaggeration)
+        for value in region:
+            try:
+                rlat, rlon = (float(v) for v in value.replace(" ", "").split(","))
+            except ValueError:
+                raise typer.BadParameter(f"could not read '{value}' as latitude,longitude")
+            viewer.add_region(_region(world, world_dir, rlat, rlon, None, None, None, "earth", False))
+        fields = _fields(field)
+        missing = [f for f in fields if f not in viewer.fields]
+        if missing:
+            _fail(ValueError(f"'{missing[0]}' is not available; choose from {', '.join(viewer.fields)}"))
+        if out is None:
+            viewer.show(fields[0], epoch, lat, lon)
+            return
+        suffix = out.suffix.lower()
+        if suffix == ".png":
+            viewer.screenshot(out, fields[0], epoch, lat, lon)
+        elif suffix == ".html":
+            viewer.save_html(out, fields[0], epoch, lat, lon)
+        elif suffix:
+            _fail(ValueError(f"unknown output type '{suffix}'; use .png, .html or a folder"))
+        else:
+            if fmt not in ("png", "html"):
+                _fail(ValueError(f"unknown format '{fmt}'; use png or html"))
+            epochs = None if all_epochs else [viewer.epoch if epoch is None else epoch]
+            files = viewer.export_views(out, fields, epochs, fmt, lat, lon)
+            typer.echo(f"{len(files)} views written to {out}")
+            return
+    except (KeyError, ValueError, ImportError) as e:
+        _fail(e)
+    typer.echo(f"globe written to {out}")
+
+
 @app.command("archetypes")
 def archetypes_cmd() -> None:
     """List the available archetypes."""

@@ -26,6 +26,22 @@ VIEW_LAYERS = {"energy": "development_level", "transport": "development_level", 
 EXPLORER_WIDTH = 900
 
 
+def available_fields(world) -> list[str]:
+    """Return the map fields a world can show: physical ones its surface has, and its culture's and history's."""
+    surface = world.surface
+    needs = {"ice": "ice_thickness", "biomes": "biome", "koppen": "koppen", "rainfall": "precipitation"}
+    out = [f for f in PHYSICAL_FIELDS if needs.get(f, "elevation") in surface]
+    civ = world.culture
+    if civ is None:
+        return out
+    out += [f for f in CULTURE_VIEW_FIELDS if f.split(":")[0] in CULTURE_FIELDS]
+    out += [f for f in HISTORY_VIEW_FIELDS if f in HISTORY_LAYER_FIELDS + ("events",)
+            and VIEW_LAYERS.get(f, "population_density") in civ.layers]
+    if "suitability_component" in civ.layers:
+        out += [f"land:{c}" for c in civ.layers["suitability_component"]["component"].values]
+    return out
+
+
 class HistoryExplorer:
     """A world's organic history as maps at its kept epochs, with planet events, cell values and a timeline."""
 
@@ -45,14 +61,7 @@ class HistoryExplorer:
 
     def _fields(self) -> list[str]:
         """Return the map fields the world can show at its epochs."""
-        civ = self.world.culture
-        out = [f for f in PHYSICAL_FIELDS if f != "ice" or "ice_thickness" in self.world.surface]
-        out += [f for f in CULTURE_VIEW_FIELDS if f.split(":")[0] in CULTURE_FIELDS]
-        out += [f for f in HISTORY_VIEW_FIELDS if f in HISTORY_LAYER_FIELDS + ("events",)
-                and VIEW_LAYERS.get(f, "population_density") in civ.layers]
-        if "suitability_component" in civ.layers:
-            out += [f"land:{c}" for c in civ.layers["suitability_component"]["component"].values]
-        return out
+        return available_fields(self.world)
 
     def at(self, years_ago: float):
         """Return the world as it stood at a kept epoch."""

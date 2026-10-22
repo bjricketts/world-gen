@@ -147,6 +147,22 @@ def _river_lines(region, min_order: int, min_area_km2: float, min_discharge_m3_s
     return segments, widths, wets
 
 
+def local_colours(world, region, mode: str = "relief", hillshade: bool = True) -> np.ndarray:
+    """Return the colours (rows, cols, 3; first row at the region's low-t edge) of a region's local map base:
+    relief or biome tints, ice, hillshading and lakes."""
+    rows, cols = region.grid.shape
+    rgb, elevation, ocean = _base_rgb(world, region, biome=(mode == "biome"))
+    ice = np.zeros((rows, cols)) if region.ice_thickness_m is None else region.ice_thickness_m.reshape(rows, cols)
+    covered = ice > 0.0
+    rgb[covered] = 0.25 * rgb[covered] + 0.75 * np.array(to_rgb(ICE_COLOUR))
+    if hillshade:
+        shade = _shade(elevation + ice, _axial_step_m(region))      # light falls on the ice surface
+        strength = np.where(ocean, 0.25, np.where(covered, 0.45, 0.65))[..., None]
+        rgb = np.clip(rgb * (1.0 - strength + strength * shade[..., None]), 0.0, 1.0)
+    rgb[region.lake.reshape(rows, cols)] = to_rgb(LAKE_COLOUR)     # lake surfaces are flat: no shading
+    return rgb
+
+
 def plot_local_map(world, region, *, mode: str = "relief", hillshade: bool = True, rivers: bool = True,
                    min_stream_order: int = 1, min_stream_area_km2: Optional[float] = None,
                    min_stream_discharge_m3_s: Optional[float] = None, graticule: bool = True,
@@ -163,16 +179,11 @@ def plot_local_map(world, region, *, mode: str = "relief", hillshade: bool = Tru
     import matplotlib.pyplot as plt
 
     rows, cols = region.grid.shape
-    rgb, elevation, ocean = _base_rgb(world, region, biome=(mode == "biome"))
-
-    ice = np.zeros((rows, cols)) if region.ice_thickness_m is None else region.ice_thickness_m.reshape(rows, cols)
-    covered = ice > 0.0
-    rgb[covered] = 0.25 * rgb[covered] + 0.75 * np.array(to_rgb(ICE_COLOUR))
-    if hillshade:
-        shade = _shade(elevation + ice, _axial_step_m(region))      # light falls on the ice surface
-        strength = np.where(ocean, 0.25, np.where(covered, 0.45, 0.65))[..., None]
-        rgb = np.clip(rgb * (1.0 - strength + strength * shade[..., None]), 0.0, 1.0)
-    rgb[region.lake.reshape(rows, cols)] = to_rgb(LAKE_COLOUR)     # lake surfaces are flat: no shading
+    rgb = local_colours(world, region, mode, hillshade)
+    elevation = region.elevation.reshape(rows, cols)
+    ocean = region.ocean.reshape(rows, cols)
+    covered = np.zeros((rows, cols), dtype=bool) if region.ice_thickness_m is None else \
+        region.ice_thickness_m.reshape(rows, cols) > 0.0
 
     fig, ax = plt.subplots(figsize=(figsize, figsize * rows / cols))
     ax.imshow(rgb, origin="lower", interpolation="bilinear")

@@ -407,7 +407,7 @@ ZOOM_NO_SNOWLINE_M = 1.0e5                 # stands for "no snowline" where the 
 # in ~15 s. Larger requests are refused past ZOOM_MAX_NODES (memory and time grow with the node count).
 ZOOM_DEFAULT_RESOLUTION_M = 750.0
 ZOOM_DEFAULT_HALF_WIDTH_KM = 75.0
-ZOOM_MAX_NODES = 1_000_000
+ZOOM_MAX_NODES = 1_100_000     # admits blocks of 8 × 8 tiles (1017², or 1025² and 1009² on engine lattices)
 
 # --- Climate: energy balance (Tier 0 and Tier 1) ------------------------------
 # Outgoing radiation slope: the grey value (3.3 W m⁻² K⁻¹ for Earth) is lowered by
@@ -1662,3 +1662,31 @@ ZOOM_ROAD_NEIGHBOURS = 8
 ZOOM_BORDER_BAND_KM = 60.0
 ZOOM_BORDER_RIVER_ORDER = 5
 ZOOM_BORDER_RIVER_HOURS = 24.0
+
+# --- Export (milestone 10) ---
+# 16-bit heightmaps of one world share one height scale: the world's elevation range widened by this share
+# of it on each side, so zoomed detail and erosion, which add up to a few hundred metres above the global
+# grid's peaks and below its deeps, fit inside it (heuristic; 0.31 m steps on the Earth example).
+EXPORT_HEIGHT_MARGIN_FRACTION = 0.15
+# Native lattices are georeferenced by ground control points at every tile corner, and at least this many
+# along each side; a thin-plate-spline warp through them places a 5900 km continent block within 0.3 lattice
+# steps (task 10.2 prototype; GDAL's default polynomial is off by up to 17 steps on such blocks).
+EXPORT_GCP_MIN_PER_SIDE = 17
+# Tile pyramid (task 10.3). Tiles of 129 nodes (2ⁿ + 1, 128 quads). The global part is built at
+# PYRAMID_TOP_LEVEL (~9 km on Earth: one block per cube face) and coarser levels keep every other node.
+# Each level is re-levelled onto its parent: the part of (level − parent) smoother than
+# PYRAMID_RELEVEL_SIGMA parent spacings (a Gaussian) is removed, since zoom erosion lowers coarse lattices
+# more (−84 m at ~9 km, −20 m at ~2.4 km on the Earth example). Where a finer level's coverage ends its
+# heights ramp linearly to the parent's over PYRAMID_BLEND_FRACTION of a tile (as geometry clipmaps do).
+PYRAMID_NODES_PER_TILE = 129
+PYRAMID_TOP_LEVEL = 3
+PYRAMID_RELEVEL_SIGMA = 0.5
+PYRAMID_BLEND_FRACTION = 0.1
+# Meshes (task 10.4): a tile's default vertical tolerance is this share of its node spacing (31 m at ~0.6 km,
+# 490 m at ~9.8 km), measured on the exaggerated heights plus the chord's sag below the sphere (heuristic).
+MESH_ERROR_FRACTION = 0.05
+# Globe viewer (task 10.5): default height exaggeration of the 3D globe (relief is ~0.1% of the radius on Earth),
+# and how far a draped region is raised above the globe, in metres before exaggeration, so it draws over the
+# globe tiles beneath it (heuristic).
+GLOBE_EXAGGERATION = 20.0
+GLOBE_REGION_LIFT_M = 5.0

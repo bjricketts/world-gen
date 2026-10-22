@@ -167,14 +167,16 @@ def elevation_colours(world: World, elev: np.ndarray, ocean: np.ndarray,
 
 
 def elevation_image(world: World, proj: ccrs.Projection, width: int, hillshade: bool = True,
-                    limits: Optional[tuple[float, float]] = None):
+                    limits: Optional[tuple[float, float]] = None, sampler=None):
     """Return an RGBA image of elevation in a projection, plus the colormap and norm for a colour bar.
 
     ``limits`` fixes the colour scale (lowest, highest elevation); by default
-    it spans the world's elevations.
+    it spans the world's elevations. ``sampler`` replaces the projected image
+    lookup (its extent is then taken to be in metres on Earth's radius).
     """
     ds = world.surface
-    sampler = projected_sampler(world.grid, proj, width)
+    sampler = sampler if sampler is not None else projected_sampler(world.grid, proj, width)
+    width = sampler.shape[1]
     valid = sampler.valid.reshape(sampler.shape)
     elev = sampler.sample(ds["elevation"].values)
     # Interpolated elevation gives smoother coastlines than the per-cell ocean mask; the mask keeps
@@ -204,13 +206,15 @@ def elevation_image(world: World, proj: ccrs.Projection, width: int, hillshade: 
     return rgba, cmap, norm, sampler.extent
 
 
-def field_image(world: World, field: str, proj: ccrs.Projection, width: int, month: Optional[int] = None):
+def field_image(world: World, field: str, proj: ccrs.Projection, width: int, month: Optional[int] = None,
+                sampler=None):
     """Return an RGBA image of a categorical, age or climate field, plus its legend handles or (cmap, norm).
 
     ``month`` (1–12) selects a monthly temperature or precipitation field instead of the annual mean.
+    ``sampler`` replaces the projected image lookup.
     """
     ds = world.surface
-    sampler = projected_sampler(world.grid, proj, width)
+    sampler = sampler if sampler is not None else projected_sampler(world.grid, proj, width)
     valid = sampler.valid.reshape(sampler.shape)
     if field == "terrain":
         codes = sampler.sample(ds["terrain"].values, categorical=True)
@@ -328,6 +332,26 @@ def field_image(world: World, field: str, proj: ccrs.Projection, width: int, mon
         raise ValueError(f"unknown field '{field}'; choose from {', '.join(FIELDS)}")
     rgba = np.concatenate([rgb, valid[..., None].astype(float)], axis=-1)
     return rgba, extra, sampler.extent
+
+
+def field_colours(world: World, field: str, sampler, month: Optional[int] = None, hillshade: bool = False) -> np.ndarray:
+    """Return the RGBA colours of a map field at the points of a sampler, as the map of that field shows them.
+
+    Overlay-only fields (settlements, roads, events) give the faded relief
+    their maps are drawn on.
+    """
+    if world.surface is None:
+        raise ValueError(f"{world.state.name} has no solid surface")
+    name = split_field(field)[0]
+    if field == "elevation":
+        return elevation_image(world, None, 0, hillshade, sampler=sampler)[0]
+    if field == "events" or name in ("settlements", "roads"):
+        rgba = elevation_image(world, None, 0, hillshade, sampler=sampler)[0]
+        rgba[..., :3] = 0.45 * rgba[..., :3] + 0.55
+        return rgba
+    if is_culture_field(field):
+        return culture_image(world, field, None, 0, sampler=sampler)[0]
+    return field_image(world, field, None, 0, month, sampler=sampler)[0]
 
 
 CULTURE_COLORBAR_LABELS = {"population": "population density (people/km²)", "resources": "resource potential (0–1)",

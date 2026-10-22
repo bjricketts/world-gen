@@ -130,127 +130,169 @@ def _borders(codes: np.ndarray, valid: np.ndarray) -> np.ndarray:
     return edge & valid
 
 
-def culture_image(world, field: str, proj, width: int):
-    """Return an RGBA image of a culture layer, its legend handles or (cmap, norm), and the image extent."""
+def _leading_culture(civ) -> np.ndarray:
+    """Return, per cell, the id of the culture with the most people there (−1 where none)."""
+    density = civ.layers["population_density"]
+    values = density.values
+    ids = density["culture"].values
+    return np.where(values.max(axis=0) > 0, ids[np.argmax(values, axis=0)], -1)
+
+
+def _livestock_code(civ) -> np.ndarray:
+    """Return, per cell, 1 where herds are kept, 2 where settlers brought them, 0 for farming without herds, else −1."""
+    herds = _history_layer(civ, "livestock").values
+    dev = civ.layers["development_level"]
+    density = civ.layers["population_density"]
+    ids = [int(i) for i in dev["organic"].values if int(i) in set(density["culture"].values.tolist())]
+    farmed = np.zeros(herds.size, dtype=bool)
+    for i in ids:
+        farmed |= (density.sel(culture=i).values > 0) & (dev.sel(organic=i).values[0] >= 0.5)
+    return np.where(herds == 1, 1, np.where(herds == 2, 2, np.where(farmed, 0, -1)))
+
+
+def _suitability_culture(civ, option: Optional[str]) -> int:
+    """Return the culture a suitability field shows: the one named, else the most populous."""
+    cid = _culture_id(civ, option)
+    if cid is None:
+        people = civ.layers["population_density"].sum(dim="cell")
+        cid = int(people["culture"].values[int(np.argmax(people.values))])
+    if cid not in set(civ.layers["suitability"]["culture"].values.tolist()):
+        raise ValueError(f"culture {cid} has no suitability layer (it has no people at this epoch)")
+    return cid
+
+
+def culture_values(world, field: str) -> tuple[np.ndarray, bool, str, Optional[dict]]:
+    """Return a culture layer per grid cell: values, whether they are category codes, units, and code labels.
+
+    Category codes are ids (cultures, polities) or indices (habitats, levels,
+    resources, livestock), with −1 where the layer is empty. Settlements and
+    roads are drawn on maps but have no per-cell values.
+    """
+    name, option = split_field(field)
+    civ = _civ(world)
+    if name == "population":
+        return civ.layers["population_density"].values.sum(axis=0), False, "people/km2", None
+    if name == "cultures":
+        return _leading_culture(civ), True, "culture id", {c.id: c.name or f"culture {c.id}" for c in civ.cultures}
+    if name in ("polities", "political"):
+        return _owner(civ), True, "polity id", {p.id: p.name or f"polity {p.id}" for p in civ.polities}
+    if name == "habitat":
+        if "habitat" not in civ.layers:
+            raise ValueError("this civilisation has no habitat layer; rebuild its culture")
+        return civ.layers["habitat"].values, True, "habitat", {int(k): k.name.lower() for k in HABITAT_COLOURS}
+    if name == "resources":
+        pot = civ.layers["resource_potential"]
+        names = [str(n) for n in pot["resource"].values]
+        if option == "best":
+            values = pot.values
+            best = np.where(values.max(axis=0) >= RESOURCE_BEST_MIN, np.argmax(values, axis=0), -1)
+            return best, True, "resource", {k: n.replace("_", " ") for k, n in enumerate(names)}
+        if option is None or option not in names:
+            raise ValueError(f"choose a resource as resources:<name> or resources:best, one of {', '.join(names)}")
+        return pot.sel(resource=option).values, False, "potential (0-1)", None
+    if name == "suitability":
+        cid = _suitability_culture(civ, option)
+        return civ.layers["suitability"].sel(culture=cid).values, False, "capacity relative to the best cell", None
+    if name in LEVEL_AXES:
+        from ..culture.development import COMMUNICATION_LEVELS, ENERGY_LEVELS, TRANSPORT_LEVELS
+
+        names = {"energy": ENERGY_LEVELS, "transport": TRANSPORT_LEVELS, "communication": COMMUNICATION_LEVELS}[name]
+        labels = {k: n.replace("_", " ") for k, n in enumerate(names)}
+        return level_codes(civ, name, _culture_id(civ, option)), True, f"{name} level", labels
+    if name == "bands":
+        return _history_layer(civ, "subpolity_count").values.sum(axis=0), False, "polities per cell", None
+    if name == "livestock":
+        labels = dict(zip((0, 1, 2), LIVESTOCK_COLOURS))
+        return _livestock_code(civ), True, "livestock", labels
+    if name == "land":
+        comp = _history_layer(civ, "suitability_component")
+        names = [str(c) for c in comp["component"].values]
+        if option is None or option not in names:
+            raise ValueError(f"choose a component as land:<name>, one of {', '.join(names)}")
+        return comp.sel(component=option).values, False, "suitability component (0-1)", None
+    if name in ("settlements", "roads"):
+        raise ValueError(f"'{name}' are drawn as overlays and have no per-cell values")
+    raise ValueError(f"unknown culture field '{field}'; choose from {', '.join(CULTURE_FIELDS + HISTORY_LAYER_FIELDS)}")
+
+
+def culture_image(world, field: str, proj, width: int, sampler=None):
+    """Return an RGBA image of a culture layer, its legend handles or (cmap, norm), and the image extent.
+
+    ``sampler`` replaces the projected image lookup, so the same colours can be
+    sampled at any set of points (a raster, mesh vertices).
+    """
     name, option = split_field(field)
     civ = _civ(world)
     ds = world.surface
-    sampler = projected_sampler(world.grid, proj, width)
+    sampler = sampler if sampler is not None else projected_sampler(world.grid, proj, width)
     valid = sampler.valid.reshape(sampler.shape)
     ocean = sampler.sample(ds["ocean"].values, categorical=True).astype(bool)
     rgb = np.empty(ocean.shape + (3,))
     rgb[:] = to_rgb(EMPTY_LAND)
     extra = None
+    if name in ("settlements", "roads"):
+        extra = []
+    else:
+        values, categorical, _, labels = culture_values(world, field)
+        img = sampler.sample(values, categorical=categorical)
     if name == "population":
-        density = civ.layers["population_density"].values.sum(axis=0)
-        img = sampler.sample(density)
-        norm = LogNorm(vmin=0.01, vmax=max(1.0, float(density.max())))
+        norm = LogNorm(vmin=0.01, vmax=max(1.0, float(values.max())))
         cmap = plt.get_cmap("magma_r")
         live = np.nan_to_num(img) > 0.01
         rgb[live] = cmap(norm(img[live]))[..., :3]
         extra = (cmap, norm)
     elif name == "cultures":
-        density = civ.layers["population_density"].values
-        top = np.where(density.max(axis=0) > 0, np.argmax(density, axis=0), -1)
-        codes = sampler.sample(top, categorical=True)
-        ids = np.array([c.id for c in civ.cultures])
-        colours = _id_colours(ids, seed=3)
-        rgb[codes >= 0] = colours[codes[codes >= 0]]
-        shown = np.unique(codes[codes >= 0])
-        extra = [Patch(color=colours[i], label=civ.cultures[i].name or f"culture {civ.cultures[i].id}") for i in shown]
+        shown = np.unique(img[img >= 0])
+        rgb[img >= 0] = _id_colours(img[img >= 0], seed=3)
+        colours = dict(zip(shown.tolist(), _id_colours(shown, seed=3)))
+        extra = [Patch(color=colours[i], label=labels[i]) for i in shown.tolist()]
     elif name in ("polities", "political"):
-        codes = sampler.sample(_owner(civ), categorical=True)
-        rgb[codes >= 0] = _id_colours(codes[codes >= 0])
-        rgb[_borders(codes, valid) & ~ocean] = (0.2, 0.2, 0.2)
-        extra = []
-    elif name == "settlements":
-        extra = []
-    elif name == "roads":
+        rgb[img >= 0] = _id_colours(img[img >= 0])
+        rgb[_borders(img, valid) & ~ocean] = (0.2, 0.2, 0.2)
         extra = []
     elif name == "habitat":
-        if "habitat" not in civ.layers:
-            raise ValueError("this civilisation has no habitat layer; rebuild its culture")
-        codes = sampler.sample(civ.layers["habitat"].values, categorical=True)
         for k, colour in HABITAT_COLOURS.items():
-            rgb[codes == k] = to_rgb(colour)
+            rgb[img == k] = to_rgb(colour)
         extra = [Patch(color=c, label=k.name.lower()) for k, c in HABITAT_COLOURS.items()]
+    elif name == "resources" and option == "best":
+        palette = plt.get_cmap("tab20")(np.arange(len(labels)) % 20)[:, :3]
+        rgb[img >= 0] = palette[img[img >= 0]]
+        rgb[ocean] = to_rgb(OCEAN_COLOUR)
+        rgba = np.concatenate([rgb, valid[..., None].astype(float)], axis=-1)
+        shown = np.unique(img[img >= 0])
+        return rgba, [Patch(color=palette[k], label=labels[k]) for k in shown], sampler.extent
     elif name == "resources":
-        pot = civ.layers["resource_potential"]
-        names = list(pot["resource"].values)
-        if option == "best":
-            values = pot.values
-            best = np.where(values.max(axis=0) >= RESOURCE_BEST_MIN, np.argmax(values, axis=0), -1)
-            codes = sampler.sample(best, categorical=True)
-            palette = plt.get_cmap("tab20")(np.arange(len(names)) % 20)[:, :3]
-            rgb[codes >= 0] = palette[codes[codes >= 0]]
-            rgb[ocean] = to_rgb(OCEAN_COLOUR)
-            rgba = np.concatenate([rgb, valid[..., None].astype(float)], axis=-1)
-            shown = np.unique(codes[codes >= 0])
-            return rgba, [Patch(color=palette[k], label=names[k].replace("_", " ")) for k in shown], sampler.extent
-        if option is None or option not in names:
-            raise ValueError(f"choose a resource as resources:<name> or resources:best, one of {', '.join(names)}")
-        img = sampler.sample(pot.sel(resource=option).values)
         cmap = plt.get_cmap("YlOrBr")
         rgb = cmap(np.clip(np.nan_to_num(img), 0, 1))[..., :3]
         extra = (cmap, plt.Normalize(0, 1))
     elif name == "suitability":
-        suit = civ.layers["suitability"]
-        cid = _culture_id(civ, option)
-        if cid is None:
-            people = civ.layers["population_density"].sum(dim="cell")
-            cid = int(people["culture"].values[int(np.argmax(people.values))])
-        if cid not in set(suit["culture"].values.tolist()):
-            raise ValueError(f"culture {cid} has no suitability layer (it has no people at this epoch)")
-        img = sampler.sample(suit.sel(culture=cid).values)
         cmap = plt.get_cmap("viridis")
         norm = PowerNorm(0.5, vmin=0.0, vmax=1.0)          # most land holds a small share of the best cell
         rgb = cmap(norm(np.clip(np.nan_to_num(img), 0, 1)))[..., :3]
         extra = (cmap, norm)
     elif name in LEVEL_AXES:
-        from ..culture.development import COMMUNICATION_LEVELS, ENERGY_LEVELS, TRANSPORT_LEVELS
-
-        names = {"energy": ENERGY_LEVELS, "transport": TRANSPORT_LEVELS, "communication": COMMUNICATION_LEVELS}[name]
-        codes = sampler.sample(level_codes(civ, name, _culture_id(civ, option)), categorical=True)
-        palette = plt.get_cmap("YlOrRd")(np.linspace(0.15, 0.95, len(names)))[:, :3]
-        lived = codes >= 0
-        rgb[lived] = palette[np.clip(codes[lived], 0, len(names) - 1)]
-        shown = np.unique(codes[lived])
-        extra = [Patch(color=palette[k], label=names[k].replace("_", " ")) for k in shown if 0 <= k < len(names)]
+        palette = plt.get_cmap("YlOrRd")(np.linspace(0.15, 0.95, len(labels)))[:, :3]
+        lived = img >= 0
+        rgb[lived] = palette[np.clip(img[lived], 0, len(labels) - 1)]
+        shown = np.unique(img[lived])
+        extra = [Patch(color=palette[k], label=labels[k]) for k in shown if 0 <= k < len(labels)]
     elif name == "bands":
-        counts = _history_layer(civ, "subpolity_count").values.sum(axis=0)
-        img = sampler.sample(counts)
         live = np.nan_to_num(img) >= 1
-        norm = LogNorm(vmin=1.0, vmax=max(2.0, float(counts.max())))
+        norm = LogNorm(vmin=1.0, vmax=max(2.0, float(values.max())))
         cmap = plt.get_cmap("YlGn")
         rgb[live] = cmap(norm(img[live]))[..., :3]
         ruled = sampler.sample((_owner(civ) >= 0).astype(float), categorical=True).astype(bool)
         rgb[ruled & ~live] = (0.72, 0.72, 0.72)
         extra = (cmap, norm)
     elif name == "livestock":
-        herds = _history_layer(civ, "livestock").values
-        dev = civ.layers["development_level"]
-        density = civ.layers["population_density"]
-        ids = [int(i) for i in dev["organic"].values if int(i) in set(density["culture"].values.tolist())]
-        farmed = np.zeros(herds.size, dtype=bool)
-        for i in ids:
-            farmed |= (density.sel(culture=i).values > 0) & (dev.sel(organic=i).values[0] >= 0.5)
-        code = np.where(herds == 1, 1, np.where(herds == 2, 2, np.where(farmed, 0, -1)))
-        codes = sampler.sample(code, categorical=True)
         colours = list(LIVESTOCK_COLOURS.values())
         for k in range(3):
-            rgb[codes == k] = to_rgb(colours[k])
+            rgb[img == k] = to_rgb(colours[k])
         extra = [Patch(color=c, label=label) for label, c in LIVESTOCK_COLOURS.items()]
     elif name == "land":
-        comp = _history_layer(civ, "suitability_component")
-        names = [str(c) for c in comp["component"].values]
-        if option is None or option not in names:
-            raise ValueError(f"choose a component as land:<name>, one of {', '.join(names)}")
-        img = sampler.sample(comp.sel(component=option).values)
         cmap = plt.get_cmap("YlGnBu")
         rgb = cmap(np.clip(np.nan_to_num(img), 0, 1))[..., :3]
         extra = (cmap, plt.Normalize(0, 1))
-    else:
-        raise ValueError(f"unknown culture field '{field}'; choose from {', '.join(CULTURE_FIELDS + HISTORY_LAYER_FIELDS)}")
     rgb[ocean] = 0.5 * rgb[ocean] + 0.5 * np.array(to_rgb(OCEAN_COLOUR)) if name == "resources" else to_rgb(OCEAN_COLOUR)
     rgba = np.concatenate([rgb, valid[..., None].astype(float)], axis=-1)
     return rgba, extra, sampler.extent

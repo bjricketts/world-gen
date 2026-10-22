@@ -13,6 +13,13 @@ every cell has a tectonic setting and a potential for fifteen resource classes, 
 population density map, settlements, roads, polities and names, carried down to villages, local roads
 and refined borders on zoomed maps. Milestone 9 (organic cultures that emerge from a simulated history)
 is under way: the spec, the history's time steps, the kept epochs (task 9.1), the land's suitability (task 9.2) the growth and spread of people (task 9.3), farming and development (task 9.4), states that form, expand and break apart (task 9.5), rulers, wars between states and alliances (task 9.6), settlements, roads and trade through time (task 9.7), and colonists among natives (task 9.8) are in place.
+Milestone 10 (export and a 3D globe) is done: any map field can be written as a global GeoTIFF, 16-bit PNG
+or RAW raster, as values or as its map colours (task 10.1), and zoomed regions can be exported with their culture
+as rasters and GeoJSON, or as Unity and Unreal heightmaps (task 10.2); a tile pyramid carries the heights from
+the globe down to local maps with matching seams (task 10.3); the globe, pyramid tiles and regions export as
+GLB/glTF, PLY or OBJ meshes with per-vertex colours from any map field (task 10.4); a 3D globe shows any map
+field at any kept epoch with zoomed regions draped over it (task 10.5); `worldgen export` and `worldgen globe`
+run all of it from the command line, and `scripts/validate_export.py` checks it (task 10.6).
 Known gaps and planned fixes are in
 [OPEN_POINTS.md](OPEN_POINTS.md).
 
@@ -22,7 +29,9 @@ Known gaps and planned fixes are in
 pip install -e ".[dev,notebooks]"
 ```
 
-The history explorer notebook also needs `pip install -e ".[explore]"` (ipywidgets and ipympl).
+The history explorer notebook also needs `pip install -e ".[explore]"` (ipywidgets and ipympl). GeoTIFF export
+and mesh export need `pip install -e ".[export]"` (rasterio, trimesh); PNG and RAW export work without it. The 3D
+globe needs `pip install -e ".[globe]"` (PyVista with its Jupyter backend, ipywidgets).
 
 Requires Python 3.10+. Maps use Cartopy, which installs from wheels on Windows, macOS and Linux.
 
@@ -73,6 +82,22 @@ worldgen epochs kestrel_history timeline.png --timeline         # people, levels
 worldgen map kestrel_history old.png -f political --epoch 2000  # --epoch also works for report and zoom
 worldgen map kestrel_history events.png -f events --epoch 2000  # planet events since the previous kept epoch
 worldgen map kestrel_history wars.png -f political --events      # the same events over any field
+
+# Export (pip install -e ".[export]" for GeoTIFF and meshes)
+worldgen export fields kestrel                                   # what the world can export, with units
+worldgen export raster kestrel elevation.tif                     # format from the suffix: .tif, .png, .r16/.raw
+worldgen export raster kestrel texture.png -f biomes --colour --hillshade
+worldgen export raster kestrel_history states.tif -f political --epoch 2000
+worldgen export region kestrel_settled alps/ --lat=46.5 --lon=9 --crs laea   # fields, colours, culture, GeoJSON
+worldgen export engine kestrel terrain.r16 --lat=46.5 --lon=9 --engine unity --size 1025
+worldgen export pyramid kestrel tiles/ --place 46.5,9,9 --meshes  # levels 0-3 (~6.5 min) and a chain to level 9
+worldgen export mesh kestrel globe.glb --level 2 -f biomes --exaggeration 20
+worldgen export mesh kestrel alps.glb --lat=46.5 --lon=9          # a region in local metres
+
+# The 3D globe (pip install -e ".[globe]")
+worldgen globe kestrel_history                                    # a window: keys n/p for fields, an epoch slider
+worldgen globe kestrel_history globe.html -f political -e 2000    # an interactive page; .png for an image
+worldgen globe kestrel_history views/ -f elevation,political --all-epochs --region 46.5,9
 ```
 
 Map fields: `elevation`, `terrain`, `plates`, `crust_age`, `orogeny_age`, `temperature`, `rainfall`, `basins`,
@@ -148,12 +173,55 @@ from worldgen.culture.local import zoom_culture
 
 local = zoom_culture(world, region)                         # villages, footprints, local roads, borders
 plot_local_map(world, region, culture=local)
+
+# Export: global rasters of any map field (format from the suffix: .tif, .png, .r16/.raw)
+from worldgen.export import export_global, global_raster
+
+export_global(world, "elevation.tif", "elevation", width=4096)       # float metres, planet-sphere CRS
+export_global(world, "heightmap.r16", "elevation")                   # 16-bit codes; scale in heightmap.r16.json
+export_global(world, "biomes.png", "biomes")                         # category codes; labels in the sidecar
+export_global(world, "texture.png", "elevation", colour=True, hillshade=True)   # the map's colours
+export_global(world, "states.tif", "political", epoch=2000)           # a culture layer at a kept epoch
+raster = global_raster(world, "rainfall:7")                          # values in memory (month 7)
+
+# Export: zoomed regions on their native lattice (GCP-referenced; warp with a thin-plate spline) or north-up LAEA
+from worldgen.export import export_region, export_region_bundle, engine_region, export_engine_heightmap
+
+export_region(world, region, "region.tif")                           # heights in metres
+export_region(world, region, "region_laea.tif", crs="laea")          # resampled north up
+export_region_bundle(world, region, "region/", culture=local)        # fields, colours, culture rasters, GeoJSON
+terrain = engine_region(world, 48.5, 12.0, "unity", 513)             # built on a 129-node lattice: 513² exactly
+export_engine_heightmap(world, terrain, "terrain.r16", "unity")      # import settings in terrain.r16.json
+
+# Export: a tile pyramid (levels 0-3 for the globe, ~6.5 min; finer levels around chosen places)
+from worldgen.export import build_pyramid, export_pyramid
+
+pyramid = build_pyramid(world, places=[(48.5, 12.0, 9)])             # a chain down to level 9 (~0.14 km)
+export_pyramid(pyramid, world, "tiles/")                             # L<level>/<face>/<x>_<y>_elevation.png + tileset.json
+
+# Export: meshes (RTIN with locked borders; terrain plus a sea-surface layer; GLB nodes in planet metres)
+from worldgen.export import export_globe_mesh, export_region_mesh, export_pyramid_meshes
+
+export_globe_mesh(world, "globe.glb", level=2, field="biomes", exaggeration=20)   # from the global grid
+export_globe_mesh(world, "globe3.glb", level=3, pyramid=pyramid)                 # from pyramid tiles
+export_region_mesh(world, terrain, "terrain.obj", max_error_m=20)                # local east-north-up metres
+
+# The 3D globe (pip install -e ".[globe]")
+from worldgen.render import GlobeViewer
+
+globe = GlobeViewer(world, level=2)              # heights x20; pyramid=... for pyramid tiles
+globe.add_region(region)                         # draped over the globe
+globe.show("political", 2000)                    # window: keys n/p step fields, slider picks the kept epoch
+globe.widget()                                   # in Jupyter (trame backend)
+globe.screenshot("globe.png", "biomes", lat_deg=45, lon_deg=10)
+globe.save_html("globe.html", "political", 2000)            # one interactive page
+globe.export_views("views/", ("political", "energy"))   # an HTML page per field and kept epoch
 ```
 
 A guided tour is in `notebooks/01_quickstart.ipynb`; `notebooks/02_organic_history.ipynb` runs an organic history
 and reads its chronicle, series and epochs; `notebooks/03_history_explorer.ipynb` browses a history with a widget:
 field and epoch controls, planet events, the values of the cell under the cursor and a timeline
-(`HistoryExplorer(world).widget()`).
+(`HistoryExplorer(world).widget()`); `notebooks/04_export_and_globe.ipynb` exports global rasters, zoomed regions, engine heightmaps, a tile pyramid and meshes, and shows the 3D globe (milestone 10).
 
 ## Surfaces
 
@@ -523,6 +591,7 @@ the spec like any other value.
 | `render/` | Cartopy map projections, colour schemes, hillshading, smoothed rivers, drift figures and animations, history figures, local maps of zoomed regions |
 | `zoom/` | Cube-sphere quadtree tiles and region lattices, inherited surface and downscaled climate, sub-grid detail, local erosion, glaciers and drainage, the `zoom_region` request and saved regions |
 | `culture/` | Culture spec, development axes, resolved cultures, tectonic settings and resource potentials, suitability, population density, settlements, roads, polities and names, the civilisation data model (cultures, polities, settlement and road tables, per-cell layers, chronicle) and its storage; `culture/history/` the organic mode (history spec, steps, state, run, kept epochs) |
+| `export/` | Export (milestone 10): fields with units and labels, planet-sphere and LAEA CRS, barycentric samplers, GeoTIFF/PNG/RAW writers with JSON sidecars, global rasters, region rasters and bundles, GeoJSON culture vectors, engine heightmaps, the tile pyramid, RTIN meshes |
 | `world.py` | World container, save and load |
 | `history/` | The history ODE system: per-planet constants, thermal evolution, volatiles, Tier 0 climate table, biosphere, integration, states at epochs |
 | `evolve/` | Snapshot evolver and history evolver behind one interface |
@@ -551,6 +620,7 @@ Run from the `scripts/` folder:
 | `archetype_fidelity.py` | Archetype outcomes over many draws: temperatures, water phase, open ocean, estimated land, life, redraws |
 | `validate_history.py` | History-mode Earth, Mars and Venus against the real planets, and Earth against its snapshot build; exits non-zero if a check misses |
 | `validate_culture.py` | Culture on Earth worlds against Earth (population, settlements, roads, polities), sound systems against WALS and PHOIBLE, zoomed regions, and colonies on hostile worlds (`--hostile`); known gaps are shown but not counted; exits non-zero if a check misses |
+| `validate_export.py` | Every export of a world against its source (file round trips, georeferencing against GDAL's thin-plate warp, seams between faces, levels and mesh tiles, the mesh tolerance) with timings; `--pyramid` adds the full pyramid; exits non-zero if a check misses |
 | `history_sensitivity.py` | Ranks the poorly constrained history parameters by how far they move the outcome, one at a time over each prior |
 | `hypsometry_table.py` | Reference land fraction against ocean volume, for `worldgen/water.py` |
 | `render_examples.py` | The example figures in "Claude outputs" |

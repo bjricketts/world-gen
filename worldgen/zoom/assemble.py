@@ -20,7 +20,7 @@ from .. import __version__
 from .. import heuristics as h
 from .erode import ErodedRegion, erode_region
 from .detail import RUGGEDNESS, synthesize_region
-from .tiles import NODES_PER_TILE, level_for_resolution, region_for, region_grid
+from .tiles import NODES_PER_TILE, level_for_resolution, region_for, region_grid, unit_to_face_uv
 
 REGION_FORMAT = 1
 # Fields of an eroded region stored per node, and those that may be absent.
@@ -63,9 +63,28 @@ def zoom_region(world, lat_deg: float, lon_deg: float, *, resolution_m: Optional
     """
     if world.surface is None:
         raise ValueError(f"{world.state.name} has no solid surface to zoom into")
+    block = region_block(world, lat_deg, lon_deg, resolution_m, level, half_width_km, nodes_per_tile)
+    return zoom_block(world, block, nodes_per_tile=nodes_per_tile, ruggedness=ruggedness, cache_dir=cache_dir)
+
+
+def square_block(world, lat_deg: float, lon_deg: float, tiles: int, level: int) -> tuple[int, int, int, int, int, int]:
+    """Return a block of ``tiles`` × ``tiles`` tiles at ``level`` around a place, shifted to stay on one cube face."""
+    face, s, t = unit_to_face_uv(unit_vector(lat_deg, lon_deg))
+    count = 1 << level
+    if tiles > count:
+        raise ValueError(f"a face holds only {count} tiles per side at level {level}")
+    x0 = int(np.clip(round(s * count - tiles / 2), 0, count - tiles))
+    y0 = int(np.clip(round(t * count - tiles / 2), 0, count - tiles))
+    return face, level, x0, y0, x0 + tiles - 1, y0 + tiles - 1
+
+
+def zoom_block(world, block: tuple[int, int, int, int, int, int], *, nodes_per_tile: int = NODES_PER_TILE,
+               ruggedness: str = "earth", cache_dir: Optional[str | Path] = None) -> ErodedRegion:
+    """Return the local map of a tile block (face, level, x0, y0, x1, y1), built or read from ``cache_dir``."""
+    if world.surface is None:
+        raise ValueError(f"{world.state.name} has no solid surface to zoom into")
     if ruggedness not in RUGGEDNESS:
         raise ValueError(f"unknown ruggedness '{ruggedness}'; choose from: {', '.join(RUGGEDNESS)}")
-    block = region_block(world, lat_deg, lon_deg, resolution_m, level, half_width_km, nodes_per_tile)
     _, _, x0, y0, x1, y1 = block
     nodes = ((x1 - x0 + 1) * (nodes_per_tile - 1) + 1) * ((y1 - y0 + 1) * (nodes_per_tile - 1) + 1)
     if nodes > h.ZOOM_MAX_NODES:
