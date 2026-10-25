@@ -38,7 +38,7 @@ def build_civilisation(world, spec: Optional[CultureSpec] = None) -> Civilisatio
         from .history.epochs import organic_civilisation
         return organic_civilisation(world, spec, seed, cultures)
     layers = geology_layers(world)
-    if world.surface is None:
+    if not world.has_ground:
         return Civilisation(spec=spec, seed=seed, cultures=cultures, layers=layers)
     cultures, people = population_layers(world, cultures, seed, layers.get("resource_potential"))
     return finish_civilisation(world, spec, seed, cultures, layers, people)
@@ -77,7 +77,7 @@ def _cell_area(world) -> float:
 
 def geology_layers(world) -> xr.Dataset:
     """Return the per-cell layers culture builds on: tectonic setting and resource potential."""
-    if world.surface is None:
+    if not world.has_ground:
         return xr.Dataset()
     geo = geology(world)
     setting = xr.DataArray(geo.setting, dims="cell", attrs={

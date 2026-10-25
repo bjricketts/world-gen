@@ -20,6 +20,11 @@ the globe down to local maps with matching seams (task 10.3); the globe, pyramid
 GLB/glTF, PLY or OBJ meshes with per-vertex colours from any map field (task 10.4); a 3D globe shows any map
 field at any kept epoch with zoomed regions draped over it (task 10.5); `worldgen export` and `worldgen globe`
 run all of it from the command line, and `scripts/validate_export.py` checks it (task 10.6).
+Milestone 11 (giants and moons) is done: giants have a cloud class, albedo, colours, jets and cloud-top maps,
+rings and moon systems are drawn from their formation, moons are built as worlds with tides, eclipses,
+planetshine and subsurface oceans, a `habitable_moon` archetype draws habitable moons with their parents,
+`scripts/validate_solar_system.py` checks the Solar System's giants and moons, and `worldgen system` and
+`worldgen moon` draw a system as a diagram or a 3D scene and build its moons.
 Known gaps and planned fixes are in
 [OPEN_POINTS.md](OPEN_POINTS.md).
 
@@ -31,7 +36,8 @@ pip install -e ".[dev,notebooks]"
 
 The history explorer notebook also needs `pip install -e ".[explore]"` (ipywidgets and ipympl). GeoTIFF export
 and mesh export need `pip install -e ".[export]"` (rasterio, trimesh); PNG and RAW export work without it. The 3D
-globe needs `pip install -e ".[globe]"` (PyVista with its Jupyter backend, ipywidgets).
+globe and the 3D system scene need `pip install -e ".[globe]"` (PyVista with its Jupyter backend, ipywidgets,
+and imageio with ffmpeg for movies).
 
 Requires Python 3.10+. Maps use Cartopy, which installs from wheels on Windows, macOS and Linux.
 
@@ -98,6 +104,15 @@ worldgen export mesh kestrel alps.glb --lat=46.5 --lon=9          # a region in 
 worldgen globe kestrel_history                                    # a window: keys n/p for fields, an epoch slider
 worldgen globe kestrel_history globe.html -f political -e 2000    # an interactive page; .png for an image
 worldgen globe kestrel_history views/ -f elevation,political --all-epochs --region 46.5,9
+
+# Giants and moons
+worldgen generate jupiter.yaml --save jupiter                    # a giant: cloud class, jets, rings, moons
+worldgen map jupiter clouds.png -f clouds -p robinson             # also temperature, winds, bands, vortices, relief
+worldgen moon jupiter                                             # list the moons
+worldgen moon jupiter europa -r preview --map europa.png          # build Europa as a world, kept in jupiter/moons/
+worldgen system jupiter system.png --view edge                    # moons, rings and limits; .svg or .pdf too
+worldgen system jupiter scene.png --3d --time 2                   # the 3D scene with shadows; .html, .mp4 or .gif
+worldgen system jupiter/moons/01_europa europa.png                # a moon's folder draws its parent, moon marked
 ```
 
 Map fields: `elevation`, `terrain`, `plates`, `crust_age`, `orogeny_age`, `temperature`, `rainfall`, `basins`,
@@ -221,7 +236,7 @@ globe.export_views("views/", ("political", "energy"))   # an HTML page per field
 A guided tour is in `notebooks/01_quickstart.ipynb`; `notebooks/02_organic_history.ipynb` runs an organic history
 and reads its chronicle, series and epochs; `notebooks/03_history_explorer.ipynb` browses a history with a widget:
 field and epoch controls, planet events, the values of the cell under the cursor and a timeline
-(`HistoryExplorer(world).widget()`); `notebooks/04_export_and_globe.ipynb` exports global rasters, zoomed regions, engine heightmaps, a tile pyramid and meshes, and shows the 3D globe (milestone 10).
+(`HistoryExplorer(world).widget()`); `notebooks/04_export_and_globe.ipynb` exports global rasters, zoomed regions, engine heightmaps, a tile pyramid and meshes, and shows the 3D globe (milestone 10); `notebooks/05_giants_and_moons.ipynb` builds Jupiter with the Galilean moons, Saturn with drawn rings and moons, Europa and a habitable moon as worlds, and draws their systems (milestone 11).
 
 ## Surfaces
 
@@ -308,7 +323,10 @@ carries `timeline.yaml` (its events and sampled series) and one state file per e
 Zoomed regions kept with `--cache` (or `cache_dir`) live under `regions/`. A world with inhabitants keeps
 its civilisation under `culture/`: `culture.yaml` (spec, cultures, polities, chronicle) and `culture.zarr`
 (per-cell layers, settlement and road tables), with the earlier epochs of an organic history saved the
-same way under `culture/epochs/<years ago>/` (culture format 2; format 1 still loads). This is format 6. Worlds saved by milestone 7 (format 5) load
+same way under `culture/epochs/<years ago>/` (culture format 2; format 1 still loads). `state.yaml` holds the
+planet's system summary (moons, rings) or, for a moon, its parent, and moon worlds built from a planet are kept
+under `moons/`. A giant's `surface.zarr` holds its cloud tops, with the cloud model in its attributes. This is
+format 8. Worlds saved before task 11.3 (format 7) load as they were; those saved by milestone 10 (format 6) load without a system summary; those saved by milestone 7 (format 5) load
 without a civilisation, and those saved by milestone 6 (format 4) also load, with the structural fabric the
 zoom needs computed from their surface. Older worlds need to be generated again.
 
@@ -405,8 +423,123 @@ Resolution order for each value:
 3. **archetype**: drawn from the chosen archetype's prior (or, if none is named, from an archetype
    compatible with the fixed values, weighted toward habitable and occupiable worlds). Some archetypes
    give instellation as a position across the star's habitable zone rather than an absolute value.
+   `habitable_moon` makes a temperate moon of a giant in the habitable zone. The moon formed in the
+   giant's disc (3 × 10⁻⁵–10⁻⁴ of a 3–13 M_J planet's mass, 8–30 planet radii out) or was captured
+   (0.1–1 M⊕ around a 0.3–3 M_J planet, 6–60 planet radii out, half of them retrograde);
+   `parent.moon_origin` picks one (`impact` is refused: impacts on giants make moons too small). The archetype is
+   used for any spec with a `parent` section and no archetype, and for about 3% of specs that fix nothing
+   about the body.
 4. **prior**: drawn from broad base priors
 5. **derived / heuristic / default**: computed by the physics modules
+
+### Giant planets
+
+Ice giants, gas giants and brown dwarfs get an appearance, reported under "Appearance": the cloud
+class of Sudarsky et al. (2000, I ammonia to V silicate clouds) from the effective temperature, which
+adds internal heat from the planet's mass and age to the starlight; the Bond albedo that class gives
+(used for the equilibrium temperature unless the spec sets `atmosphere.bond_albedo`); the colour of
+the disc, its zones and belts under the star's light; and the jets: their number from the Rhines
+scale and the direction of the equatorial jet. Tidally locked giants have one broad superrotating
+equatorial jet, a hot spot east of the substellar point and polar vortices instead of bands. Jupiter
+comes out class I with 23 jets, Uranus and Neptune class I with 3 and retrograde equators.
+
+Cold giants (classes I and II) are coloured by their atmospheres. The envelope's heavy elements follow
+the Solar System's mass trend (Jupiter ~2×, Saturn ~9×, Uranus and Neptune ~60–80× protosolar carbon),
+shifted by the star's [Fe/H]; `body.atmospheric_metallicity` sets it. A temperature profile decides where
+ammonia, water or methane condense; above the uppermost cloud, hydrogen scattering, methane absorption,
+hazes and Jupiter's red-brown chromophore set the spectrum. Jupiter comes out cream with brown belts,
+Saturn butterscotch with faint bands under a thicker haze, and ice giants cyan to azure, paler with less
+internal heat (Uranus). The report's "heavy elements" and "visible cloud" rows give the metallicity, the
+cloud and its haze. Hotter classes keep model spectra darkened by metallicity.
+
+A giant's world has cloud tops in place of a surface: zonal winds that alternate between the jets,
+zones and belts, a population of vortices after the JunoCam catalogue (white and red anticyclones in
+zones, brown and dark cyclones in belts, sometimes a great oval), polar cyclones with a ring of
+circumpolar cyclones or a hexagon, and on ice giants dark spots and bright clouds. Locked giants show
+their day–night temperatures and hot spot. The model behind them is kept with the world and evaluated
+wherever it is drawn, so maps, rasters and the globe show vortices smaller than a grid cell:
+
+```python
+from worldgen import generate_world, load_spec
+from worldgen.export import export_global
+from worldgen.render import GlobeViewer, plot_map
+
+world = generate_world(load_spec("jupiter.yaml"), "standard")
+plot_map(world, "clouds", "orthographic")          # also temperature, winds, bands, vortices, relief
+export_global(world, "jupiter_winds.tif", "winds")
+GlobeViewer(world, level=2).show()
+```
+
+Zoomed regions, culture and the ground maps (terrain, rainfall, biomes and so on) need solid ground and
+refuse giants.
+
+Giants get rings by the temperature their ring material would reach (dense rings form near 70 K, after
+Hedman 2015): broad bright icy rings like Saturn's, narrow dark ringlets like Uranus', or tenuous dusty
+rings like Jupiter's and Neptune's (with arcs). Hot giants lose their rings to Poynting–Robertson drag, and
+rocky planets have rings only when listed. `system.rings` in the spec is `auto` (default), `none`, one of
+`broad`, `narrow`, `dusty warm`, `dusty cold`, or a list of rings in planet radii. The report lists them
+under "Moons and rings", and the 3D globe draws them.
+
+### Moons and parent planets
+
+A planet's `system.moons` lists moons by mass (Earth masses) and semi-major axis (planet radii); left
+out, moons are drawn, and `moons: []` means none. Gas giants that open a gap in their star's nebula get
+a Jovian system (4–5 similar moons, the inner ones in 2:1 resonances, rocky inside and icy outside),
+others a Saturnian one (one dominant icy moon), after Sasaki et al. (2010); giants with rings also get
+small moons spread out of the rings (Crida & Charnoz 2012). Half of ice giants get a Uranian system
+from a giant impact (five moons, ~10⁻⁴ of the planet's mass, after Woo et al. 2021), the rest
+ring-born moons. Every giant also meets one binary planetesimal, which leaves a captured moon (often
+retrograde, like Triton) about a quarter of the time around ice giants; a surviving capture clears the
+regular moons. Rocky planets get a moon from a giant impact about two times in five (a large one about
+one in ten, after Elser et al. 2011). Every planet's state carries its system summary: the moons,
+the stable region (0.36 of the Hill radius prograde, 0.5 retrograde), the ring–moon boundary for icy
+and rocky material, the synchronous orbit and the largest moon that survives tidal migration. The
+report lists them under "Moons and rings".
+
+A spec with a `parent` section is a moon: `orbit` is then the parent's orbit about the star, and
+`parent` gives the parent's mass (and optionally radius, rotation, obliquity, Bond albedo, Q, k₂) and
+the moon's orbit about it (`semi_major_axis_rp`, `eccentricity`, `inclination_deg`, and optionally
+the parent's `effective_temperature_k` and `magnetic_moment_am2`). The moon locks to its parent, takes
+the parent's obliquity, and is checked against the Roche limit and the parent's Hill sphere. Its
+climate sees the starlight left after eclipses by the parent plus the light the parent reflects, and
+absorbs the parent's glow and the tidal heat the parent raises in it. Rocky moons use fixed-Q tides
+with their own Q, raised to Io's k₂/Q of 0.015 when tides would keep the interior partially molten.
+Frozen water-rich moons dissipate in their ice shell, between Europa's k₂/Q of ~10⁻³ and
+Enceladus's 0.015. A drawn eccentricity is damped by the moon's tides over its age; moons in a
+resonance, and moons whose spec gives `eccentricity`, keep theirs. The tidal heat also drives the
+interior. The report gives the parent's magnetopause and how much of the moon's orbit lies inside
+it. Frozen bodies with surface water get an ice shell over any subsurface ocean, from conduction of
+their internal heat (Tjoa et al. 2020) below a porous lid (solid-ice conduction from 135 K). High-
+pressure ice (III to VI) lies below the ocean where the IAPWS melting curves put it: Europa gets a
+20 km shell, Ganymede 120 km of ice over a 150 km ocean. Cold water-rich worlds hold more nitrogen (Titan's
+1.5 bar), thick nitrogen–methane air is hazy (albedo 0.26), and below 63 K the air sits at the N₂
+vapour pressure (Triton's microbars). From Python, a planet's moon becomes a world on request:
+
+```python
+from worldgen import generate_world, load_world
+from worldgen.giants import moon_spec, moon_world
+
+jupiter = load_world("jupiter")
+europa = moon_world(jupiter, 1, "preview", folder="jupiter")   # kept under jupiter/moons/01_europa
+spec = moon_spec(jupiter, 1)                                   # or edit the spec first
+```
+
+A planet's system can be drawn as a diagram, seen from above or edge-on, with the moons' orbits on a
+logarithmic radial axis, the rings, the Roche, synchronous, stable and Hill limits and a table of the
+moons, or as a 3D scene lit by the star, with the planet's shadow on the rings, the rings' shadow on the
+planet and moon shadows and eclipses. The scene compresses distances beyond the rings by default and
+draws kept moons with their own surfaces:
+
+```python
+from worldgen.render.system import plot_system
+from worldgen.render.system_scene import system_scene
+
+plot_system(jupiter, view="edge", path="jupiter_system.png")   # PNG or SVG; highlight="Europa" marks a moon
+scene = system_scene(jupiter, folder="jupiter")                # scale="true" for true proportions
+scene.screenshot("jupiter_scene.png", t_s=86400)               # one day on
+scene.save_html("jupiter_scene.html")                          # an interactive page (vtk.js)
+scene.save_movie("jupiter_week.mp4", duration_s=7 * 86400)     # or .gif; scene.show() opens a window with a time slider
+```
 
 ### Culture section
 
@@ -576,7 +709,8 @@ the spec like any other value.
 | `spec.py`, `spec_base.py` | Spec schema, YAML load/save, template; shared section base |
 | `priors/` | Archetypes, distributions, sampling, outcome constraints, occupiability score |
 | `star.py` | Luminosity, radius, temperature, lifetime, XUV activity |
-| `orbit.py` | Period, instellation, habitable zone, tidal locking, spin |
+| `orbit.py` | Period, instellation, habitable zone, tidal locking (to the star, or a moon's to its parent), spin |
+| `giants/` | Giants and moons (milestone 11): giant appearance (cloud class, albedo, colour, jets), moon and ring limits, the system summary, parent planets, `moon_spec` and `moon_world` |
 | `bulk.py` | Mass–radius–composition, planet class, gravity |
 | `interior.py` | Radiogenic heat, tectonic regime, magnetic dynamo |
 | `atmosphere.py` | Retention, pressure, greenhouse, global climate (Tier 0), water phase |
@@ -588,7 +722,7 @@ the spec like any other value.
 | `biosphere/` | Life and its gases, pigment colour, vegetation, biomes and Köppen classes, climate–ice–vegetation coupling |
 | `hydrology/` | Water balance, drainage, lakes, rivers, river erosion and sediment |
 | `tectonics/` | Plate simulation: crust points, Numba kernels, processes, re-mapping, subsidence, biogenic sediment, conversion to a surface |
-| `render/` | Cartopy map projections, colour schemes, hillshading, smoothed rivers, drift figures and animations, history figures, local maps of zoomed regions |
+| `render/` | Cartopy map projections, colour schemes, hillshading, smoothed rivers, drift figures and animations, history figures, local maps of zoomed regions, the system diagram and 3D system scene |
 | `zoom/` | Cube-sphere quadtree tiles and region lattices, inherited surface and downscaled climate, sub-grid detail, local erosion, glaciers and drainage, the `zoom_region` request and saved regions |
 | `culture/` | Culture spec, development axes, resolved cultures, tectonic settings and resource potentials, suitability, population density, settlements, roads, polities and names, the civilisation data model (cultures, polities, settlement and road tables, per-cell layers, chronicle) and its storage; `culture/history/` the organic mode (history spec, steps, state, run, kept epochs) |
 | `export/` | Export (milestone 10): fields with units and labels, planet-sphere and LAEA CRS, barycentric samplers, GeoTIFF/PNG/RAW writers with JSON sidecars, global rasters, region rasters and bundles, GeoJSON culture vectors, engine heightmaps, the tile pyramid, RTIN meshes |
@@ -620,6 +754,7 @@ Run from the `scripts/` folder:
 | `archetype_fidelity.py` | Archetype outcomes over many draws: temperatures, water phase, open ocean, estimated land, life, redraws |
 | `validate_history.py` | History-mode Earth, Mars and Venus against the real planets, and Earth against its snapshot build; exits non-zero if a check misses |
 | `validate_culture.py` | Culture on Earth worlds against Earth (population, settlements, roads, polities), sound systems against WALS and PHOIBLE, zoomed regions, and colonies on hostile worlds (`--hostile`); known gaps are shown but not counted; exits non-zero if a check misses |
+| `validate_solar_system.py` | The giants (T_eff, albedo, jets, rings), drawn moon systems over many draws, the Earth–Moon impact statistics, and Io, Europa, Ganymede, Callisto, Enceladus, Titan, Triton and the Moon built from their real orbits, each against a cited value; exits non-zero if a check misses |
 | `validate_export.py` | Every export of a world against its source (file round trips, georeferencing against GDAL's thin-plate warp, seams between faces, levels and mesh tiles, the mesh tolerance) with timings; `--pyramid` adds the full pyramid; exits non-zero if a check misses |
 | `history_sensitivity.py` | Ranks the poorly constrained history parameters by how far they move the outcome, one at a time over each prior |
 | `hypsometry_table.py` | Reference land fraction against ocean volume, for `worldgen/water.py` |
@@ -632,7 +767,20 @@ Run from the `scripts/` folder:
 pytest                   # full suite, ~9 min on one core (~5.5 min with -n 2)
 pytest -n auto           # in parallel (needs pytest-xdist, included in the dev extras)
 pytest -m "not slow"     # skip tests that generate worlds, ~25 s
+pytest -m zoom           # one category (physics, history, surface, climate, hydrology, zoom,
+                         # culture, organic, render, export, cli)
+python scripts/select_tests.py -n 4            # only the tests relevant to uncommitted changes
+python scripts/select_tests.py --base HEAD~1   # ... to changes since a commit; --list prints the selection
+python scripts/select_tests.py --tests-only    # only the changed and new test files
+pytest tests/test_system.py::test_moon_locks_to_parent   # a single test
 ```
+
+`tests/categories.py` sorts the tests into categories by the part of the package they cover and lists
+which categories build on which (a surface change also runs hydrology, zoom and export). The selection
+script maps changed files to categories, runs changed test files directly, maps a change in
+`heuristics.py` to the modules that use the changed constants, skips documentation and notebooks, and
+falls back to the full suite for files no category covers (such as `conftest.py`). The end-to-end
+pipeline test and the check of the tables always run. New test files must be added to a category.
 
 The suite checks each relation against published values, runs Earth, Venus and Mars through the full
 pipeline, checks that every archetype meets its constraints, and covers grids, terrain for every regime,
@@ -644,4 +792,4 @@ cached regions, and local maps; subsidence and biogenic sediment; and the cultur
 tectonic settings, resource potentials, carrying capacity, clustering, culture ranges, default
 populations, settlement regions and placement, travel costs, routing and road classes, polity partitions, counts and types,
 sound systems and names, colonist habitats and elevators, the saved civilisation, and the organic
-history's spec, steps, kept epochs and their storage, its suitability components, the growth and spread of people, and farming and development.
+history's spec, steps, kept epochs and their storage, moon and ring limits against Sicardy et al. (2024) and Barnes & O'Brien (2002), parents and moon worlds, its suitability components, the growth and spread of people, and farming and development.

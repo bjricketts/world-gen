@@ -67,10 +67,15 @@ def reflectance(nm: np.ndarray, peak_nm: float) -> np.ndarray:
 
 def pigment_colour(peak_nm: float, star_temperature_k: float) -> tuple[str, float]:
     """Return the vegetation colour (hex sRGB) under the star's light and its visible albedo."""
+    return reflected_colour(reflectance(WAVELENGTHS_NM, peak_nm), star_temperature_k)
+
+
+def reflected_colour(reflect: np.ndarray, star_temperature_k: float) -> tuple[str, float]:
+    """Return the colour (hex sRGB) of a reflectance spectrum on WAVELENGTHS_NM under the star, and its brightness."""
     light = blackbody(WAVELENGTHS_NM, star_temperature_k)
     cmf = colour_matching(WAVELENGTHS_NM)
     white = cmf @ light
-    leaf = cmf @ (light * reflectance(WAVELENGTHS_NM, peak_nm))
+    leaf = cmf @ (light * reflect)
     # Adapt to the starlight: scale each channel so a perfect reflector is white.
     rgb_white = _XYZ_TO_RGB @ (white / white[1])
     rgb = (_XYZ_TO_RGB @ (leaf / white[1])) / rgb_white

@@ -4,7 +4,11 @@ A saved world is a folder: ``spec.yaml``, ``state.yaml``, ``surface.zarr``
 and, in history mode, ``timeline.yaml`` (events and sampled series) with one
 file per epoch under ``epochs/``. Zoomed regions kept for reuse live under
 ``regions/`` (format 5). A world with inhabitants keeps its civilisation under
-``culture/`` (format 6). Format-4 and format-5 worlds still load; format-4
+``culture/`` (format 6). Format 7 adds the system summary (moons, rings)
+and, for a moon, its parent to ``state.yaml``; moon worlds built from a
+planet are kept under ``moons/``. Format 8 gives giants a cloud-top surface
+(``surface.zarr`` with the cloud model in its attributes) and an appearance
+in ``state.yaml``. Format-4 to format-7 worlds still load; format-4
 surfaces gain the structural fabric the zoom needs, computed from the stored
 fields.
 """
@@ -27,8 +31,8 @@ from .report import state_to_plain, to_plain
 from .spec import PlanetSpec, load_spec, save_spec
 from .state import PlanetState, Timeline, TimelineEvent
 
-FORMAT_VERSION = 6
-READABLE_VERSIONS = (4, 5, 6)
+FORMAT_VERSION = 8
+READABLE_VERSIONS = (4, 5, 6, 7, 8)
 REGIONS_FOLDER = "regions"
 CULTURE_FOLDER = "culture"
 
@@ -49,6 +53,16 @@ class World:
         if self.surface is None:
             return None
         return build_grid(int(self.surface.attrs["grid_size"]))
+
+    @property
+    def cloud_tops(self) -> bool:
+        """Return whether the surface holds a giant's cloud tops rather than ground."""
+        return self.surface is not None and self.surface.attrs.get("kind") == "cloud_tops"
+
+    @property
+    def has_ground(self) -> bool:
+        """Return whether the world has solid ground (terrain, rivers, culture and zoom need it)."""
+        return self.surface is not None and not self.cloud_tops
 
 
 def _epoch_name(index: int, time_s: float) -> str:

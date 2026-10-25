@@ -7,6 +7,7 @@ from typing import Optional
 
 import typer
 
+from .constants import M_EARTH
 from .generate import candidates, generate, generate_world
 from .priors import ARCHETYPES
 from .report import format_culture, format_report, format_timeline, save_state
@@ -92,6 +93,10 @@ def _write_map(world: World, path: Path, field: str, projection_name: str,
     if world.surface is None:
         typer.echo(f"no map: {world.state.name} has no solid surface", err=True)
         return
+    if world.cloud_tops and field in ("overview", "climate", "culture"):
+        typer.echo(f"no {field} map: {world.state.name} is a giant; map its cloud tops "
+                   "(clouds, temperature, winds, bands, vortices, relief)", err=True)
+        return
     if field == "overview":
         fig = plot_overview(world)
     elif field == "climate":
@@ -127,7 +132,7 @@ def _run(spec: PlanetSpec, epoch: Optional[float], out: Optional[Path], n: int, 
     except NotImplementedError as e:
         typer.echo(f"error: {e}", err=True)
         raise typer.Exit(code=1)
-    typer.echo(format_report(state))
+    typer.echo(format_report(state, [] if save is not None and state.system is not None else None))
     if world is not None and world.culture is not None:
         typer.echo(format_culture(world.culture, world))
     if out is not None:
@@ -335,7 +340,10 @@ def report_cmd(
     """Print the report of a saved world."""
     world = _at_epoch(load_world(world_dir), epoch)
     if not timeline:
-        typer.echo(format_report(world.state))
+        from .giants import kept_moons
+
+        kept = list(kept_moons(world_dir, world)) if world.state.system is not None else None
+        typer.echo(format_report(world.state, kept))
         if world.culture is not None:
             typer.echo(format_culture(world.culture, world))
         return
@@ -363,7 +371,7 @@ def culture_cmd(
     from .culture import apply_culture, load_culture_spec
 
     world = load_world(world_dir)
-    if world.surface is None:
+    if not world.has_ground:
         typer.echo(f"error: {world.state.name} has no solid surface for a culture", err=True)
         raise typer.Exit(code=1)
     try:
@@ -703,7 +711,8 @@ def globe_cmd(
     epoch: Optional[float] = typer.Option(None, "--epoch", "-e", help=EPOCH_HELP),
     all_epochs: bool = typer.Option(False, "--all-epochs", help="Write every kept epoch into the folder."),
     level: int = typer.Option(1, help="Quadtree level of the globe's tiles (1 is ~50 km at the Earth's size)."),
-    exaggeration: Optional[float] = typer.Option(None, help="Vertical exaggeration (default 20)."),
+    exaggeration: Optional[float] = typer.Option(None, help="Vertical exaggeration (default 20; 3 for a giant's "
+                                                            "cloud tops)."),
     lat: float = typer.Option(20.0, help="Latitude the camera looks down on (degrees)."),
     lon: float = typer.Option(0.0, help="Longitude the camera looks down on (degrees)."),
     region: list[str] = typer.Option([], "--region", help="Drape a zoomed region over the globe: "
@@ -711,19 +720,18 @@ def globe_cmd(
     fmt: str = typer.Option("png", "--format", help="File type in a folder: png or html."),
 ) -> None:
     """Show a saved world as a 3D globe in a window, or write images or interactive pages of it."""
-    from . import heuristics as h
     from .render import GlobeViewer
 
     world = load_world(world_dir)
     try:
-        viewer = GlobeViewer(world, level, exaggeration=h.GLOBE_EXAGGERATION if exaggeration is None else exaggeration)
+        viewer = GlobeViewer(world, level, exaggeration=exaggeration)
         for value in region:
             try:
                 rlat, rlon = (float(v) for v in value.replace(" ", "").split(","))
             except ValueError:
                 raise typer.BadParameter(f"could not read '{value}' as latitude,longitude")
             viewer.add_region(_region(world, world_dir, rlat, rlon, None, None, None, "earth", False))
-        fields = _fields(field)
+        fields = ["clouds" if world.cloud_tops and f == "elevation" else f for f in _fields(field)]
         missing = [f for f in fields if f not in viewer.fields]
         if missing:
             _fail(ValueError(f"'{missing[0]}' is not available; choose from {', '.join(viewer.fields)}"))
@@ -747,6 +755,137 @@ def globe_cmd(
     except (KeyError, ValueError, ImportError) as e:
         _fail(e)
     typer.echo(f"globe written to {out}")
+
+
+def _system_world(world: World, world_dir: Path, three_d: bool):
+    """Return the world whose system to draw, its folder, the moon to highlight and given moon worlds.
+
+    A planet draws its own system. A moon kept in a planet's folder draws its
+    parent's; a standalone moon draws its parent rebuilt from its parent
+    section with only this moon.
+    """
+    from .giants import parent_folder, rebuilt_parent_spec
+
+    state = world.state
+    if state.system is not None:
+        return world, world_dir, None, {}
+    if state.parent is None:
+        raise ValueError(f"{state.name} has no moons, rings or parent planet to draw")
+    planet_dir = parent_folder(world_dir)
+    if planet_dir is not None:
+        return load_world(planet_dir), planet_dir, state.name, {state.name: world}
+    typer.echo(f"{state.name} has no saved parent: drawing {state.parent.name or 'its parent'} rebuilt from its "
+               "parent section, without rings or other moons")
+    spec = rebuilt_parent_spec(state, world.spec)
+    parent = generate_world(spec, "preview") if three_d else generate(spec)[0]
+    return parent, None, state.name, {state.name: world}
+
+
+@app.command("system")
+def system_cmd(
+    world_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="Folder written by --save (a planet "
+                                                                             "or a moon)."),
+    out: Optional[Path] = typer.Argument(None, help="Diagram: .png, .svg or .pdf; with --3d: .png, .html, .mp4 or "
+                                                    ".gif. Without it a window opens."),
+    three_d: bool = typer.Option(False, "--3d", help="The 3D scene (planet, rings and moons lit by the star, with "
+                                                     "shadows) instead of the diagram."),
+    view: str = typer.Option("top", help="Diagram view: top (down the spin axis) or edge (edge-on)."),
+    linear: bool = typer.Option(False, help="Diagram: linear distances instead of the logarithmic axis."),
+    highlight: Optional[str] = typer.Option(None, help="Diagram: a moon to mark (a moon's folder marks itself)."),
+    scale: str = typer.Option("compressed", help="3D: compressed (true out past the rings, logarithmic beyond, "
+                                                 "moons enlarged) or true."),
+    season: float = typer.Option(60.0, help="3D: the star's angle along the planet's orbit (degrees; 0 and 180 put "
+                                            "both poles equally lit)."),
+    time: float = typer.Option(0.0, "--time", help="Time in days: where the moons are."),
+    duration: Optional[float] = typer.Option(None, help="3D movie: span in days (default one orbit of the "
+                                                        "outermost moon)."),
+    frames: int = typer.Option(120, help="3D movie: number of frames."),
+    level: int = typer.Option(1, help="3D: quadtree level of the planet's globe."),
+) -> None:
+    """Draw a planet's moons, rings and limits as a diagram, or show its system in 3D."""
+    import math
+
+    world = load_world(world_dir)
+    try:
+        planet, folder, marked, moon_worlds = _system_world(world, world_dir, three_d)
+        highlight = highlight or marked
+        if not three_d:
+            import matplotlib
+
+            if out is not None:
+                matplotlib.use("Agg")
+            from .render.system import plot_system
+
+            if view not in ("top", "edge"):
+                raise ValueError(f"unknown view '{view}'; use top or edge")
+            if out is not None and out.suffix.lower() not in (".png", ".svg", ".pdf"):
+                raise ValueError(f"unknown output type '{out.suffix}'; use .png, .svg or .pdf")
+            fig = plot_system(planet, view, "linear" if linear else "log", highlight, moon_worlds, path=out,
+                              time_s=time * 86400.0)
+            if out is None:
+                import matplotlib.pyplot as plt
+
+                plt.show()
+                return
+            typer.echo(f"system diagram written to {out}")
+            return
+        from .render.system_scene import system_scene
+
+        scene = system_scene(planet, scale, math.radians(season), level, moon_worlds, folder)
+        if out is None:
+            scene.show(time * 86400.0)
+            return
+        suffix = out.suffix.lower()
+        if suffix == ".png":
+            scene.screenshot(out, time * 86400.0)
+        elif suffix == ".html":
+            scene.save_html(out, time * 86400.0)
+        elif suffix in (".mp4", ".gif"):
+            scene.save_movie(out, None if duration is None else duration * 86400.0, frames)
+        else:
+            raise ValueError(f"unknown output type '{suffix}'; use .png, .html, .mp4 or .gif")
+        typer.echo(f"system scene written to {out}")
+    except (KeyError, ValueError, ImportError) as e:
+        _fail(e)
+
+
+@app.command("moon")
+def moon_cmd(
+    world_dir: Path = typer.Argument(..., exists=True, file_okay=False, help="A planet's folder written by --save."),
+    moon: Optional[str] = typer.Argument(None, help="The moon's name or number (1 is the innermost); without it the "
+                                                    "moons are listed."),
+    resolution: str = typer.Option("standard", "--resolution", "-r", help=RESOLUTION_HELP),
+    map_path: Optional[Path] = typer.Option(None, "--map", "-m", help=MAP_HELP),
+    field: str = typer.Option("overview", "--field", "-f", help=FIELD_HELP),
+    projection_name: str = typer.Option("robinson", "--projection", "-p", help=PROJECTION_HELP),
+    keep: bool = typer.Option(True, help="Keep the moon's world in the planet's folder (moons/NN_name), where the "
+                                         "report, the 3D scene and later runs find it."),
+) -> None:
+    """Build a planet's moon as a world (or load it if kept), print its report, and keep it with the planet."""
+    from .giants import kept_moons, moon_folder, moon_index, moon_world
+
+    world = load_world(world_dir)
+    sy = world.state.system
+    if sy is None or not sy.moons:
+        _fail(ValueError(f"{world.state.name} has no moons"))
+    if moon is None:
+        kept = kept_moons(world_dir, world)
+        for k, m in enumerate(sy.moons, 1):
+            typer.echo(f"{k:>3}  {m.name:<16}{m.mass_kg / M_EARTH:>10.3g} M⊕  "
+                       f"{m.semi_major_axis_m / world.state.bulk.radius_m:>7.1f} R_p  {m.origin:<9}"
+                       + ("  kept" if m.name in kept else ""))
+        return
+    try:
+        index = moon_index(world, moon)
+        built = moon_world(world, index, _resolution(resolution), world_dir if keep else None)
+    except (KeyError, IndexError, ValueError, NotImplementedError) as e:
+        _fail(e)
+    typer.echo(format_report(built.state))
+    if keep:
+        typer.echo(f"\nmoon kept in {moon_folder(world_dir, world, index)}")
+    if map_path is not None:
+        _write_map(built, map_path, field, projection_name, 0.0, 0.0)
+
 
 
 @app.command("archetypes")

@@ -139,9 +139,9 @@ def test_frozen_ocean_flag(world_cache):
 
 
 @pytest.mark.slow
-def test_giant_has_no_surface():
+def test_giant_has_cloud_tops_and_no_ground():
     w = generate_world(PlanetSpec(seed=1, priors={"archetype": "giant"}, body={"mass_mearth": 300.0}), RES)
-    assert w.surface is None and w.grid is None
+    assert w.cloud_tops and not w.has_ground
     assert w.state.surface is None
 
 

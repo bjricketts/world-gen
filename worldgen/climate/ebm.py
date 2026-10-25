@@ -149,7 +149,7 @@ def solve_thermal(setting: ClimateSetting, surface: SurfaceState, reference: Zon
                                                   surface.glacier) - h.SURFACE_ALBEDO_OCEAN), 0.0, 0.95)
         if setting.albedo_fixed and q_mean > 0:
             offset += setting.albedo - float((insolation * albedo).mean()) / q_mean
-        forcing = insolation * (1.0 - albedo) - a + b * lapse + ocean_heating
+        forcing = insolation * (1.0 - albedo) - a + b * lapse + ocean_heating + setting.extra_flux_w_m2
         coeffs = harmonics(forcing, count)
         solved = np.stack([factors[k].solve(coeffs[k] if k else coeffs[k].real) for k in range(count)])
         new = synthesise(solved.astype(complex), samples)

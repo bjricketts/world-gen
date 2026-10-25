@@ -10,7 +10,7 @@ take the nearest cell, and categories carry labels for their codes.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 
@@ -76,6 +76,7 @@ class ExportField:
     description: str
     labels: Optional[dict] = None  # category code → label
     nodata: Optional[float] = None  # code that marks empty cells of a category field
+    evaluator: Optional[Callable] = None   # unit vectors → values, for fields evaluated at full detail (cloud tops)
 
     @property
     def categorical(self) -> bool:
@@ -84,6 +85,9 @@ class ExportField:
 
     def sample(self, sampler, surface=None) -> np.ndarray:
         """Return the field at a sampler's points; the sea is drawn where the blended elevation is below sea level."""
+        if self.evaluator is not None and getattr(sampler, "vectors", None) is not None:
+            values = self.evaluator(np.asarray(sampler.vectors, dtype=float))
+            return values.reshape(sampler.shape)
         if self.name == "ocean" and surface is not None:
             elevation = sampler.sample(surface["elevation"].values)
             near_sea = sampler.sample(surface["ocean"].values, categorical=True).astype(bool)
@@ -91,11 +95,44 @@ class ExportField:
         return sampler.sample(self.values, categorical=self.sampling != LINEAR)
 
 
+# Cloud-top fields of giants: (model output, surface variable, sampling, units, description)
+CLOUD_EXPORT = {
+    "elevation": ("relief", "elevation", LINEAR, "m", "cloud-top height above the mean cloud deck"),
+    "relief": ("relief", "elevation", LINEAR, "m", "cloud-top height above the mean cloud deck"),
+    "temperature": ("temperature", "cloud_temperature", LINEAR, "K", "upper-tropospheric temperature"),
+    "winds": ("zonal_wind", "zonal_wind", LINEAR, "m/s", "zonal wind at the cloud tops (eastward positive)"),
+    "bands": ("band", "band", LINEAR, "", "band phase: +1 at zone centres, -1 at belt centres"),
+    "vortices": ("vortex", "vortex", CATEGORICAL, "vortex index", "vortex at each point (-1: none)"),
+    "ocean": (None, "ocean", CATEGORICAL, "", "no ocean on a giant"),
+}
+
+
+def _cloud_export_field(world, field: str) -> ExportField:
+    """Return a cloud-top field of a giant, evaluated from its cloud model wherever it is sampled."""
+    from ..giants.clouds import cloud_model, evaluate
+
+    if field not in CLOUD_EXPORT:
+        raise ValueError(f"unknown cloud-top field '{field}'; choose from {', '.join(CLOUD_EXPORT)}")
+    output, variable, sampling, units, description = CLOUD_EXPORT[field]
+    values = np.asarray(world.surface[variable].values)
+    if sampling == CATEGORICAL:
+        values = values.astype(np.int32)
+    model = cloud_model(world.surface)
+
+    def at_points(vectors):
+        """Return the field at unit vectors."""
+        return evaluate(model, vectors, (output,))[output]
+    return ExportField(field, values, sampling, units, description, None, -1 if sampling == CATEGORICAL else None,
+                       at_points if output is not None else None)
+
+
 def export_field(world, field: str) -> ExportField:
     """Return a world's field by map name, e.g. ``elevation``, ``rainfall:7`` (month 7), ``political``."""
     ds = world.surface
     if ds is None:
         raise ValueError(f"{world.state.name} has no solid surface to export")
+    if world.cloud_tops:
+        return _cloud_export_field(world, field)
     name, option = split_field(field)
     if name in PHYSICAL:
         variable, sampling, units, description = PHYSICAL[name]

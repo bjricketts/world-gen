@@ -1,12 +1,16 @@
 """Shared fixtures: Solar System reference bodies, the Earth spec and a cache of generated worlds.
 
 Tests that generate worlds are marked ``slow`` (directly, or through the
-fixtures in ``SLOW_FIXTURES``); ``pytest -m "not slow"`` skips them.
+fixtures in ``SLOW_FIXTURES``); ``pytest -m "not slow"`` skips them. Every
+test is also marked with its categories from ``categories.py``
+(``pytest -m zoom``); ``scripts/select_tests.py`` picks them from a change.
 """
 
 from pathlib import Path
 
 import pytest
+
+from .categories import categories_of_test
 
 from worldgen import bulk, generate_world, star
 from worldgen.spec import load_spec
@@ -19,10 +23,12 @@ SLOW_FIXTURES = {"world_cache", "living_world", "aquaplanet", "wet_world", "temp
 
 
 def pytest_collection_modifyitems(items):
-    """Mark tests that use a slow fixture as slow."""
+    """Mark tests that use a slow fixture as slow, and every test with its categories."""
     for item in items:
         if SLOW_FIXTURES & set(getattr(item, "fixturenames", ())):
             item.add_marker(pytest.mark.slow)
+        for category in categories_of_test(item.module.__name__.rsplit(".", 1)[-1]):
+            item.add_marker(getattr(pytest.mark, category))
 
 
 @pytest.fixture(scope="session")

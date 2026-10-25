@@ -10,6 +10,7 @@ import numpy as np
 import yaml
 
 from . import constants as c
+from . import heuristics as h
 from .state import PlanetState, Timeline
 
 TAGS = {
@@ -54,7 +55,217 @@ def _water_rows(state: PlanetState) -> list[str]:
         _row("seafloor pressure", f"{w.seafloor_pressure_ratio:.3g} × Earth"),
         _row("expected land fraction", f"{w.land_fraction_estimate:.2f}", "heuristic"),
     ]
+    sh = state.ice_shell
+    if sh is not None:
+        if sh.ocean_depth_m > 0:
+            ocean = (f"{sh.ocean_depth_m / 1e3:,.0f} km deep under {sh.shell_thickness_m / 1e3:,.1f} km of ice, "
+                     f"at {sh.ocean_temperature_k:.0f} K")
+        else:
+            ocean = f"none: frozen through ({sh.water_layer_m / 1e3:,.0f} km of ice)"
+        rows += [_row("subsurface ocean", ocean, "heuristic")]
+        if sh.high_pressure_ice_m > 0:
+            rows += [_row("high-pressure ice", f"{sh.high_pressure_ice_m / 1e3:,.0f} km of ice III–VI "
+                          + ("below the ocean" if sh.ocean_depth_m > 0 else "below the ice Ih shell"), "heuristic")]
+        rows += [
+            _row("heat through the ice", f"{sh.basal_heat_flux_w_m2 * 1e3:.3g} mW/m², shell Rayleigh number "
+                 f"{sh.rayleigh_number:.2g}" + (" (would convect; conduction assumed)" if sh.convective else "")),
+        ]
     return rows
+
+
+def _appearance_rows(state: PlanetState) -> list[str]:
+    """Return the report lines for a giant's cloud class, colour and jets."""
+    ap = state.appearance
+    rows = [
+        _row("cloud class", f"Sudarsky {ap.sudarsky_class}", "derived"),
+        _row("effective temperature", f"{ap.effective_temperature_k:.0f} K "
+             f"(internal {ap.internal_temperature_k:.0f} K, {ap.internal_flux_w_m2:.3g} W/m²)", "heuristic"),
+        _row("Bond albedo", f"{ap.bond_albedo:.2f}", state.provenance.get("atmosphere.bond_albedo")),
+        _row("heavy elements", f"{ap.atmospheric_metallicity:.3g}× protosolar C/H",
+             state.provenance.get("body.atmospheric_metallicity", "heuristic")),
+    ]
+    if ap.cloud_deck:
+        deck = {"NH3": "ammonia", "H2O": "water", "CH4": "methane"}.get(ap.cloud_deck)
+        haze = ("tropospheric haze" if ap.cloud_deck != "CH4" else "haze at the methane cloud")
+        rows.append(_row("visible cloud", (f"{deck} ice, base {ap.cloud_deck_bar:.2g} bar; {haze} "
+                                           f"τ {ap.haze_optical_depth:.2g} at 800 nm") if deck
+                         else "none above the model floor", "heuristic"))
+    rows += [
+        _row("colour", f"{ap.colour} (zones {ap.zone_colour}, belts {ap.belt_colour}; "
+             f"brightness {ap.visible_albedo:.2f})", "heuristic"),
+    ]
+    if ap.regime == "locked":
+        rows += [
+            _row("circulation", f"tidally locked: superrotating equatorial jet to ±{ap.jet_half_width_deg:.0f}°, "
+                 f"hot spot {ap.hot_spot_offset_deg:.0f}° east of the substellar point, polar vortices", "heuristic"),
+        ]
+    else:
+        rows += [
+            _row("jets", f"{ap.jet_count} alternating, {ap.equatorial_jet} at the equator "
+                 f"(speed scale {ap.jet_speed_m_s:.0f} m/s, Rhines length {ap.rhines_length_m / 1e3:,.0f} km)",
+                 "heuristic"),
+        ]
+    return rows
+
+
+def _interior_rows(state: PlanetState) -> list[str]:
+    """Return the report lines for a solid planet's interior."""
+    i, p = state.interior, state.provenance
+    return [
+        _row("tectonic regime", i.tectonic_regime, p.get("interior.tectonic_regime")),
+        _row("  probabilities", ", ".join(f"{k} {v:.2f}" for k, v in i.regime_probabilities.items())),
+        _row("activity index", f"{i.activity_index:.3g} (Earth = 1)", "heuristic"),
+        _row("surface heat flux", f"{i.surface_heat_flux_w_m2 * 1e3:.1f} mW/m²"),
+        _row("radiogenic power", f"{i.radiogenic_power_w / 1e12:.3g} TW", p.get("body.radiogenic_abundance")),
+        _row("tidal heating", f"{i.tidal_power_w / 1e12:.3g} TW", p.get("body.tidal_heating_w")),
+        _row("magnetic field", f"{_yes_no(i.magnetic_field)} (p = {i.dynamo_probability:.2f})",
+             p.get("interior.magnetic_field")),
+    ]
+
+
+def _giant_interior_rows(state: PlanetState) -> list[str]:
+    """Return the report lines for a giant's interior: its intrinsic heat and field."""
+    i, p, ap = state.interior, state.provenance, state.appearance
+    area = 4.0 * math.pi * state.bulk.radius_m**2
+    rows = [
+        _row("structure", "fluid envelope, no solid surface"),
+        _row("internal heat", f"{ap.internal_flux_w_m2:.3g} W/m², {ap.internal_flux_w_m2 * area:.3g} W "
+             "(cooling since formation)", "heuristic"),
+    ]
+    if i.tidal_power_w > 0:
+        rows.append(_row("tidal heating", f"{i.tidal_power_w / 1e12:.3g} TW", p.get("body.tidal_heating_w")))
+    rows.append(_row("magnetic field", _yes_no(i.magnetic_field), p.get("interior.magnetic_field")))
+    return rows
+
+
+def _atmosphere_rows(state: PlanetState) -> list[str]:
+    """Return the 'Atmosphere and surface' section of a solid planet."""
+    a, p = state.atmosphere, state.provenance
+    return [
+        "Atmosphere and surface",
+        _row("atmosphere", f"{_yes_no(a.present)} (retention p = {a.retention_probability:.2f}, "
+             f"shoreline ratio {a.shoreline_ratio:.3g})", p.get("atmosphere.present")),
+        _row("surface pressure", f"{a.surface_pressure_pa / c.BAR:.3g} bar", p.get("atmosphere.surface_pressure_bar")),
+        _row("composition", a.composition, p.get("atmosphere.composition")),
+        _row("Bond albedo", f"{a.bond_albedo:.2f}", p.get("atmosphere.bond_albedo")),
+        _row("equilibrium temperature", f"{a.equilibrium_temperature_k:.0f} K"),
+        _row("greenhouse optical depth", f"{a.greenhouse_optical_depth:.3g}", "heuristic"),
+        _row("surface temperature", f"{a.surface_temperature_k:.0f} K ({a.surface_temperature_k - 273.15:.0f} °C)",
+             p.get("atmosphere.surface_temperature_k")),
+        _row("scale height", f"{a.scale_height_m / 1e3:.1f} km"),
+        _row("water boiling point", f"{a.water_boiling_point_k:.0f} K"),
+        _row("surface water", a.surface_water),
+        _row("CO₂ regulated by weathering", _yes_no(a.weathering_regulated)
+             + (f" (target {a.weathering_target_k:.0f} K)" if a.weathering_regulated else ""),
+             p.get("atmosphere.weathering_target_k") if a.weathering_regulated else None),
+        _row("runaway greenhouse", _yes_no(a.runaway_greenhouse)),
+        "",
+    ]
+
+
+def _giant_atmosphere_rows(state: PlanetState) -> list[str]:
+    """Return the 'Atmosphere' section of a giant (its temperatures are in 'Appearance')."""
+    a, p = state.atmosphere, state.provenance
+    return [
+        "Atmosphere",
+        _row("composition", a.composition, p.get("atmosphere.composition")),
+        _row("equilibrium temperature", f"{a.equilibrium_temperature_k:.0f} K (starlight alone)"),
+        _row("scale height", f"{a.scale_height_m / 1e3:.1f} km (at the equilibrium temperature)"),
+        "",
+    ]
+
+
+def _system_rows(state: PlanetState, kept_moons: Optional[list[str]] = None) -> list[str]:
+    """Return report rows for a planet's moons and rings, marking moons kept as worlds."""
+    sy = state.system
+    lim = sy.limits
+    r = state.bulk.radius_m
+    rows = [
+        _row("stable moon orbits", f"out to {lim.stable_prograde_m / 1e3:,.0f} km ({lim.stable_prograde_m / r:,.0f} planet "
+             f"radii) prograde, {lim.stable_retrograde_m / 1e3:,.0f} km retrograde", "heuristic"),
+        _row("ring–moon boundary", f"{lim.roche_icy_m / r:.2f} planet radii for icy, {lim.roche_rocky_m / r:.2f} for "
+             "rocky material", "heuristic"),
+        _row("synchronous orbit", f"{lim.synchronous_orbit_m / r:.2f} planet radii"),
+        _row("largest surviving moon", "no tidal limit" if lim.max_surviving_moon_mass_kg > state.bulk.mass_kg else
+             f"{lim.max_surviving_moon_mass_kg / c.M_EARTH:.3g} M⊕ (tidal migration over the planet's age)"),
+    ]
+    formed = {"jovian": "Jovian architecture (the planet opened a gap in its nebula)",
+              "saturnian": "Saturnian architecture (no gap in the nebula)",
+              "rings only": "spread from the rings", "uranian": "Uranian architecture from a giant impact",
+              "impact": "from a giant impact"}
+    if sy.source == "drawn":
+        counts = ", ".join(f"{sum(m.origin == o for m in sy.moons)} {label}" for o, label in
+                           (("regular", "regular"), ("ring", "ring-born"), ("impact", "impact"),
+                            ("captured", "captured"))
+                           if any(m.origin == o for m in sy.moons))
+        rows.append(_row("moons", f"drawn, {formed.get(sy.moon_regime, sy.moon_regime)}: {counts}", "heuristic"))
+    elif not sy.moons:
+        rows.append(_row("moons", "none" + (" drawn" if sy.moon_regime != "none" else " listed")))
+    origin = {"regular": "regular", "ring": "ring-born", "impact": "impact", "captured": "captured", "user": ""}
+    for m in sy.moons:
+        notes = [x for x in (origin.get(m.origin, m.origin), "retrograde" if m.retrograde else "", m.resonance or "",
+                             "kept as a world" if kept_moons and m.name in kept_moons else "") if x]
+        rows.append(_row(m.name, f"{m.mass_kg / c.M_EARTH:.3g} M⊕, {m.radius_m / 1e3:,.0f} km radius, "
+                         f"{m.semi_major_axis_m / r:.1f} planet radii, {m.orbital_period_s / c.SECONDS_PER_DAY:.3g} days"
+                         + "".join(f", {x}" for x in notes), m.origin if m.origin == "user" else None))
+    if kept_moons is not None and sy.moons:
+        rows.append(_row("moon worlds", (f"{len(kept_moons)} of {len(sy.moons)} kept" if kept_moons else "none kept")
+                         + "; build one with `worldgen moon <world> <name>`"))
+    regime = {"broad": "broad icy rings (Saturn-like)", "narrow": "narrow dark ringlets (Uranus-like)",
+              "dusty warm": "tenuous dusty rings (Jupiter-like)", "dusty cold": "dusty rings with arcs (Neptune-like)",
+              "user": "as listed", "none": "none"}.get(sy.ring_regime, sy.ring_regime)
+    total = sum(ring.mass_kg for ring in sy.rings)
+    rows.append(_row("rings", regime + (f", {total:.2g} kg in all" if sy.rings else ""),
+                     "user" if sy.ring_regime == "user" else ("heuristic" if sy.rings else None)))
+    for ring in sy.rings:
+        width = ring.outer_radius_m - ring.inner_radius_m
+        extent = (f"{ring.inner_radius_m / 1e3:,.0f}–{ring.outer_radius_m / 1e3:,.0f} km" if width > 1e6
+                  else f"{ring.inner_radius_m / 1e3:,.0f} km, {width / 1e3:.3g} km wide")
+        arcs = f", {len(ring.arcs)} arcs" if ring.arcs else ""
+        rows.append(_row(f"  {ring.name or 'ring'}", f"{extent} ({ring.inner_radius_m / r:.2f}–"
+                         f"{ring.outer_radius_m / r:.2f} planet radii), optical depth {ring.optical_depth:.2g}, "
+                         f"albedo {ring.bond_albedo:.2f}, {ring.colour}{arcs}"))
+    return rows
+
+
+def _parent_rows(state: PlanetState) -> list[str]:
+    """Return report rows for the planet a moon orbits."""
+    pa = state.parent
+    p = state.provenance
+    area = 4.0 * math.pi * state.bulk.radius_m**2
+    return [
+        _row("parent", f"{pa.name}, {pa.mass_kg / c.M_EARTH:.4g} M⊕, {pa.radius_m / c.R_EARTH:.3g} R⊕",
+             p.get("parent.mass_mearth")),
+        _row("orbit about the parent", f"{pa.semi_major_axis_m / 1e3:,.0f} km ({pa.semi_major_axis_m / pa.radius_m:.1f} "
+             f"parent radii), e = {pa.eccentricity:.4f}", p.get("parent.semi_major_axis_rp")),
+        _row("period about the parent", f"{pa.orbital_period_s / c.SECONDS_PER_DAY:.4g} days"),
+        _row("stable limit", f"{pa.stable_limit_m / pa.radius_m:,.0f} parent radii", "heuristic"),
+        _row("fluid Roche limit", f"{pa.roche_limit_m / pa.radius_m:.2f} parent radii"),
+        _row("parent rotation", f"{pa.rotation_period_s / c.SECONDS_PER_HOUR:.4g} h", p.get("parent.rotation_period_h")),
+        *([_row("moon's origin", {"regular": "formed in the parent's disc", "captured": "captured",
+                                  "impact": "from a giant impact"}[pa.moon_origin], p.get("parent.moon_origin"))]
+          if pa.moon_origin else []),
+        _row("starlight", f"{pa.star_instellation_earth:.3g} × Earth's; eclipses remove {1 - pa.eclipse_fraction:.1%}, "
+             f"the parent reflects {pa.reflected_fraction:.2%} more"),
+        _row("parent's glow", f"{pa.planet_heat_w_m2:.3g} W/m² absorbed (parent at {pa.effective_temperature_k:.0f} K)",
+             p.get("parent.effective_temperature_k")),
+        _row("tidal heat", f"{pa.tidal_heating_w / 1e12:.3g} TW, {pa.tidal_heating_w / area:.3g} W/m²"
+             + (" (above Io's 2 W/m²: global volcanism)" if pa.tidal_heating_w / area > h.TIDAL_HAZARD_FLUX_W_M2 else ""),
+             "user" if p.get("body.tidal_heating_w") == "user" else "heuristic"),
+        *([_row("tidal response", f"k₂/Q {pa.tidal_k2_over_q:.3g}"
+                + (" (partially molten: tides at Io's dissipation exceed the radiogenic heat)" if pa.partially_molten
+                   else " (ice shell over an ocean)" if pa.ice_shell_dissipation else ""),
+                "user" if p.get("body.tidal_q") == "user" else "heuristic")]
+          if pa.tidal_k2_over_q > 0 else []),
+        *([_row("eccentricity damping", f"e {pa.initial_eccentricity:.3g} → {pa.eccentricity:.2g}: free eccentricity " if pa.eccentricity >= 1e-6 else
+                f"e {pa.initial_eccentricity:.3g} → 0: free eccentricity "
+                f"damped by the moon's tides in {pa.eccentricity_damping_time_s / c.SECONDS_PER_GYR:.3g} Gyr "
+                "(no resonance holds it)", "heuristic")]
+          if math.isfinite(pa.eccentricity_damping_time_s) and pa.initial_eccentricity > 0 else []),
+        _row("parent's magnetosphere", "none" if pa.magnetopause_standoff_m <= 0 else
+             f"standoff {pa.magnetopause_standoff_m / pa.radius_m:.1f} parent radii; the moon spends "
+             f"{pa.magnetosphere_fraction:.0%} of its orbit inside", p.get("parent.magnetic_moment_am2")),
+    ]
 
 
 def _climate_rows(state: PlanetState) -> list[str]:
@@ -133,8 +344,11 @@ def _history_rows(state: PlanetState) -> list[str]:
     return rows
 
 
-def format_report(state: PlanetState) -> str:
-    """Return a multi-line text report of the planet with value sources and consistency notes."""
+def format_report(state: PlanetState, kept_moons: Optional[list[str]] = None) -> str:
+    """Return a multi-line text report of the planet with value sources and consistency notes.
+
+    ``kept_moons`` names the moons kept as worlds in the planet's saved folder.
+    """
     p = state.provenance
     s, o, b, i, a, occ = state.star, state.orbit, state.bulk, state.interior, state.atmosphere, state.occupiability
     hz = o.habitable_zone
@@ -172,6 +386,7 @@ def format_report(state: PlanetState) -> str:
         _row("  position", f"{hz.conservative_fraction:.2f} across conservative zone (0 inner, 1 outer)"),
         _row("  conservative", f"{hz.runaway_greenhouse_m / c.AU:.3f}–{hz.maximum_greenhouse_m / c.AU:.3f} AU"),
         _row("  optimistic", f"{hz.recent_venus_m / c.AU:.3f}–{hz.early_mars_m / c.AU:.3f} AU"),
+        *(["", "Parent planet", *_parent_rows(state)] if state.parent is not None else []),
         "",
         "Body",
         _row("class", b.planet_class),
@@ -187,36 +402,11 @@ def format_report(state: PlanetState) -> str:
         _row("escape velocity", f"{b.escape_velocity_m_s / 1e3:.2f} km/s"),
         "",
         "Interior",
-        _row("tectonic regime", i.tectonic_regime, p.get("interior.tectonic_regime")),
-        _row("  probabilities", ", ".join(f"{k} {v:.2f}" for k, v in i.regime_probabilities.items())),
-        _row("activity index", f"{i.activity_index:.3g} (Earth = 1)", "heuristic"),
-        _row("surface heat flux", f"{i.surface_heat_flux_w_m2 * 1e3:.1f} mW/m²"),
-        _row("radiogenic power", f"{i.radiogenic_power_w / 1e12:.3g} TW", p.get("body.radiogenic_abundance")),
-        _row("tidal heating", f"{i.tidal_power_w / 1e12:.3g} TW", p.get("body.tidal_heating_w")),
-        _row("magnetic field", f"{_yes_no(i.magnetic_field)} (p = {i.dynamo_probability:.2f})",
-             p.get("interior.magnetic_field")),
+        *(_giant_interior_rows(state) if state.appearance is not None else _interior_rows(state)),
+        *(["", "Appearance", *_appearance_rows(state)] if state.appearance is not None
+          else ["", "Water", *_water_rows(state)]),
         "",
-        "Water",
-        *_water_rows(state),
-        "",
-        "Atmosphere and surface",
-        _row("atmosphere", f"{_yes_no(a.present)} (retention p = {a.retention_probability:.2f}, "
-             f"shoreline ratio {a.shoreline_ratio:.3g})", p.get("atmosphere.present")),
-        _row("surface pressure", f"{a.surface_pressure_pa / c.BAR:.3g} bar", p.get("atmosphere.surface_pressure_bar")),
-        _row("composition", a.composition, p.get("atmosphere.composition")),
-        _row("Bond albedo", f"{a.bond_albedo:.2f}", p.get("atmosphere.bond_albedo")),
-        _row("equilibrium temperature", f"{a.equilibrium_temperature_k:.0f} K"),
-        _row("greenhouse optical depth", f"{a.greenhouse_optical_depth:.3g}", "heuristic"),
-        _row("surface temperature", f"{a.surface_temperature_k:.0f} K ({a.surface_temperature_k - 273.15:.0f} °C)",
-             p.get("atmosphere.surface_temperature_k")),
-        _row("scale height", f"{a.scale_height_m / 1e3:.1f} km"),
-        _row("water boiling point", f"{a.water_boiling_point_k:.0f} K"),
-        _row("surface water", a.surface_water),
-        _row("CO₂ regulated by weathering", _yes_no(a.weathering_regulated)
-             + (f" (target {a.weathering_target_k:.0f} K)" if a.weathering_regulated else ""),
-             p.get("atmosphere.weathering_target_k") if a.weathering_regulated else None),
-        _row("runaway greenhouse", _yes_no(a.runaway_greenhouse)),
-        "",
+        *(_giant_atmosphere_rows(state) if state.appearance is not None else _atmosphere_rows(state)),
         "Climate",
         *_climate_rows(state),
         "",
@@ -224,10 +414,15 @@ def format_report(state: PlanetState) -> str:
         *_biosphere_rows(state),
         "",
         "Occupiability",
-        _row("score", f"{occ.score:.2f} (0–1)"),
-        _row("habitable unaided", _yes_no(occ.habitable_unaided)),
-        _row("factors", ", ".join(f"{k} {v:.2f}" for k, v in occ.factors.items())),
+        *([_row("score", f"{occ.score:.2f} (no solid surface)")] if state.appearance is not None else [
+            _row("score", f"{occ.score:.2f} (0–1)"),
+            _row("habitable unaided", _yes_no(occ.habitable_unaided)),
+            _row("factors", ", ".join(f"{k} {v:.2f}" for k, v in occ.factors.items())),
+        ]),
     ]
+
+    if state.system is not None:
+        lines += ["", "Moons and rings", *_system_rows(state, kept_moons)]
 
     if state.mode == "history":
         lines += ["", "History", *_history_rows(state)]

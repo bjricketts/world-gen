@@ -105,7 +105,7 @@ def build_state(ctx: HistoryContext, t_gyr: float, apply_overrides: bool = False
         rotation_period_s=None if rotation_h is None else rotation_h * c.SECONDS_PER_HOUR,
         rotation_is_user=inputs.is_user("orbit.rotation_period_h"),
         obliquity_is_user=inputs.is_user("orbit.obliquity_deg"),
-        tidal_q=base.orbit.tidal_q, periapsis_longitude_rad=base.orbit.periapsis_longitude_rad)
+        tidal_q=base.orbit.tidal_q, periapsis_longitude_rad=base.orbit.periapsis_longitude_rad, parent=base.parent)
 
     rates = d.thermal
     regime = modes.regime
@@ -219,7 +219,8 @@ def build_state(ctx: HistoryContext, t_gyr: float, apply_overrides: bool = False
         constraints_met=True, mode="history", archetype=base.archetype, epoch_s=t_gyr * c.SECONDS_PER_GYR,
         star=star, orbit=orbit, bulk=bulk, interior=interior, atmosphere=atmosphere, occupiability=occupiability,
         inputs=values, provenance=provenance, issues=_deduplicate(issues), water=water, climate=climate,
-        biosphere=biosphere, events=_events_until(result, t_gyr), overrides=overrides)
+        biosphere=biosphere, events=_events_until(result, t_gyr), overrides=overrides,
+        system=base.system, parent=base.parent)
 
 
 def _fmt(value) -> str:

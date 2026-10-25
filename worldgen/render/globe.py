@@ -4,7 +4,8 @@ draped over it, in a PyVista window, a Jupyter widget, screenshots or a standalo
 The globe is built once from tile meshes (``export.globe_meshes``: the global
 grid resampled onto the cube-sphere, or a pyramid level); switching field or
 epoch only recolours its vertices from the map colours (0.01–0.1 s). Regions
-are drawn as overlays raised slightly above the globe. PyVista is needed (the
+are drawn as overlays raised slightly above the globe, and a planet's rings as
+annuli in its equatorial plane (``render.rings``). PyVista is needed (the
 ``globe`` extra); the Jupyter widget also needs ipywidgets and a PyVista
 Jupyter backend (trame).
 """
@@ -50,14 +51,20 @@ def _polydata(meshes):
 class GlobeViewer:
     """A world's globe with selectable map field, kept epoch, sea and draped regions."""
 
-    def __init__(self, world, level: int = 1, pyramid=None, exaggeration: float = h.GLOBE_EXAGGERATION,
+    def __init__(self, world, level: int = 1, pyramid=None, exaggeration: Optional[float] = None,
                  max_error_m: Optional[float] = None, sea: bool = True):
-        """Build the globe's meshes at a quadtree level (from a pyramid if given) with exaggerated heights."""
+        """Build the globe's meshes at a quadtree level (from a pyramid if given) with exaggerated heights.
+
+        ``exaggeration`` defaults to GLOBE_EXAGGERATION for solid planets and
+        GLOBE_CLOUD_EXAGGERATION for a giant's cloud tops.
+        """
         from ..export import globe_meshes
 
         if world.surface is None:
             raise ValueError(f"{world.state.name} has no solid surface")
         self.world = world
+        if exaggeration is None:
+            exaggeration = h.GLOBE_CLOUD_EXAGGERATION if world.cloud_tops else h.GLOBE_EXAGGERATION
         self.exaggeration = exaggeration
         self.radius_m = float(world.surface.attrs["radius_m"])
         meshes = globe_meshes(world, level, "elevation", max_error_m, exaggeration, sea, pyramid)
@@ -69,21 +76,25 @@ class GlobeViewer:
         self.directions = points / r[:, None]
         self.heights = (r - self.radius_m) / exaggeration
         self._elevation = base                    # the meshes come coloured by elevation
+        system = world.state.system
+        from .rings import ring_polydata
+
+        self.rings = ring_polydata(system.rings) if system is not None and system.rings else None
         self.fields = available_fields(world)
         from .epochs import epoch_dates
 
         self.dates = epoch_dates(world) if world.culture is not None and world.culture.epochs else [0.0]
         self.regions: list = []
         self._sampler = None
-        self.field, self.epoch = "elevation", 0.0
+        self.field, self.epoch = ("clouds" if world.cloud_tops else "elevation"), 0.0
         self._plotter = None
 
     def sampler(self):
         """Return the lookup from the globe's vertices to grid cells (built once)."""
         if self._sampler is None:
-            from ..export.sampling import point_sampler
+            from ..export.sampling import world_sampler
 
-            self._sampler = point_sampler(self.world.grid, self.directions, (1, len(self.directions)))
+            self._sampler = world_sampler(self.world, self.directions, (1, len(self.directions)))
         return self._sampler
 
     def at(self, years_ago: float):
@@ -99,13 +110,15 @@ class GlobeViewer:
         from ..export.meshes import _rgba
         from .maps import field_colours
 
-        if field == "elevation":
+        if field == "elevation" or (self.world.cloud_tops and field == "clouds"):
             return self._elevation
         return _rgba(field_colours(self.at(years_ago), field, self.sampler())[..., :3].reshape(-1, 3))
 
     def show_field(self, field: str = "elevation", years_ago: Optional[float] = None) -> None:
         """Recolour the globe for a field and epoch (the nearest kept epoch at or after ``years_ago``)."""
         years = self.epoch if years_ago is None else min(self.dates, key=lambda d: abs(d - years_ago))
+        if self.world.cloud_tops and field == "elevation":
+            field = "clouds"            # a giant's 'elevation' view is its cloud tops
         if field not in self.fields:
             raise ValueError(f"'{field}' is not available; choose from {', '.join(self.fields)}")
         self.terrain["rgba"] = self.colours(field, years)
@@ -142,6 +155,8 @@ class GlobeViewer:
             pl.add_mesh(self.sea, scalars="rgba", rgba=True, opacity=0.85, smooth_shading=True)
         for poly in self.regions:
             pl.add_mesh(poly, scalars="rgba", rgba=True, smooth_shading=True)
+        if self.rings is not None:
+            pl.add_mesh(self.rings, scalars="rgba", rgba=True, lighting=False)
         pl.set_background("black")
         self._plotter = pl
         self._label()

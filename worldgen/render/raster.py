@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Optional
 
 import numpy as np
 
@@ -55,6 +56,7 @@ class Sampler:
     nearest: np.ndarray               # (rows*cols,) nearest cell
     neighbours: np.ndarray            # (rows*cols, 4) nearest cells
     weights: np.ndarray               # (rows*cols, 4) inverse-distance weights
+    vectors: Optional[np.ndarray] = None   # (rows*cols, 3) unit vectors of the pixels, for fields evaluated directly
 
     def sample(self, values: np.ndarray, categorical: bool = False, fill: float = np.nan) -> np.ndarray:
         """Return a (rows, cols) image of a grid field; pixels outside the projection get ``fill``."""
@@ -99,7 +101,7 @@ def projected_sampler(grid: SphereGrid, proj, width: int) -> Sampler:
     w = 1.0 / np.maximum(dist, 1e-12) ** 2
     w /= w.sum(axis=1, keepdims=True)
     sampler = Sampler(shape=(height, width), extent=(x0, x1, y0, y1), valid=valid,
-                      nearest=idx[:, 0], neighbours=idx, weights=w)
+                      nearest=idx[:, 0], neighbours=idx, weights=w, vectors=vec.astype(np.float32))
     if len(_SAMPLERS) >= _MAX_SAMPLERS:
         _SAMPLERS.pop(next(iter(_SAMPLERS)))
     _SAMPLERS[key] = sampler

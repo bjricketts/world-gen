@@ -139,7 +139,8 @@ def solve_zonal(setting: ClimateSetting, land_fraction: float | np.ndarray, star
                 offset += setting.albedo - current
                 alb_ocean, alb_land = albedos(ocean, land)
             if target_mean_k is not None:
-                absorbed = float((insolation * (f_ocean * (1.0 - alb_ocean) + f_land * (1.0 - alb_land))).mean())
+                absorbed = float((insolation * (f_ocean * (1.0 - alb_ocean) + f_land * (1.0 - alb_land))).mean()) + \
+                    setting.extra_flux_w_m2
                 a = absorbed - b * target_mean_k
             # Warming reduces ice albedo; including this gain in the solve speeds up convergence.
             up_ocean, up_land = albedos(ocean + 0.5, land + 0.5)
@@ -152,7 +153,8 @@ def solve_zonal(setting: ClimateSetting, land_fraction: float | np.ndarray, star
             factors = _factor(x, ocean, land, f_land, setting, diffusivity, b, exchange, c_land, c_ocean,
                               omega, count, gain)
             state = np.concatenate([ocean, land], axis=1)
-            forcing = np.concatenate([insolation * (1.0 - alb_ocean) - a, insolation * (1.0 - alb_land) - a],
+            forcing = np.concatenate([insolation * (1.0 - alb_ocean) - a + setting.extra_flux_w_m2,
+                                      insolation * (1.0 - alb_land) - a + setting.extra_flux_w_m2],
                                      axis=1) - gain * state
             if ocean_flux.any():
                 forcing[:, :n] += convergence(ocean_flux, n) / np.maximum(f_ocean, 1e-6)

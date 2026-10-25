@@ -20,12 +20,14 @@ from .constraints import (
     MOSTLY_OPEN_OCEAN,
     NOT_LOCKED,
     NOT_RUNAWAY,
+    STABLE_MOON_ORBIT,
     SYNCHRONOUS,
     Constraint,
     dayside_temperature_between,
     surface_temperature_between,
 )
-from .distributions import Choice, Distribution, Fixed, HZFraction, LogUniform, TruncNormal, Uniform
+from .distributions import (Choice, Conditional, Distribution, Fixed, HZFraction, LogUniform, Mixture, Relative,
+                            TruncNormal, Uniform)
 
 # Broad defaults used when an archetype does not set a field.
 BASE_PRIORS: dict[str, Distribution] = {
@@ -75,6 +77,11 @@ class Archetype:
     priors: dict[str, Distribution] = field(default_factory=dict)
     mix_weight: float = 1.0   # weight when no archetype is requested
     constraints: tuple[Constraint, ...] = ()   # outcomes every planet of this type must have
+    moon: bool = False        # the archetype is a moon: its worlds get a parent from the parent.* priors
+
+
+_NO_IMPACT = ("giant impacts on giants make moons of at most ~1e-4 of the planet's mass (Woo et al. 2021), too "
+              "small for a habitable moon; use regular or captured")
 
 
 ARCHETYPES: dict[str, Archetype] = {a.name: a for a in [
@@ -180,6 +187,39 @@ ARCHETYPES: dict[str, Archetype] = {a.name: a for a in [
             "body.water_mass_fraction": LogUniform(1e-4, 3e-3),
         },
         mix_weight=0.05,
+    ),
+    Archetype(
+        "habitable_moon",
+        "Temperate moon of a giant in its star's habitable zone: formed in the giant's disc or captured.",
+        {
+            "star.mass_msun": LogUniform(*h.HABITABLE_MOON_STAR_MSUN),
+            "star.age_gyr": Uniform(2.0, 7.0),
+            "orbit.instellation_earth": HZFraction(0.1, 0.7),
+            "parent.moon_origin": Choice(list(h.HABITABLE_MOON_ORIGINS), list(h.HABITABLE_MOON_ORIGINS.values())),
+            "parent.mass_mearth": Conditional("parent.moon_origin", {
+                "regular": LogUniform(*h.HABITABLE_MOON_REGULAR_PARENT_MEARTH),
+                "captured": LogUniform(*h.HABITABLE_MOON_CAPTURED_PARENT_MEARTH)}, _NO_IMPACT),
+            "parent.semi_major_axis_rp": Conditional("parent.moon_origin", {
+                "regular": LogUniform(*h.HABITABLE_MOON_ORBIT_RP),
+                "captured": LogUniform(*h.HABITABLE_MOON_CAPTURED_ORBIT_RP)}, _NO_IMPACT),
+            "parent.inclination_deg": Conditional("parent.moon_origin", {
+                "regular": Fixed(0.0),
+                "captured": Mixture((Uniform(*h.CAPTURED_TILT_DEG), Uniform(180.0 - h.CAPTURED_TILT_DEG[1], 180.0)),
+                                    (1.0 - h.CAPTURE_RETROGRADE_SHARE, h.CAPTURE_RETROGRADE_SHARE))}, _NO_IMPACT),
+            "parent.eccentricity": LogUniform(*h.HABITABLE_MOON_ECCENTRICITY),
+            "parent.obliquity_deg": TruncNormal(15.0, 15.0, 0.0, 60.0),
+            "parent.rotation_period_h": LogUniform(8.0, 20.0),
+            "body.mass_mearth": Conditional("parent.moon_origin", {
+                "regular": Relative("parent.mass_mearth", LogUniform(*h.HABITABLE_MOON_MASS_RATIO),
+                                    h.HABITABLE_MOON_REGULAR_PARENT_MEARTH),
+                "captured": LogUniform(*h.HABITABLE_MOON_CAPTURED_MEARTH)}, _NO_IMPACT),
+            "body.water_mass_fraction": LogUniform(3.5e-4, 2e-3),
+            "atmosphere.surface_pressure_bar": LogUniform(0.6, 3.0),
+            "interior.tectonic_regime": Fixed("mobile_lid"),
+        },
+        mix_weight=0.03,
+        constraints=(STABLE_MOON_ORBIT, NOT_RUNAWAY, MOSTLY_OPEN_OCEAN),
+        moon=True,
     ),
     Archetype(
         "giant",

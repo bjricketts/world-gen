@@ -11,6 +11,8 @@ from __future__ import annotations
 import math
 from typing import Optional
 
+from scipy.optimize import brentq
+
 from . import constants as c
 from . import heuristics as h
 from .state import BulkState, Issue
@@ -48,24 +50,64 @@ def chen_kipping_mass_neptunian(radius_rearth: float) -> float:
     return 10 ** ((math.log10(radius_rearth) - cc) / s)
 
 
-def rocky_radius(mass_mearth: float, cmf: float, wmf: float = 0.0) -> float:
-    """Return the radius (Earth radii) of a rocky planet with a given core and water fraction."""
+def _zeng_radius(mass_mearth: float, cmf: float, wmf: float) -> float:
+    """Return the Zeng-type radius (Earth radii) of a compressed rocky planet, with water inflation."""
     return (1.07 - 0.21 * cmf) * mass_mearth ** (1 / 3.7) * (1 + h.WATER_RADIUS_INFLATION * wmf)
 
 
+def _uncompressed_radius(mass_mearth: float, cmf: float, wmf: float) -> float:
+    """Return the radius (Earth radii) of a small body from uncompressed iron, rock and ice densities."""
+    volume = mass_mearth * c.M_EARTH * (cmf / h.SMALL_BODY_IRON_DENSITY
+                                        + (1.0 - cmf - wmf) / h.SMALL_BODY_ROCK_DENSITY
+                                        + wmf / h.SMALL_BODY_ICE_DENSITY)
+    return (3.0 * max(volume, 1e-30) / (4.0 * math.pi)) ** (1 / 3) / c.R_EARTH
+
+
+def rocky_radius(mass_mearth: float, cmf: float, wmf: float = 0.0) -> float:
+    """Return the radius (Earth radii) of a rocky body with a given core and water fraction.
+
+    Above 1 M⊕ the Zeng-type relation; below 0.1 M⊕, where self-compression is
+    small, uncompressed densities; in between a log-log blend of the two.
+    """
+    lo, hi = h.SMALL_BODY_BLEND_MEARTH
+    if mass_mearth >= hi:
+        return _zeng_radius(mass_mearth, cmf, wmf)
+    small = _uncompressed_radius(mass_mearth, cmf, wmf)
+    if mass_mearth <= lo:
+        return small
+    w = math.log(mass_mearth / lo) / math.log(hi / lo)
+    return small ** (1 - w) * _zeng_radius(mass_mearth, cmf, wmf) ** w
+
+
 def rocky_mass(radius_rearth: float, cmf: float, wmf: float = 0.0) -> float:
-    """Return the mass (Earth masses) of a rocky planet with a given radius and composition."""
-    return (radius_rearth / ((1.07 - 0.21 * cmf) * (1 + h.WATER_RADIUS_INFLATION * wmf))) ** 3.7
+    """Return the mass (Earth masses) of a rocky body with a given radius and composition."""
+    zeng = (radius_rearth / ((1.07 - 0.21 * cmf) * (1 + h.WATER_RADIUS_INFLATION * wmf))) ** 3.7
+    if zeng >= h.SMALL_BODY_BLEND_MEARTH[1]:
+        return zeng
+    return math.exp(brentq(lambda lm: math.log(rocky_radius(math.exp(lm), cmf, wmf) / radius_rearth),
+                           math.log(1e-12), math.log(h.SMALL_BODY_BLEND_MEARTH[1]) + 1e-9))
 
 
 def rocky_cmf(mass_mearth: float, radius_rearth: float, wmf: float = 0.0) -> float:
-    """Return the core mass fraction implied by a rocky planet's mass and radius (unclipped)."""
-    return (1.07 - radius_rearth / ((1 + h.WATER_RADIUS_INFLATION * wmf) * mass_mearth ** (1 / 3.7))) / 0.21
+    """Return the core mass fraction implied by a rocky body's mass and radius (unclipped, may leave 0–1)."""
+    if mass_mearth >= h.SMALL_BODY_BLEND_MEARTH[1]:
+        return (1.07 - radius_rearth / ((1 + h.WATER_RADIUS_INFLATION * wmf) * mass_mearth ** (1 / 3.7))) / 0.21
+    f = lambda x: rocky_radius(mass_mearth, x, wmf) - radius_rearth   # noqa: E731
+    lo, hi = -3.0, 3.0
+    if f(lo) * f(hi) > 0:
+        return lo if f(lo) < 0 else hi
+    return brentq(f, lo, hi)
 
 
 def rocky_wmf(mass_mearth: float, radius_rearth: float, cmf: float) -> float:
-    """Return the water mass fraction implied by a rocky planet's mass, radius and core fraction."""
-    return (radius_rearth / rocky_radius(mass_mearth, cmf) - 1) / h.WATER_RADIUS_INFLATION
+    """Return the water mass fraction implied by a rocky body's mass, radius and core fraction."""
+    if mass_mearth >= h.SMALL_BODY_BLEND_MEARTH[1]:
+        return (radius_rearth / rocky_radius(mass_mearth, cmf) - 1) / h.WATER_RADIUS_INFLATION
+    f = lambda x: rocky_radius(mass_mearth, cmf, x) - radius_rearth   # noqa: E731
+    lo, hi = -1.0, 1.0 - cmf
+    if f(lo) * f(hi) > 0:
+        return hi if f(hi) < 0 else lo
+    return brentq(f, lo, hi)
 
 
 def classify(mass_mearth: float, envelope: float, wmf: float) -> str:
@@ -120,8 +162,9 @@ def build_bulk(
             has_envelope = mass_mearth > h.ENVELOPE_ASSUMED_ABOVE_MEARTH
         else:
             has_envelope = radius_rearth > ROCKY_RADIUS_LIMIT_REARTH
-        if mass_mearth is not None and radius_rearth is not None and not has_envelope:
-            # Too large even for a half-water planet: must hold an envelope.
+        if (mass_mearth is not None and radius_rearth is not None and not has_envelope
+                and mass_mearth > h.SMALL_BODY_BLEND_MEARTH[0]):
+            # Too large even for a half-water planet: must hold an envelope (small bodies are taken as icy instead).
             has_envelope = radius_rearth > rocky_radius(mass_mearth, 0.0, 0.5)
     else:
         has_envelope = envelope > 1e-3
@@ -163,11 +206,12 @@ def build_bulk(
                 else:
                     cmf = implied
                     prov["body.core_mass_fraction"] = "derived"
-                if not 0.0 <= cmf <= 1.0:
+                tol = h.CMF_TOLERANCE
+                if not -tol <= cmf <= 1.0 + tol:
                     issues.append(Issue("warning", "conflict", "bulk",
                                         f"mass and radius imply a core mass fraction of {implied:.2f}, "
                                         "outside the physical range 0–1"))
-                    cmf = min(max(cmf, 0.0), 1.0)
+                cmf = min(max(cmf, 0.0), 1.0)
             elif abs(implied - cmf) > 0.05:
                 issues.append(Issue("warning", "conflict", "bulk",
                                     f"mass, radius and core fraction are over-determined; "

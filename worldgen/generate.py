@@ -23,13 +23,18 @@ def generate_world(spec: PlanetSpec, resolution: int | str = "standard",
     """Return a planet with its global surface at the given grid resolution.
 
     ``snapshot_interval_myr`` stores the tectonic history at that interval
-    (simulated plate tectonics only). A spec with a culture section also gets
-    its civilisation.
+    (simulated plate tectonics only). Giants get their cloud tops instead of
+    a surface. A spec with a culture section also gets its civilisation.
     """
     state, timeline = evolve(spec, t_target_gyr)
-    surface = build_surface(state, resolution, snapshot_interval_myr, timeline)
+    if state.appearance is not None:
+        from .giants import cloud_surface
+
+        surface = cloud_surface(state, resolution)       # a giant's cloud tops stand in for a surface
+    else:
+        surface = build_surface(state, resolution, snapshot_interval_myr, timeline)
     world = World(spec=spec, state=state, surface=surface, timeline=timeline)
-    if spec.culture is not None and surface is not None:
+    if spec.culture is not None and world.has_ground:
         world = apply_culture(world)
     return world
 

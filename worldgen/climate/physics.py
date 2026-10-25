@@ -64,6 +64,7 @@ class ClimateSetting:
     albedo_fixed: bool               # the global mean albedo must equal ``albedo``
     has_water: bool                  # surface water present (liquid or frozen)
     reference_k: float               # temperature the radiation is linearised about
+    extra_flux_w_m2: float = 0.0     # absorbed non-stellar heat (a parent's glow, tides), uniform
 
     @property
     def cp(self) -> float:

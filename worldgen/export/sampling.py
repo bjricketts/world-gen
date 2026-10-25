@@ -41,7 +41,40 @@ def point_sampler(grid: SphereGrid, vectors: np.ndarray, shape: tuple[int, ...] 
     nearest = grid.nearest(vectors, k=1)[1]
     shape = tuple(shape) if shape is not None else (1, m)
     return Sampler(shape=shape, extent=extent, valid=np.ones(m, dtype=bool), nearest=nearest, neighbours=tris,
-                   weights=weights)
+                   weights=weights, vectors=vectors.astype(np.float32))
+
+
+def vector_sampler(vectors: np.ndarray, shape: tuple[int, ...] | None = None,
+                   extent: tuple[float, float, float, float] = (0.0, 1.0, 0.0, 1.0)) -> Sampler:
+    """Return a sampler that only carries unit vectors, for fields evaluated directly (a giant's cloud tops)."""
+    vectors = np.asarray(vectors, dtype=np.float32)
+    m = len(vectors)
+    zeros = np.zeros((m, 1), dtype=np.int64)
+    return Sampler(shape=tuple(shape) if shape is not None else (1, m), extent=extent, valid=np.ones(m, dtype=bool),
+                   nearest=zeros[:, 0], neighbours=zeros, weights=np.ones((m, 1)), vectors=vectors)
+
+
+def world_sampler(world, vectors: np.ndarray, shape: tuple[int, ...] | None = None,
+                  extent: tuple[float, float, float, float] = (0.0, 1.0, 0.0, 1.0)) -> Sampler:
+    """Return the sampler a world's fields need at unit vectors: vectors only for cloud tops, the grid otherwise."""
+    if world.cloud_tops:
+        return vector_sampler(vectors, shape, extent)
+    return point_sampler(world.grid, vectors, shape, extent)
+
+
+def equirect_vectors(width: int) -> tuple[np.ndarray, tuple[int, int], tuple[float, float, float, float]]:
+    """Return the pixel-centre unit vectors, shape and extent of a global equirectangular raster."""
+    rows, cols = width // 2, width
+    _, _, vectors = lonlat_vectors(rows, cols)
+    half = np.pi * EARTH_RADIUS_M
+    return vectors, (rows, cols), (-half, half, -half / 2, half / 2)
+
+
+def world_equirect_sampler(world, width: int) -> Sampler:
+    """Return the equirectangular raster sampler suited to a world (cached for grid worlds)."""
+    if world.cloud_tops:
+        return vector_sampler(*equirect_vectors(width))
+    return equirect_sampler(world.grid.size, width)
 
 
 @lru_cache(maxsize=4)

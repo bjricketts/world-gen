@@ -61,7 +61,7 @@ def zoom_region(world, lat_deg: float, lon_deg: float, *, resolution_m: Optional
     ``cache_dir`` a region built before for the same world and request is
     loaded from there, and a new one is stored there.
     """
-    if world.surface is None:
+    if not world.has_ground:
         raise ValueError(f"{world.state.name} has no solid surface to zoom into")
     block = region_block(world, lat_deg, lon_deg, resolution_m, level, half_width_km, nodes_per_tile)
     return zoom_block(world, block, nodes_per_tile=nodes_per_tile, ruggedness=ruggedness, cache_dir=cache_dir)
@@ -81,7 +81,7 @@ def square_block(world, lat_deg: float, lon_deg: float, tiles: int, level: int) 
 def zoom_block(world, block: tuple[int, int, int, int, int, int], *, nodes_per_tile: int = NODES_PER_TILE,
                ruggedness: str = "earth", cache_dir: Optional[str | Path] = None) -> ErodedRegion:
     """Return the local map of a tile block (face, level, x0, y0, x1, y1), built or read from ``cache_dir``."""
-    if world.surface is None:
+    if not world.has_ground:
         raise ValueError(f"{world.state.name} has no solid surface to zoom into")
     if ruggedness not in RUGGEDNESS:
         raise ValueError(f"unknown ruggedness '{ruggedness}'; choose from: {', '.join(RUGGEDNESS)}")

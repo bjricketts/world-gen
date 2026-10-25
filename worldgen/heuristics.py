@@ -47,11 +47,522 @@ TIDAL_K2_ROCKY = 0.3
 TIDAL_Q_GIANT = 1e5
 TIDAL_K2_GIANT = 0.5
 
+# --- Moons and rings (milestone 11) --------------------------------------
+
+# Outermost stable moon orbits as fractions of the Hill radius: prograde from
+# Holman & Wiegert's binary integrations as applied by Barnes & O'Brien
+# (2002); retrograde from the Solar System's retrograde moons (their Table 1).
+MOON_STABLE_FRACTION_PROGRADE = 0.36
+MOON_STABLE_FRACTION_RETROGRADE = 0.50
+
+# Ring–moon boundary a_R = (3M / γρ)^(1/3) for strengthless material filling
+# its Roche lobe (γ = 1.6, as used by Hedman 2015 and Sicardy et al. 2024),
+# for porous icy material of Saturn's small moons' density and rocky
+# material of Amalthea's (Sicardy et al. 2024).
+ROCHE_GAMMA_RUBBLE = 1.6
+RING_DENSITY_ICY = 400.0
+RING_DENSITY_ROCKY = 860.0
+
+# --- Giant appearance (task 11.2) ------------------------------------------
+
+# Intrinsic luminosity at 4.5 Gyr (units of 8.710e-10 L_sun, Linder et al.'s L_J) against
+# mass (M_E): Jupiter and Saturn from their Cassini-era intrinsic fluxes, 7.485 W/m² (Li et al.
+# 2018) and 2.84 W/m² (Wang et al. 2024, over mean radii of 69,911 and 58,232 km; task 11.8);
+# ice giants at the geometric mean of Uranus (≤1.01e-3) and Neptune (9.85e-3)
+# at their mean mass, with a seeded scatter spanning the two; 5 and 10 M_J
+# from the Burrows et al. (1997) cooling tracks at 4.5 Gyr. Interpolated
+# log-log; L ∝ t^-1 with age (Linder et al. 2019).
+L_JUPITER_W = 8.710e-10 * 3.828e26
+GIANT_LUMINOSITY_TABLE = ((15.8, 3.15e-3), (95.2, 0.363), (317.8, 1.379), (1589.0, 20.4), (3178.0, 76.4))
+GIANT_LUMINOSITY_AGE_GYR = 4.5
+GIANT_LUMINOSITY_MIN_AGE_GYR = 0.01
+ICE_GIANT_LUMINOSITY_SCATTER_DEX = 0.5
+
+# Sudarsky, Burrows & Pinto (2000) class boundaries in T_eff (K); class V also
+# above the IV boundary when surface gravity is below 10 m/s².
+SUDARSKY_BOUNDARIES_K = (150.0, 350.0, 900.0, 1500.0)
+SUDARSKY_LOW_GRAVITY_M_S2 = 10.0
+# Bond albedos: class I gas giants the mean of Jupiter's 0.503 (Li et al. 2018) and Saturn's 0.41
+# (Wang et al. 2024), the Cassini-era values (task 11.8; Voyager's were 0.34); class I ice giants
+# between Neptune's 0.29 (Pearl & Conrath 1991) and Uranus's 0.349 (Irwin et al. 2025); classes II–V
+# the Sudarsky G2V fiducial values.
+GIANT_ALBEDO = {"I gas": 0.46, "I ice": 0.30, "II": 0.81, "III": 0.12, "IV": 0.03, "V": 0.55}
+# Half-width (dex in T_eff) over which the albedo blends across a class boundary.
+GIANT_ALBEDO_BLEND_DEX = 0.04
+
+# Geometric albedos in B, V, R, I (445, 551, 658, 806 nm) from Cahoy, Marley &
+# Fortney (2010) Table 4: class I gas Jupiter 1× at 5 AU, class I ice Neptune
+# 10× at 10 AU, II Jupiter 1× at 2 AU, III Jupiter 1× at 0.8 AU. Classes IV
+# and V have no model there: IV takes class III's shape and V class II's,
+# scaled to their Bond albedos (heuristic).
+GIANT_BANDS_NM = (445.0, 551.0, 658.0, 806.0)
+GIANT_GEOMETRIC_ALBEDO = {
+    "I gas": (0.609, 0.567, 0.531, 0.453),
+    "I ice": (0.388, 0.295, 0.228, 0.147),
+    "II": (0.733, 0.742, 0.727, 0.673),
+    "III": (0.556, 0.322, 0.156, 0.047),
+}
+# Belt transmission of the chromophores Cahoy's models lack (class I gas
+# giants): belts are darker and redder than zones (tuned constant).
+CHROMOPHORE_TRANSMISSION = (0.35, 0.55, 0.78, 0.95)
+ZONE_CHROMOPHORE_SHARE = 0.3         # zones carry this power of the belt tint
+BELT_SHARE = 0.5
+# Vortex colour: the chromophore tint raised to this power (redder than belts).
+VORTEX_CHROMOPHORE_POWER = 2.5
+
+# --- giant colours from composition (task 11.11) ---------------------------------
+# Heavy-element enrichment: the Solar System C/H fit log ε = 8.84 − 1.13 log10(M/M_J)
+# (Lothringer et al. 2025), plus the star's [Fe/H]; the scatter is heuristic.
+GIANT_METALLICITY_LOG_EPS_MJ = 8.84
+GIANT_METALLICITY_SLOPE = -1.13
+GIANT_METALLICITY_SCATTER_DEX = 0.2
+# Adiabat factor α of the Robinson & Catling (2012) profile: their Jupiter fit 0.85 up to
+# 10× protosolar, falling to 0.6 at 50×, which puts the ice giants' 1-bar temperatures near
+# the observed 76 and 72 K and their methane cloud at 1.5–2.5 bar (heuristic).
+GIANT_ALPHA_SOLAR = 0.85
+GIANT_ALPHA_RICH = 0.6
+GIANT_ALPHA_METALLICITY = (10.0, 50.0)
+# Aerosols, as optical depths at 800 nm; fitted to the Payne et al. (2025) spectra of the
+# four giants with two points per law (heuristic):
+GIANT_UPPER_HAZE_TAU = 0.40                 # extended small haze above the deck (all four ~0.3–0.5)
+GIANT_HAZE_SCATTER_DEX = 0.2
+# tropospheric haze over an ammonia cloud, linear in its base pressure (bar), through Jupiter and
+# Saturn as the model builds them (the haze saturates their colour above ~40)
+GIANT_TROPOSPHERIC_HAZE = ((0.61, 0.0), (1.98, 40.0))
+GIANT_TROPOSPHERIC_HAZE_MAX = 80.0
+GIANT_CHROMOPHORE_TAU = 0.042               # Jupiter's chromophore layer over an ammonia cloud
+# haze at the methane condensation level, falling to none between Uranus's and Neptune's
+# internal heat fluxes (W/m², interpolated in log)
+GIANT_METHANE_HAZE_TAU = 1.3
+GIANT_METHANE_HAZE_FLUX_W_M2 = (0.04, 0.43)
+GIANT_CLOUD_TAU = 10.0                      # the visible cloud deck
+GIANT_CLOUD_ALBEDO = 0.995
+GIANT_FLOOR_REFLECTANCE = 0.9               # below the model, relative to the cloud albedo
+GIANT_ICE_CLOUD_FLOOR_BAR = 6.0             # deep (H2S) cloud of ice giants, fixed
+GIANT_CLEAR_DECK_BAR = 30.0                 # model floor when nothing condenses
+GIANT_RT_LAYERS = 60
+GIANT_GEOMETRIC_FACTOR = 0.75               # geometric albedo over the diffuse reflectance
+GIANT_BELT_HAZE_TAU = 10.0                  # haze optical depth that halves the belt tint
+GIANT_ZONE_CLOUD_SCALE = 1.5                # ice-giant zones: thicker cloud than the disc mean
+# Classes III–V: albedo ∝ Z^−b in B, V, R, I, b from Cahoy et al. (2010) Table 4 (clear 0.8 AU
+# models, 1×→3× and 10×→30× averaged); Z clipped to this range.
+GIANT_HOT_METALLICITY_EXPONENT = (0.17, 0.29, 0.40, 0.41)
+GIANT_HOT_METALLICITY_RANGE = (0.3, 100.0)
+
+# Giants with envelope mass fraction below this look and behave like ice
+# giants (Uranus and Neptune ~0.1–0.2; Saturn and Jupiter ≳ 0.8).
+GIANT_ICE_ENVELOPE_MAX = 0.5
+
+# Speed scale U (m/s) in the Rhines length π√(2U/β): calibrated so Jupiter and
+# Saturn get ~20 jets and Uranus and Neptune 3 (Lian & Showman 2010),
+# interpolated log-linearly in envelope fraction, with a seeded scatter.
+JET_SPEED_GAS_M_S = 15.0
+JET_SPEED_ICE_M_S = 200.0
+JET_ENVELOPE_ICE = 0.15
+JET_ENVELOPE_GAS = 0.9
+JET_SPEED_SCATTER_DEX = 0.1
+JET_MAX_LATITUDE_DEG = 85.0
+# Gas giants with intrinsic heat flux above this have a prograde equatorial jet
+# (Liu & Schneider 2010: between Uranus 0.04 and Neptune 0.43 W/m²). Ice giants
+# keep a retrograde jet (water condensation, Lian & Showman 2010).
+PROGRADE_JET_MIN_FLUX_W_M2 = 0.13
+
+# Tidally locked giants: one superrotating equatorial jet as wide as the
+# equatorial deformation radius (Showman & Polvani 2011), capped at the 60°
+# their models reach; hot spot east of the substellar point (10–60° in their
+# models; middle value).
+LOCKED_JET_MAX_LATITUDE_DEG = 60.0
+HOT_SPOT_OFFSET_DEG = 30.0
+GIANT_CP_OVER_R = 3.5                # c_p / R for an H2-He atmosphere
+
+# --- Giant cloud tops (task 11.3) ------------------------------------------
+
+# Zonal wind: jets alternate in direction at the jet cores of the appearance
+# and peak at the belt–zone boundaries (Melin 2026). Equatorial peaks: Jupiter
+# ~100 m/s (Fletcher et al. 2019), Saturn ~400 m/s, Neptune −400 m/s with
+# ~250 m/s prograde at high latitude (Melin 2026); gas giants interpolate
+# log-linearly in mass between Saturn and Jupiter. Off-equatorial jet peaks
+# as a fraction of the equatorial one, and the depth of the equatorial dip
+# that makes the gas giants' double-peaked equatorial jet (Fletcher et al.
+# 2019), are tuned.
+WIND_EQUATOR_JUPITER_M_S = 100.0
+WIND_EQUATOR_SATURN_M_S = 400.0
+WIND_EQUATOR_ICE_M_S = -400.0
+WIND_HIGH_LATITUDE_ICE_M_S = 250.0
+WIND_JET_FRACTION_GAS = 0.6
+WIND_EQUATOR_DIP = 0.4
+WIND_EQUATOR_PEAK_FRACTION = 0.35    # equatorial peaks at this fraction of the first jet spacing
+WIND_LOCKED_M_S = 1000.0             # superrotating jet of hot locked giants (Showman & Polvani 2011: ~1 km/s)
+
+# Band structure: zones are anticyclonic shear (−∂u/∂y in the north), cold and
+# cloudy; belts cyclonic and warm (Fletcher et al. 2019). Contrasts are tuned.
+BAND_TEMPERATURE_CONTRAST_K = 3.0    # zone–belt difference in the upper troposphere
+BAND_RELIEF_SCALE_HEIGHTS = 0.5      # zone–belt cloud-top relief in scale heights (heuristic, for shading)
+BAND_BRIGHTNESS_CONTRAST = 0.07      # zone–belt brightness where zones and belts share a colour
+BAND_CONTRAST_SPREAD = (0.45, 1.0)   # per-band contrast drawn from this range (faded and strong belts)
+BAND_EDGE_WARP = 0.18                # band-edge waviness as a fraction of the local band width
+BAND_TURBULENCE_FROM_DEG = 45.0      # latitude above which filamentary turbulence grows (Sankar et al. 2024)
+BAND_TURBULENCE_WARP = 0.04          # its displacement (radians) at the pole
+CLOUD_NOISE_OCTAVES = 3
+# Above ~70° the banding gives way to a chaotic polar region (Melin 2026), except up to a hexagon's jet.
+POLAR_CHAOS_DEG = (65.0, 75.0)
+
+# Vortices (Sankar et al. 2024, JunoCam catalogue): sizes log-normal about
+# the deformation radius, aspect ratios log-normal about 1.5, colour classes
+# with their shares and latitude preferences. The deformation radius N H / f
+# at 45° with N H = R_s √(T/c_p) gives 1450 km on Jupiter; the calibration
+# brings it to the catalogue's 1800 km. The count per deformation area is
+# tuned (JunoCam saw only part of the planet).
+DEFORMATION_CALIBRATION = 1.24
+VORTEX_DENSITY_PER_LD2 = 0.008
+VORTEX_DENSITY_ICE_FRACTION = 0.1
+VORTEX_SIZE_MEDIAN_LD = 0.75          # semi-major axis median, in deformation radii
+VORTEX_SIZE_SIGMA = 0.8               # ln-space spread (most between 300 and 10 000 km on Jupiter)
+VORTEX_ASPECT_MEDIAN = 1.5
+VORTEX_ASPECT_SIGMA = 0.2
+VORTEX_MAX_BAND_FRACTION = 0.45       # semi-minor axis at most this fraction of the band it sits in
+VORTEX_CLASS_SHARES = {"white": 0.42, "red": 0.22, "brown": 0.09, "dark": 0.27}
+VORTEX_RELIEF_SCALE_HEIGHTS = 0.6     # anticyclones domed, cyclones dished (heuristic, for shading)
+VORTEX_RIM_DARKENING = 0.12           # darker ring at a vortex's edge (heuristic)
+ICE_BRIGHT_CLOUDS = 15                # short-lived bright clouds on ice giants (Melin 2026)
+ICE_BRIGHT_ASPECT = (3.0, 6.0)
+
+# Great ovals: one anticyclone as wide as its zone (the Great Red Spot fills
+# the gap between its bounding jets; eccentricity 0.6–0.92, Sánchez-Lavega et
+# al. 2024); dark spots on ice giants. Probabilities are tuned.
+GREAT_OVAL_PROBABILITY = 0.5
+GREAT_OVAL_LATITUDE_DEG = (15.0, 35.0)
+GREAT_OVAL_ECCENTRICITY = (0.6, 0.92)
+GREAT_OVAL_WIDTH_FRACTION = 0.9
+GREAT_DARK_SPOT_PROBABILITY = 0.5
+GREAT_DARK_SPOT_LD = 1.6              # semi-minor axis in deformation radii (heuristic)
+
+# Polar features of gas giants: a polar cyclone at each pole; a ring of
+# circumpolar cyclones at ~84° as on Jupiter, as many as fit at 5.87 radii of
+# maximum wind apart (Gavriel & Kaspi 2021; ~1000 km on Jupiter, visible
+# diameters 4000–6000 km); or a hexagon on a prograde jet near 78° as on
+# Saturn (Allison et al. 1990, via Melin 2026). Probabilities are tuned.
+POLAR_CYCLONE_RING_PROBABILITY = 0.5
+POLAR_RING_LATITUDE_DEG = 84.0
+POLAR_RING_SPACING = 5.87
+POLAR_CYCLONE_RMAX_LD = 0.55
+POLAR_CYCLONE_VISIBLE = 2.5           # visible radius in radii of maximum wind
+HEXAGON_PROBABILITY = 0.5
+HEXAGON_JET_LATITUDE_DEG = (65.0, 82.0)
+
+# Tidally locked giants: day–night temperature difference ~100 K for warm
+# giants and 500–1000 K for hot Jupiters with T_eq 1600–2500 K (Skinner & Wei
+# 2025); interpolated in T_eq between these.
+DAY_NIGHT_WARM_K = 100.0
+DAY_NIGHT_HOT_K = 750.0
+DAY_NIGHT_T_EQ_K = (1300.0, 1600.0)
+POLAR_VORTEX_LOCKED_DEG = 20.0        # radius of the anticyclonic polar vortices (heuristic)
+
+# --- Rings (task 11.4) ------------------------------------------------------
+
+# Dense rings form where weak icy material sits near 70 K (Hedman 2015): ring
+# temperature T = 283 K (1 − A)^¼ (L/L☉)^¼ (1 AU/a)^½. A planet is in the
+# window when some ring albedo between the dark and bright limits brings the
+# ring into the band below; the albedo that gives 70 K picks bright broad
+# icy rings (Saturn, A ≈ 0.66 needed) or dark narrow ringlets (Uranus, A ≈ 0.02).
+RING_TEMPERATURE_K = 70.0
+RING_TEMPERATURE_WINDOW_K = (60.0, 80.0)
+RING_ALBEDO_RANGE = (0.02, 0.7)
+RING_BROAD_ALBEDO_FROM = 0.3          # required albedo above which the dense rings are broad and bright
+DENSE_RING_PROBABILITY = 0.75         # chance of dense rings inside the window (both Solar System giants in it have them)
+DUSTY_RING_PROBABILITY = 0.9          # chance of dusty rings elsewhere (all four giants have rings)
+# Poynting–Robertson drag: τ = 4.19 Gyr (ρ/3000)(r/1 m)(a/1 AU)² (L☉/L) (Hyodo & Ida 2025). Rings need
+# 1 cm rock to last at least this long (dust is replenished, but not where PR drag clears it within a few Myr).
+RING_MIN_PR_LIFETIME_GYR = 0.01
+PR_DECAY_GYR = 4.19
+
+# Saturn-like broad rings (Miller et al. 2023): region edges as fractions of the icy Roche limit
+# (outer A edge 136 770 km of 138 760 km), optical depths and Bond albedos of the C, B, Cassini Division
+# and A rings; the B ring is split into its thinner inner part and the opaque core.
+BROAD_RING_TEMPLATE = (
+    # name, inner fraction, outer fraction, optical depth, Bond albedo, kind
+    ("C", 0.537, 0.663, 0.08, 0.18, "polluted"),
+    ("B inner", 0.663, 0.70, 1.0, 0.55, "icy"),
+    ("B", 0.70, 0.847, 3.0, 0.55, "icy"),
+    ("Cassini Division", 0.847, 0.879, 0.1, 0.18, "polluted"),
+    ("A", 0.879, 0.986, 0.5, 0.55, "icy"),
+)
+BROAD_RING_MASS_RATIO = 3e-8          # ring/planet mass (Saturn, Sicardy et al. 2024)
+CASSINI_RESONANCE_RANGE = (0.75, 0.95)  # a moon's 2:1 resonance in this span of the Roche limit sets the division
+
+# Uranus-like narrow rings (Sicardy et al. 2024; Ohtsuki 2025; Hedman 2015): 5–12 dark rings between
+# 0.81 and 1.0 of the Roche limit for ρ = 1.2 g/cm³ (the ε ring at it), widths of a few km, the
+# outermost wider; optical depths 0.3–2.5; albedo a few per cent.
+NARROW_RING_DENSITY = 1200.0
+NARROW_RING_COUNT = (5, 12)
+NARROW_RING_SPAN = (0.81, 0.995)
+NARROW_RING_WIDTH_KM = (2.0, 10.0)
+NARROW_OUTER_WIDTH_KM = (20.0, 100.0)
+NARROW_RING_TAU = (0.3, 2.5)
+NARROW_RING_ALBEDO = 0.03
+NARROW_RING_MASS_RATIO = 2e-10
+
+# Dusty rings fed by small inner moons, in planet radii. Warm (Jupiter, Sicardy et al. 2024): halo
+# 1.29–1.71, main 1.71–1.80 (τ 8e-6), gossamer 1.80–2.55 and 2.55–3.16 (τ 1e-8–1e-7). Cold (Neptune):
+# narrow dusty rings at 1.69, 2.15, 2.31 and 2.54 (τ 0.003), the outermost with arcs of τ 0.1 (Adams).
+DUSTY_WARM_TEMPLATE = (("halo", 1.29, 1.71, 1e-6), ("main", 1.71, 1.80, 8e-6),
+                       ("Amalthea gossamer", 1.80, 2.55, 1e-7), ("Thebe gossamer", 2.55, 3.16, 1e-8))
+DUSTY_COLD_TEMPLATE = (("Galle", 1.66, 1.72, 1e-4), ("Le Verrier", 2.144, 2.148, 3e-3),
+                       ("Lassell", 2.15, 2.30, 1e-4), ("Adams", 2.535, 2.539, 3e-3))
+DUSTY_COLD_FROM_T0_K = 70.0           # dusty rings are Neptune-like below this zero-albedo temperature
+RING_ARC_TAU = 0.1
+RING_ARC_COUNT = (2, 5)
+RING_ARC_LENGTH_DEG = (4.0, 15.0)
+DUSTY_RING_MASS_RATIO = 5e-22
+DUSTY_RING_ALBEDO = 0.05
+
+# Relative reflectance in B, V, R, I of ring materials (shapes only; the albedo sets the level):
+# icy rings are reddish from a UV absorber, polluted regions flatter (Miller et al. 2023); dark rings
+# neutral (Ohtsuki 2025); dust reddish (heuristic).
+RING_MESH_SEGMENTS = 720               # azimuthal segments of a ring mesh on the globe
+RING_SPECTRA = {"icy": (0.62, 0.92, 1.0, 1.02), "polluted": (0.85, 0.95, 1.0, 1.03), "dark": (1.0, 1.0, 1.0, 1.0),
+                "dusty": (0.75, 0.9, 1.0, 1.05)}
+
+# --- Moon systems (task 11.5) ------------------------------------------------
+# Gas-dominated giants take a Jovian or Saturnian architecture of regular moons after Sasaki, Stewart & Ida
+# (2010): a planet that opens a gap in its star's disc keeps 4–5 similar moons, the inner ones in resonance
+# (four most likely, 39 of 100 runs; 4 or 5 in 80%); one that does not keeps one dominant icy moon (67%).
+# The gap criterion is Crida et al. (2006): 3H/(4R_H) + 50/(qℛ) ≤ 1, ℛ = 1/(α h²), for a nebula of
+# aspect ratio h at the planet (0.05 at 5.2 AU as in their runs, ∝ a^(1/4), heuristic) and α (heuristic).
+NEBULA_ASPECT_RATIO_5AU = 0.05
+NEBULA_ASPECT_SLOPE = 0.25
+NEBULA_ALPHA = 1e-3
+# Jovian architecture: counts (the split of the remaining 20% is heuristic); masses log-normal about the
+# Galilean mean, 4.9e-5 M_p, with the Galilean scatter; the innermost at Io's 5.9 R_p; the inner three in
+# 2:1 resonances; the fourth trapped in half of the runs, otherwise at a period ratio about Callisto's;
+# later moons untrapped beyond (Sasaki et al. set I'). Two moons are rocky in more than half the runs.
+JOVIAN_MOON_COUNTS = {3: 0.10, 4: 0.39, 5: 0.41, 6: 0.10}
+JOVIAN_MOON_MASS = 4.9e-5             # median mass, fraction of the planet
+JOVIAN_MOON_MASS_DEX = 0.2
+JOVIAN_INNER_ORBIT_RP = 5.9
+JOVIAN_ORBIT_DEX = 0.05
+JOVIAN_OUTER_TRAPPED = 0.5
+JOVIAN_FREE_PERIOD_RATIO = (2.1, 2.6)
+JOVIAN_EXTRA_SPACING = (1.15, 1.3)    # fifth and sixth moons: orbit ratio near Sasaki's 5-Hill-radius trap spacing
+JOVIAN_ROCKY_COUNTS = {1: 0.25, 2: 0.55, 3: 0.20}
+# Saturnian architecture: the number of moons above 1e-5 M_p (67% one; the rest split heuristically); the
+# dominant moon about Titan (2.4e-4 M_p at 20.3 R_p, within 1σ of the runs; scatter heuristic); extra large
+# moons inward of it at Sasaki's 1e-5–1e-4.
+SATURNIAN_MOON_COUNTS = {1: 0.67, 2: 0.22, 3: 0.08, 4: 0.03}
+SATURNIAN_MOON_MASS = 2.4e-4
+SATURNIAN_MOON_ORBIT_RP = 20.3
+SATURNIAN_MASS_DEX = 0.2
+SATURNIAN_ORBIT_DEX = 0.1
+SATURNIAN_EXTRA_MASS = (1e-5, 1e-4)
+SATURNIAN_EXTRA_SPACING = (1.3, 2.0)  # orbit ratio between successive extra moons (heuristic)
+REGULAR_ROCHE_MARGIN = 3.0           # innermost regular moon at least this many fluid Roche radii out (Io: 3.4)
+DISC_OUTER_FRACTION = 0.9             # the dominant Saturnian moon stays inside this fraction of the disc
+CIRCUMPLANETARY_DISC_RP = 30.0        # infall radius r_c (Canup & Ward 2002; Sasaki et al. 2010)
+# Water fractions: icy regular moons as Ganymede, Callisto and Titan; rocky ones as Io and Europa (heuristic
+# reading of their densities). Ice is available only where the nebula is below 160 K.
+ICY_MOON_WATER_FRACTION = (0.40, 0.55)
+ROCKY_MOON_WATER_FRACTION = (0.0, 0.10)
+ICE_CONDENSATION_K = 160.0
+# Moons spread from a ring past the Roche limit (Crida & Charnoz 2012): each moon twice the mass of the
+# next one in; q ∝ Δ^(9/5) inside the 2:1 point Δ = 0.587 and ∝ (1+Δ)^3.9 beyond; the outermost reached by
+# tides over the planet's age, r = (K q t)^(2/13), K = 39 k₂ √(GM) R⁵ / 2Q; the ring disc holds 1.5 times
+# the moons' mass. The disc mass ratio follows the ring regime, from the Solar System giants' moons
+# (Saturn's inside Titan, Uranus's regular moons, Neptune's inner moons, Jupiter's inner moons).
+RING_DISC_MASS = {"broad": 1.3e-5, "narrow": 1.6e-4, "dusty cold": 7e-7, "dusty warm": 2e-9}
+RING_DISC_MASS_DEX = 0.3
+RING_DISC_MOON_RATIO = 1.5
+RING_CHAIN_DELTA_21 = 0.587
+RING_CHAIN_MIN_DELTA = 0.05
+RING_CHAIN_MASS_DEX = 0.15            # scatter of each chain moon's mass (heuristic)
+RING_CHAIN_CLEARANCE = 1.5            # chain moons stay inside the innermost disc moon by this orbit ratio
+MOON_MIN_MASS_KG = 1e16               # smaller moons are not listed
+# Water fraction of ring-born moons by ring regime (heuristic reading of the densities of Saturn's
+# mid-sized moons, Uranus's moons, and Jupiter's rocky inner moons).
+RING_MOON_WATER_FRACTION = {"broad": (0.6, 0.9), "narrow": (0.4, 0.6), "dusty cold": (0.4, 0.6),
+                            "dusty warm": (0.0, 0.1)}
+# Drawn moons' densities mix ice and rock at these densities (heuristic; gives Ganymede, Titan and Io
+# within 10%).
+MOON_ICE_DENSITY = 1300.0
+MOON_ROCK_DENSITY = 3400.0
+# Impact moons of rocky planets (Elser et al. 2011): about half of planets have a moon-forming impact
+# (88 events among ~180 planets); the disc is m_disk/m_tot = 2.8 (0.1/γ)^1.25 (m_pass/m_tot)² (Canup 2008,
+# for 0.4 < b < 0.8), the moon 10–55% of the disc (Kokubo et al. 2000). γ log-uniform over 0.01–0.5 is
+# calibrated so ~1 in 10 planets hold a moon above half the Moon's mass (Elser: 1 in 12, 1 in 45 to 1 in 4).
+IMPACT_MOON_PROBABILITY = 0.49
+IMPACT_GAMMA_RANGE = (0.01, 0.5)
+IMPACT_B_RANGE = (0.4, 0.8)
+IMPACT_EFFICIENCY = (0.10, 0.55)
+IMPACT_CORE_RADIUS = 0.5              # impactor core radius / impactor radius, core twice the mantle density
+IMPACT_MOON_DENSITY = 3340.0          # mantle material, as the Moon
+IMPACT_MOON_START = 1.3               # moons accrete at 1.3 times the Roche limit (Kokubo et al. 2000)
+IMPACT_MOON_ECCENTRICITY = (0.0, 0.06)
+IMPACT_MOON_INCLINATION_DEG = (0.0, 6.0)
+REGULAR_MOON_ECCENTRICITY = (0.0, 0.01)
+REGULAR_MOON_INCLINATION_DEG = (0.0, 0.5)
+
+# --- Captured moons and impact systems of giants (task 11.7b) ------------------
+# Impact systems of ice giants (Woo et al. 2021): a 3 M⊕ rocky impactor on proto-Uranus leaves a disc that
+# spreads and forms ~1e-4 M_p of moons, the mass rising outward from ~4 to 20 R_p, about half ice
+# (6.3e-5 ice, 5.5e-5 rock). The outcome is drawn about Uranus's five large moons (masses from JPL GM,
+# orbits from the NSSDC fact sheet, in R_U = 25,559 km), with heuristic scatter. Half of ice giants have
+# one (heuristic: one of the Solar System's two). An ice giant with an impact system grows no ring-born
+# chain beside it (Woo et al.'s disc already spreads from the Roche limit).
+URANIAN_IMPACT_PROBABILITY = 0.5
+URANIAN_MOONS = ((5.08, 7.4e-7), (7.47, 1.44e-5), (10.41, 1.47e-5), (17.07, 3.92e-5), (22.83, 3.54e-5))  # (R_p, M_p)
+URANIAN_MASS_DEX = 0.2
+URANIAN_ORBIT_DEX = 0.05
+URANIAN_WATER_FRACTION = (0.45, 0.60)
+# Binary-exchange capture (Agnor & Hamilton 2006; Williams 2013; Williams & Zugger 2024). Every giant meets
+# one binary deep enough to be split (heuristic). The binary's barycentre passes at q log-uniform over
+# 4–32 R_p (Nogueira et al. 2011, fig. 5) at 2–10% of the planet's orbital speed (Nogueira et al.: captures
+# fall off above 10%; Williams & Zugger's 1.5–3 km/s at 1 AU; lower bound heuristic). Its members are
+# log-uniform over the planetesimals of the planet's region (heuristic): Triton- and Pluto-class bodies
+# beyond the ice line, embryos inside it. One member is captured if lighter than Williams & Zugger's eq. 1,
+# m₁ < 3 M_p [Gπ m₂ / (2 q v_enc (v_enc − v_peri))]^(3/2) − m₂, on an orbit with apoapsis at 0.5 (prograde)
+# or 0.9 (retrograde) of the Hill radius; prograde and retrograde captures are equally likely (Porter &
+# Grundy 2011).
+CAPTURE_PERIAPSIS_RP = (4.0, 32.0)
+CAPTURE_SPEED_FRACTION = (0.02, 0.10)
+CAPTURE_BODY_MEARTH_ICY = (1e-4, 1e-2)
+CAPTURE_BODY_MEARTH_ROCKY = (1e-3, 1.0)
+CAPTURE_APOAPSIS_HILL = {"prograde": 0.5, "retrograde": 0.9}
+CAPTURE_RETROGRADE_SHARE = 0.5
+# Survival of the loose orbit through Kozai cycles and tidal friction, by star mass (Porter & Grundy 2011,
+# table 1, averaged over their moons and planets): the rest escape or hit the planet.
+CAPTURE_SURVIVAL_BY_STAR = ((0.47, 0.235), (1.0, 0.45), (1.7, 0.65))   # (M☉, surviving share)
+# Survival among existing regular moons (Rufu & Canup 2017): a Triton of 2.09e-4 M_N survived 88%, 40%
+# and 12% of runs against systems of 0.35e-4, 1.04e-4 and 3.13e-4 M_N, and was then usually the last large
+# moon. Interpolated (and extrapolated, clipped) linearly in the log of captured / regular mass; a
+# survivor clears the regular moons (ring-born inner moons stay), a failed capture leaves them.
+CAPTURE_AMONG_MOONS = ((2.09 / 3.13, 0.12), (2.09 / 1.04, 0.40), (2.09 / 0.35, 0.88))
+# The orbit circularises at constant angular momentum, a = q(1 + e) (Goldreich et al. 1989; Nogueira et
+# al. 2011), then migrates by the planet's tides: outward if prograde, inward if retrograde. Final
+# eccentricity and tilt from the planet's orbital plane are heuristic (Porter & Grundy: near-coplanar).
+CAPTURED_FINAL_ECCENTRICITY = (0.0, 0.01)
+CAPTURED_TILT_DEG = (0.0, 30.0)
+CAPTURED_ICY_WATER_FRACTION = (0.25, 0.50)   # Triton and Pluto are about 70% rock (heuristic range)
+
+# --- Moons through the rocky pipeline (task 11.6) -----------------------------
+# Energy on a moon (Heller & Barnes 2013, eq. 22; Heller 2012): starlight lost in eclipses, starlight
+# reflected by the parent (π R_p² α_p / 2a² of the direct flux), the parent's thermal emission
+# R_p² σ T_p⁴ / a² absorbed over the moon's sphere ((1 − α_IR)/4, with T_p⁴ = T_eq⁴ + T_int⁴ as in Heller
+# & Zuluaga 2013), and tidal heat. The moon absorbs the parent's infrared with albedo 0.05 (Heller & Zuluaga).
+MOON_INFRARED_ALBEDO = 0.05
+# Tidal heat of a synchronous moon, Ė = (21/2) G^1.5 (k₂/Q) M_p^2.5 R⁵ e² / a^7.5 (Tjoa et al. 2020, eq. 1,
+# after Henning et al. 2009); Io's k₂/Q ≈ 0.015, Enceladus 0.003–0.013 (via Tjoa et al.).
+# Hazard and limits: Io's 2 W/m² of tidal heat drives global volcanism (Heller & Zuluaga 2013).
+TIDAL_HAZARD_FLUX_W_M2 = 2.0
+# Parent's magnetosphere (Heller & Zuluaga 2013, eq. 1): R_S = (μ₀ f₀² / 8π²)^(1/6) 𝓜^(1/3) P_sw^(-1/6),
+# f₀ = 1.3. The magnetopause is a half sphere of radius R_M = 1.2 R_S whose centre lies R_M − R_S behind the
+# planet, continued by a tail cylinder of that radius; 1.2 makes 20% of an orbit at 2 R_S lie inside, as
+# they state. The stellar wind's dynamic pressure is a present solar value at 1 AU scaled by distance⁻²
+# (heuristic; the star's type and the age dependence of Grießmeier et al. 2007 are not used).
+MAGNETOPAUSE_FORM_FACTOR = 1.3
+MAGNETOPAUSE_SPHERE_RATIO = 1.2
+SOLAR_WIND_PRESSURE_1AU_PA = 2.0e-9
+# Dipole moments (A m²) of the Solar System planets, interpolated log-log in mass for parents without one
+# (heuristic; Heller & Zuluaga's dynamo scaling reproduces them within a factor of 2–6). Rocky parents
+# with a dynamo take Earth's moment scaled by mass; without one, none.
+PLANET_DIPOLE_MOMENTS = ((1.0, 8.0e22), (14.5, 3.9e24), (17.1, 2.2e24), (95.2, 4.6e25), (317.8, 1.56e27))
+# Ice shells over subsurface oceans (Tjoa et al. 2020, eq. 9, conductive): the depth where conduction from
+# the surface temperature reaches the melting point with k(T) = 632/T + 0.38 − 0.00197 T W/m/K (Andersson &
+# Inaba 2005, as corrected in Carnahan et al. 2021; Tjoa et al. print 0.0197). A melting depth beyond 30%
+# of the radius means frozen through (Tjoa et al., after Hussmann et al. 2006). The shell would convect
+# above a basal Rayleigh number of 10⁶ (Carnahan et al. 2021; Shibley & Goodman 2023) with ρ = 917 kg/m³,
+# c_p = 2106 J/kg/K, k = 2.25 W/m/K (Carnahan et al., Table 1), α = 1.7e-4 /K and η = 10¹⁴ Pa s (the middle
+# of their 10¹³–10¹⁵ range).
+ICE_MELTING_K = 273.15
+ICE_SHELL_MAX_DEPTH_FRACTION = 0.3
+ICE_SHELL_DENSITY = 917.0
+ICE_SHELL_CP = 2106.0
+ICE_SHELL_CONDUCTIVITY = 2.25
+ICE_EXPANSION = 1.7e-4
+ICE_BASAL_VISCOSITY = 1e14
+ICE_CRITICAL_RAYLEIGH = 1e6
+SUBSURFACE_WATER_DENSITY = 1000.0
+
+# --- Habitable moons (task 11.7) ------------------------------------------------
+# Archetype priors: stars of 0.5–1.2 M☉ (moons of planets around stars below ~0.5 M☉ are disturbed by the
+# star; Heller 2012); orbits of 8–30 parent radii (beyond the habitable edge for small eccentricities,
+# Heller & Barnes 2013) and e of 1e-4–0.02. Two origins with heuristic shares: regular moons from the
+# giant's disc take 3e-5–1e-4 of the parent's mass (the regular-moon budget of Canup & Ward 2006), so only
+# 3–13 M_J parents give them habitable sizes (Dencs et al. 2025 form Mars-to-Earth-mass moons around
+# 10 M_J); captured moons take 0.1–1 M⊕ around 0.3–3 M_J parents (within Williams & Zugger's eq. 1 for
+# embryo binaries). Captured moons end at a = q(1 + e) ≈ 2q for q of 4–32 R_p (Nogueira et al. 2011), and
+# closer, ~7 R_p, in Porter & Grundy's (2011) habitable-zone runs, hence 6–60 R_p; half are retrograde,
+# tilted up to 30° from the parent's equator plane (heuristic). Giant impacts on giants make moons of at
+# most ~1e-4 of the planet's mass (Woo et al. 2021), too small for this archetype.
+HABITABLE_MOON_STAR_MSUN = (0.5, 1.2)
+HABITABLE_MOON_ORIGINS = {"regular": 0.4, "captured": 0.6}
+HABITABLE_MOON_REGULAR_PARENT_MEARTH = (1000.0, 4000.0)
+HABITABLE_MOON_MASS_RATIO = (3e-5, 1e-4)
+HABITABLE_MOON_CAPTURED_PARENT_MEARTH = (100.0, 1000.0)
+HABITABLE_MOON_CAPTURED_MEARTH = (0.1, 1.0)
+HABITABLE_MOON_ORBIT_RP = (8.0, 30.0)
+HABITABLE_MOON_CAPTURED_ORBIT_RP = (6.0, 60.0)
+HABITABLE_MOON_ECCENTRICITY = (1e-4, 0.02)
+# A parent's own heat for its glow: giants below this mass are taken as ice giants (Saturn's mass,
+# heuristic, since a moon's spec gives no envelope fraction).
+JOVIAN_MIN_MEARTH_FOR_GLOW = 50.0
+
+# --- Solar System validation (task 11.8) ---------------------------------------
+# Melt feedback: tides that, at the dissipation of a partially molten interior, would exceed a moon's
+# radiogenic heat keep it partially molten (or its shell decoupled over an ocean), with Io's measured
+# k₂/Q (Lainey et al. 2009; within 2σ of Juno's Im(k₂), Park et al. 2025, via Paris et al. 2026, whose
+# models keep Io's melt below ~20%). The threshold is heuristic. It gives Io ~1e14 W and Enceladus 22 GW
+# (observed 15.8 ± 3.1 GW, Howett et al. 2011 via Lainey et al. 2012).
+TIDAL_MOLTEN_K2_OVER_Q = 0.015
+# Icy-body air. Titan's air holds 78× more volatiles per unit mass than Earth's; its N₂ most likely came
+# from accreted ammonia ice (Nixon 2024). Cold worlds (equilibrium temperature below
+# COLD_NITROGEN_METHANE_BELOW_K) scale the default inventory by 1 + k × water fraction, with k set so
+# Titan (water 0.45) reaches its 1.467 bar (Fulchignoni et al. 2005, via Kimura 2025) without scatter.
+ICY_NITROGEN_PER_WATER = 255.0
+# Thick N₂–CH₄ air is hazy: its Bond albedo is the haze's, 0.25–0.27 for Titan over the Cassini epoch
+# (Creecy et al. 2021); thinner air keeps the surface's albedo (threshold heuristic).
+HAZE_ALBEDO = 0.26
+HAZE_MIN_BAR = 0.1
+# N₂ ice caps the air of colder worlds at its vapour pressure (Triton's 14.5 µbar is in vapour-pressure
+# equilibrium, Sicardy et al. 2024): Grundy et al. (2024) Table 2, Lobo & Ferreira form
+# ln p[bar] = A − B/T + C ln T + D₂T + D₃T² + D₄T³, α below 35.6 K and β up to the 63.15 K triple point.
+N2_VAPOUR_ALPHA = (-3.92, 805.3, 4.54794, -0.08002, -5.347e-5, 0.0)
+N2_VAPOUR_BETA = (9.4928, 857.5053, 1.00304, -0.04581, 2.630e-4, -1.210e-6)
+N2_ALPHA_BETA_K = 35.6
+N2_TRIPLE_K = 63.15
+
+# --- Moon calibration fixes (2026-10-25; MOON_CALIBRATION.md) -------------------
+# Moons whose tides work an ice shell over an ocean: water-rich (at least this fraction) and frozen
+# (equilibrium temperature at the thin-air albedo below this; heuristic).
+ICE_SHELL_WORLD_MIN_WATER = 0.05
+ICE_SHELL_WORLD_BELOW_K = 180.0
+# Their k₂/Q, log-log in x = μ_ice / (ρ_ice g R) between Europa (x 1.59; −Im k₂ 3e-4–2.5e-3, Bagheri et al.
+# 2026, central 1e-3) and Enceladus (x 115; |k₂| 0.027 at a 34° lag, so 0.015, Bagheri et al. 2025);
+# μ_ice = 3 GPa (Bagheri et al. 2025: 2–4 GPa). The interpolation is heuristic (two points).
+ICE_SHELL_RIGIDITY_PA = 3.0e9
+ICE_SHELL_DISSIPATION_ANCHORS = ((1.594, 1.0e-3), (114.9, 0.015))
+ICE_SHELL_DISSIPATION_MIN = 3.0e-4
+# The ice shell conducts as solid ice only below a porous, fractured lid: heat crosses the lid as if the
+# surface were at this temperature (Shoemaker et al. 1982: ~130 K; Nimmo et al. 2003: ~140 K, where pores
+# close; both via Singer et al. 2023).
+ICE_LID_EFFECTIVE_K = 135.0
+
+# Parent rotation assumed when a moon's spec does not give it.
+PARENT_ROTATION_GIANT_H = 10.0
+PARENT_ROTATION_ROCKY_H = 24.0
+
 # Locked planets with eccentricity above this settle in a 3:2 spin-orbit
 # resonance (as Mercury) instead of synchronous rotation.
 RESONANCE_ECCENTRICITY = 0.1
 
 # --- Bulk -----------------------------------------------------------------
+# Small rocky bodies (task 11.6): below 0.1 M⊕ radii follow uncompressed densities of iron, rock and ice
+# (heuristic; from their radii these give the Moon a core fraction of 0, Io 0.06, Mars 0.24 and Mercury
+# 0.66), blended log-log into the Zeng-type relation by 1 M⊕. Implied core fractions within 0.1 of 0–1
+# are clipped without a warning.
+SMALL_BODY_BLEND_MEARTH = (0.1, 1.0)
+SMALL_BODY_IRON_DENSITY = 7900.0
+SMALL_BODY_ROCK_DENSITY = 3400.0
+SMALL_BODY_ICE_DENSITY = 1300.0
+CMF_TOLERANCE = 0.1
 
 # Radius inflation of a rocky planet by a water layer:
 # R = R_rock * (1 + WATER_RADIUS_INFLATION * water_mass_fraction).
@@ -1689,4 +2200,26 @@ MESH_ERROR_FRACTION = 0.05
 # and how far a draped region is raised above the globe, in metres before exaggeration, so it draws over the
 # globe tiles beneath it (heuristic).
 GLOBE_EXAGGERATION = 20.0
+GLOBE_CLOUD_EXAGGERATION = 3.0          # cloud-top relief of giants is shading only
 GLOBE_REGION_LIFT_M = 5.0
+
+# --- System diagram and 3D system scene (task 11.9) ----------------------------
+# Diagram: moon markers scale with log radius; colours by type (heuristic palette).
+SYSTEM_MOON_MARKER_PT = (3.0, 14.0)         # marker size (points) for moons of 10 km and 3000 km radius
+SYSTEM_MOON_COLOURS = {"rocky": "#a0785a", "icy": "#b9d3e8", "ocean": "#4f8fc9", "air": "#d9a441",
+                       "highlight": "#e0402a"}
+SYSTEM_ICY_WATER_FRACTION = 0.1             # drawn moons with more water than this are drawn icy
+SYSTEM_LABEL_SPACING = 0.07                 # diagram moon labels closer than this fraction of the half-width are dropped
+SYSTEM_RING_MIN_ALPHA = 0.06               # faintest drawn ring (dusty rings of τ ~ 1e-6 stay just visible)
+# Scene: compressed scale keeps true distances out to past the rings, then logarithmic beyond,
+# r' = r₀ (1 + g ln(r/r₀)), and inflates moon radii to at least a share of the planet's, ∝ r^(1/3).
+SCENE_COMPRESS_FROM_RP = 2.5                # r₀, or 1.05 × the outermost ring if larger
+SCENE_COMPRESS_GAIN = 1.0
+SCENE_MOON_RADIUS_RP = 0.15                 # a 1000 km moon drawn this many planet radii across (compressed)
+SCENE_RING_SEGMENTS = 720
+SCENE_RING_RADIAL_STEPS = 16                # steps across each ring, so the planet's shadow edge is smooth
+SCENE_AMBIENT = 0.03                        # light on the night side, so the shape stays visible
+SCENE_MOON_SPHERE_RESOLUTION = 48
+SCENE_CAMERA_DISTANCE = 3.4                # default camera distance in drawn system extents (30° view, 4:3 window; a moon at
+                                            # greatest elongation stays in frame)
+SCENE_MOON_EXAGGERATION = 3.0              # relief exaggeration of kept moon surfaces (small globes look spiky at 20×)

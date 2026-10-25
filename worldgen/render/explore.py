@@ -29,6 +29,10 @@ EXPLORER_WIDTH = 900
 def available_fields(world) -> list[str]:
     """Return the map fields a world can show: physical ones its surface has, and its culture's and history's."""
     surface = world.surface
+    if world.cloud_tops:
+        from .clouds import CLOUD_FIELDS
+
+        return list(CLOUD_FIELDS)
     needs = {"ice": "ice_thickness", "biomes": "biome", "koppen": "koppen", "rainfall": "precipitation"}
     out = [f for f in PHYSICAL_FIELDS if needs.get(f, "elevation") in surface]
     civ = world.culture

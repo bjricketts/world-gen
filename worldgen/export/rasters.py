@@ -10,7 +10,7 @@ import numpy as np
 
 from .crs import equirect_geotransform, planet_crs_wkt
 from .fields import ExportField, export_field
-from .sampling import equirect_sampler
+from .sampling import world_equirect_sampler
 from .writers import write_raster
 
 DEFAULT_WIDTH = 2048
@@ -54,7 +54,7 @@ def global_raster(world, field: str = "elevation", width: int = DEFAULT_WIDTH,
     """
     world = _world(world, epoch)
     spec = export_field(world, field)
-    sampler = equirect_sampler(world.grid.size, width)
+    sampler = world_equirect_sampler(world, width)
     data = spec.sample(sampler, world.surface)
     rows, cols = sampler.shape
     meta = _meta(world, field, rows, cols, epoch)
@@ -73,7 +73,7 @@ def global_colours(world, field: str = "elevation", width: int = DEFAULT_WIDTH, 
     world = _world(world, epoch)
     name, option = split_field(field)
     month = int(option) if name in ("temperature", "rainfall") and option is not None else None
-    sampler = equirect_sampler(world.grid.size, width)
+    sampler = world_equirect_sampler(world, width)
     rgba = field_colours(world, name if month is not None else field, sampler, month=month, hillshade=hillshade)
     rows, cols = sampler.shape
     meta = _meta(world, field, rows, cols, epoch)

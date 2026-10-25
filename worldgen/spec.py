@@ -69,6 +69,7 @@ class BodySpec(_Section):
     radiogenic_abundance: Param = None   # heat-producing elements relative to Earth
     tidal_heating_w: Param = None
     tidal_q: Param = None                # tidal dissipation quality factor
+    atmospheric_metallicity: Param = None   # giants: C/H of the envelope relative to protosolar
 
 
 class InteriorSpec(_Section):
@@ -142,6 +143,73 @@ class HistorySpec(_Section):
         return v
 
 
+class ParentSpec(_Section):
+    """The planet a moon orbits, and the moon's orbit about it. Present only in a moon's spec.
+
+    The ``orbit`` section then describes the parent's orbit about the star.
+    """
+
+    name: Optional[str] = None
+    mass_mearth: Param = None
+    radius_rearth: Param = None          # default: Chen & Kipping mean radius for the mass
+    rotation_period_h: Param = None
+    obliquity_deg: Param = None          # the parent's; the moon orbits in its equatorial plane
+    bond_albedo: Param = None
+    tidal_q: Param = None
+    love_number_k2: Param = None
+    semi_major_axis_rp: Param = None     # the moon's orbit, in parent radii
+    eccentricity: Param = None
+    inclination_deg: Param = None        # to the parent's equator
+    effective_temperature_k: Param = None   # the parent's glow; default: its equilibrium temperature
+    magnetic_moment_am2: Param = None    # the parent's dipole; default: by mass from the Solar System planets
+    moon_origin: Optional[Literal["regular", "captured", "impact"]] = None   # how the moon came to orbit it
+
+
+class MoonEntry(BaseModel):
+    """A moon listed by the user in a planet's system."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: Optional[str] = None
+    mass_mearth: float
+    radius_rearth: Optional[float] = None
+    water_mass_fraction: float = 0.0
+    semi_major_axis_rp: float
+    eccentricity: float = 0.0
+    inclination_deg: float = 0.0
+    retrograde: bool = False
+
+
+class RingEntry(BaseModel):
+    """A ring listed by the user in a planet's system."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: Optional[str] = None
+    inner_radius_rp: float
+    outer_radius_rp: float
+    optical_depth: float = 0.5
+    bond_albedo: float = 0.5
+    kind: Literal["icy", "polluted", "dark", "dusty"] = "icy"
+
+    @model_validator(mode="after")
+    def _ordered(self):
+        """Require the inner edge inside the outer edge and outside the planet."""
+        if not 1.0 < self.inner_radius_rp < self.outer_radius_rp:
+            raise ValueError("a ring needs 1 < inner_radius_rp < outer_radius_rp")
+        return self
+
+
+RING_REGIMES = ("auto", "none", "broad", "narrow", "dusty warm", "dusty cold")
+
+
+class SystemSpec(_Section):
+    """A planet's moons and rings. Moons left unset are drawn (an empty list means none); rings follow the regime or a list."""
+
+    moons: Optional[list[MoonEntry]] = None
+    rings: Union[Literal["auto", "none", "broad", "narrow", "dusty warm", "dusty cold"], list[RingEntry]] = "auto"
+
+
 class PriorSpec(_Section):
     """How unset parameters are drawn."""
 
@@ -178,6 +246,16 @@ class PlanetSpec(BaseModel):
     history: HistorySpec = HistorySpec()
     priors: PriorSpec = PriorSpec()
     culture: Optional[CultureSpec] = None   # inhabitants placed after the planet is built (DESIGN 4.8)
+    system: SystemSpec = SystemSpec()       # moons and rings (DESIGN 4.12)
+    parent: Optional[ParentSpec] = None     # set when the body is a moon (DESIGN 4.12)
+
+    @model_validator(mode="after")
+    def _moon_needs_parent_orbit(self):
+        """Reject moons listed around a moon (the parent's mass and orbit may come from a moon archetype)."""
+        if self.parent is not None:
+            if self.system.moons:
+                raise ValueError("a moon cannot list moons of its own")
+        return self
 
 
 # Fields describing the planet's present state rather than its initial
@@ -261,6 +339,7 @@ body:
   # radiogenic_abundance: 1.0
   # tidal_heating_w: 0
   # tidal_q: 100                  # tidal dissipation; lower means faster tidal locking
+  # atmospheric_metallicity: 10   # giants: envelope C/H relative to protosolar (default: mass trend)
 
 interior: {}
   # tectonic_regime: mobile_lid   # mobile_lid | stagnant_lid | episodic | heat_pipe | inactive
@@ -309,6 +388,36 @@ atmosphere: {}
   # surface_temperature_k: 290
   # volatile_richness: 1.0
   # weathering_target_k: 288      # temperature CO2 regulation settles at (plate tectonics + water)
+
+# system:                         # moons and rings; moons left unset are drawn (Jovian or Saturnian regular moons,
+#                                 # ring-born moons, or an impact moon for rocky planets); moons: [] means none
+#   moons:
+#     - name: Selene
+#       mass_mearth: 0.0123
+#       radius_rearth: 0.273      # default: rocky mass–radius relation with the water fraction
+#       water_mass_fraction: 0.0
+#       semi_major_axis_rp: 60.3  # in planet radii
+#       eccentricity: 0.055
+#       inclination_deg: 5.1
+#       retrograde: false
+#   rings: auto                   # auto (from the ring temperature), none, broad, narrow, 'dusty warm',
+#                                 # 'dusty cold', or a list:
+#   # rings:
+#   #   - name: Broad
+#   #     inner_radius_rp: 1.3
+#   #     outer_radius_rp: 2.2
+#   #     optical_depth: 1.0
+#   #     bond_albedo: 0.55
+#   #     kind: icy                 # icy, polluted, dark or dusty
+
+# parent:                         # makes this body a moon; 'orbit' is then the parent's orbit about the star
+#   name: Jove
+#   mass_mearth: 317.8
+#   radius_rearth: 11.2           # default: Chen & Kipping radius for the mass
+#   rotation_period_h: 9.9
+#   obliquity_deg: 3.1            # the moon orbits in the parent's equatorial plane
+#   semi_major_axis_rp: 9.6       # the moon's orbit, in parent radii
+#   eccentricity: 0.009
 
 # culture:                        # inhabitants, placed after the planet is built; can also be its own file
 #   # seed: 7                     # redraw the culture alone (default: the planet seed)

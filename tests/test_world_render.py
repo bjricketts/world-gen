@@ -42,8 +42,12 @@ def test_load_rejects_unknown_format(small_world, tmp_path):
 
 @pytest.mark.slow
 def test_saving_a_world_without_surface(tmp_path):
-    giant = generate_world(PlanetSpec(seed=1, priors={"archetype": "giant"}, body={"mass_mearth": 300.0}))
-    folder = save_world(giant, tmp_path / "g")
+    from worldgen.world import World
+
+    giant = generate_world(PlanetSpec(seed=1, priors={"archetype": "giant"}, body={"mass_mearth": 300.0}), "preview")
+    bare = World(spec=giant.spec, state=giant.state, surface=None)
+    assert bare.grid is None and not bare.has_ground
+    folder = save_world(bare, tmp_path / "g")
     assert not (folder / "surface.zarr").exists()
     assert load_world(folder).surface is None
 

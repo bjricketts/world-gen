@@ -23,7 +23,7 @@ from .. import heuristics as h
 from ..zoom import region_grid
 from ..zoom.tiles import face_uv_to_unit
 from .rtin import is_rtin_size, rtin_errors, rtin_triangles
-from .sampling import point_sampler
+from .sampling import point_sampler, world_sampler
 
 SEA_COLOUR = (38, 84, 140, 255)
 MESH_FORMATS = (".glb", ".gltf", ".ply", ".obj")
@@ -124,10 +124,25 @@ def _node_colours(world, field: str, points: np.ndarray, heights: np.ndarray, oc
     """Return RGBA colours at nodes: the world's height colours from the tile's own heights, or a map field's."""
     from ..render.maps import elevation_colours, field_colours
 
-    if field == "elevation":
+    if field == "elevation" and not world.cloud_tops:
         return _rgba(elevation_colours(world, heights, ocean)[0])
-    sampler = point_sampler(world.grid, points.reshape(-1, 3), heights.shape)
+    sampler = world_sampler(world, points.reshape(-1, 3), heights.shape)
     return _rgba(field_colours(world, field, sampler))
+
+
+def _cloud_nodes(world, field: str, points: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return cloud-top heights, an empty sea mask and colours at a tile's nodes, from the cloud model."""
+    from ..giants.clouds import cloud_model, evaluate
+
+    flat = points.reshape(-1, 3)
+    show_clouds = field in ("elevation", "clouds")
+    values = evaluate(cloud_model(world.surface), flat, ("relief", "colour") if show_clouds else ("relief",))
+    z = values["relief"].reshape(points.shape[:-1])
+    if show_clouds:
+        colours = _rgba(values["colour"].reshape(*points.shape[:-1], 3))
+    else:
+        colours = _node_colours(world, field, points, z, np.zeros_like(z, dtype=bool))
+    return z, np.zeros_like(z, dtype=bool), colours
 
 
 def pyramid_meshes(pyramid, world, level: int, field: str = "elevation", max_error_m: Optional[float] = None,
@@ -185,6 +200,11 @@ def globe_meshes(world, level: int = 2, field: str = "elevation", max_error_m: O
             for x in range(count):
                 s, t = np.meshgrid(x / count + span, y / count + span)
                 pts = face_uv_to_unit(face, s, t)
+                if world.cloud_tops:
+                    z, ocean, colours = _cloud_nodes(world, field, pts)
+                    out += tile_mesh(f"L{level}_f{face}_{x}_{y}", pts, z, radius, error, ocean, colours,
+                                     exaggeration, False)
+                    continue
                 sampler = point_sampler(world.grid, pts.reshape(-1, 3), s.shape)
                 z = sampler.sample(surface["elevation"].values)
                 near_sea = sampler.sample(surface["ocean"].values, categorical=True).astype(bool)

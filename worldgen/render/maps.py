@@ -342,6 +342,10 @@ def field_colours(world: World, field: str, sampler, month: Optional[int] = None
     """
     if world.surface is None:
         raise ValueError(f"{world.state.name} has no solid surface")
+    if world.cloud_tops:
+        from .clouds import cloud_colours
+
+        return cloud_colours(world, field, sampler)[0]
     name = split_field(field)[0]
     if field == "elevation":
         return elevation_image(world, None, 0, hillshade, sampler=sampler)[0]
@@ -412,6 +416,8 @@ def plot_map(world: World, field: str = "elevation", projection_name: str = "mol
         fig = plt.figure(figsize=(7, 7) if globe else (11, 6.5))
         ax = fig.add_subplot(1, 1, 1, projection=proj)
     ax.set_global()
+    if world.cloud_tops:
+        return _plot_cloud_map(world, field, proj, width, ax, title, colorbar, legend)
 
     if field == "events":
         if world.culture is None:
@@ -476,6 +482,26 @@ def plot_map(world: World, field: str = "elevation", projection_name: str = "mol
     return ax
 
 
+def _plot_cloud_map(world: World, field: str, proj, width: int, ax, title, colorbar: bool, legend):
+    """Draw a field of a giant's cloud tops on a map and return the axes."""
+    from .clouds import CLOUD_COLORBAR_LABELS, cloud_colours, cloud_field
+
+    name = cloud_field(field)
+    sampler = projected_sampler(world.grid, proj, width)
+    rgba, extra = cloud_colours(world, name, sampler)
+    ax.imshow(rgba, transform=proj, extent=sampler.extent, origin="upper", interpolation="bilinear")
+    if isinstance(extra, tuple) and colorbar:
+        sm = plt.cm.ScalarMappable(norm=extra[1], cmap=extra[0])
+        cb = plt.colorbar(sm, ax=ax, orientation="horizontal", fraction=0.04, pad=0.04, shrink=0.6)
+        cb.set_label(CLOUD_COLORBAR_LABELS[name])
+    elif isinstance(extra, list) and extra and legend:
+        ax.legend(handles=extra, loc="center left" if legend == "right" else "lower left",
+                  bbox_to_anchor=(1.0, 0.5) if legend == "right" else None, fontsize=7, frameon=legend != "right")
+    ax.gridlines(color="white", alpha=0.3, linewidth=0.5)
+    ax.set_title(title if title is not None else f"{world.state.name}: {name}", fontsize=11)
+    return ax
+
+
 def plot_overview(world: World):
     """Return a figure with elevation, terrain, plates and two globe views."""
     fig = plt.figure(figsize=(15, 10.5))
@@ -502,7 +528,7 @@ def plot_climate(world: World):
 
     Months 1 and 7 begin at the northern winter and summer solstices.
     """
-    if world.surface is None:
+    if not world.has_ground:
         raise ValueError(f"{world.state.name} has no solid surface to map")
     wet = "precipitation" in world.surface
     rows = 3 if wet else 1

@@ -219,7 +219,7 @@ def inherit_region(world, region: RegionGrid) -> InheritedRegion:
     that connects to the global ocean.
     """
     surface = world.surface
-    if surface is None:
+    if surface is None or surface.attrs.get("kind") == "cloud_tops":
         raise ValueError("this world has no surface to zoom into")
     sampler = GlobalSampler(world.grid)
     queries = region.points

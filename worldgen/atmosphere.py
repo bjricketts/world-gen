@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from .state import PlanetState
 
 NO_SURFACE_CLASSES = ("sub-Neptune", "ice giant", "gas giant", "brown dwarf")
+GIANT_CLASSES = ("ice giant", "gas giant", "brown dwarf")   # with a cloud class (giants/appearance.py)
 WATER_TRIPLE_POINT_PA = 611.657
 WATER_TRIPLE_POINT_K = 273.16
 WATER_CRITICAL_K = 647.1
@@ -76,6 +77,20 @@ def default_surface_pressure_bar(bulk: BulkState, ratio: float, volatile_richnes
     shore = max(1.0 - ratio, h.PRESSURE_MIN_SHORELINE_FACTOR)
     scatter = 10 ** named_rng(seed, "atmosphere.pressure_scatter").normal(0.0, h.PRESSURE_SCATTER_DEX)
     return volatile_richness * m**2 / r**4 * shore * scatter
+
+
+def n2_vapour_pressure_bar(t_k: float) -> float:
+    """Return the vapour pressure (bar) of solid N₂ (Grundy et al. 2024, Table 2), below its triple point."""
+    a, b, cc, d2, d3, d4 = h.N2_VAPOUR_ALPHA if t_k < h.N2_ALPHA_BETA_K else h.N2_VAPOUR_BETA
+    return math.exp(a - b / t_k + cc * math.log(t_k) + d2 * t_k + d3 * t_k**2 + d4 * t_k**3)
+
+
+def icy_inventory_factor(bulk: BulkState, instellation_earth: float, extra_flux_w_m2: float) -> float:
+    """Return the factor by which a cold, water-rich world's volatile inventory exceeds the rocky scaling."""
+    t_cold = equilibrium_temperature(instellation_earth, h.ALBEDO_THIN, extra_flux_w_m2)
+    if t_cold >= h.COLD_NITROGEN_METHANE_BELOW_K:
+        return 1.0
+    return 1.0 + h.ICY_NITROGEN_PER_WATER * bulk.water_mass_fraction
 
 
 def boiling_point(pressure_pa: float) -> float:
@@ -238,23 +253,35 @@ def build_atmosphere(
         prov["atmosphere.surface_pressure_bar"] = "heuristic"
         issues.append(Issue("info", "heuristic", "atmosphere",
                             "surface pressure from a heuristic volatile-inventory scaling"))
+        icy = icy_inventory_factor(bulk, s, orbit.extra_flux_w_m2)
+        if icy > 1.0:
+            pressure *= icy
+            issues.append(Issue("info", "heuristic", "atmosphere",
+                                f"cold water-rich world: nitrogen inventory {icy:.0f}× the rocky scaling (Titan)"))
 
     # Albedo, equilibrium temperature, composition and greenhouse
     albedo = inputs.bond_albedo
     albedo_fixed = albedo is not None
+    if albedo is None and bulk.planet_class in GIANT_CLASSES:
+        from .giants.appearance import giant_bond_albedo   # the giants package builds on this module
+        albedo = giant_bond_albedo(star, orbit, bulk, seed)
+        prov["atmosphere.bond_albedo"] = "derived"
     if albedo is None:
         albedo = default_albedo(present, pressure, bulk.planet_class)
         prov["atmosphere.bond_albedo"] = "heuristic"
-    t_eq = equilibrium_temperature(s, albedo)
+    t_eq = equilibrium_temperature(s, albedo, orbit.extra_flux_w_m2)
 
     # Runaway greenhouse
     runaway_limit = orbit.habitable_zone.runaway_greenhouse_s
-    runaway = bool(present and has_water and not no_surface and s > runaway_limit)
+    # non-stellar heat counts as the instellation that would bring the same absorbed flux
+    s_heat = s + 4.0 * orbit.extra_flux_w_m2 / (c.S_EARTH * max(1.0 - albedo, 0.05))
+    runaway = bool(present and has_water and not no_surface and s_heat > runaway_limit)
     if inputs.runaway is not None:
         runaway = bool(inputs.runaway and has_water and not no_surface)
     if runaway:
         issues.append(Issue("warning", "note", "atmosphere",
-                            f"instellation ({s:.2f}) exceeds the runaway-greenhouse limit ({runaway_limit:.2f}): "
+                            f"instellation ({s_heat:.2f}{' counting non-stellar heat' if s_heat > 1.001 * s else ''}) "
+                            f"exceeds the runaway-greenhouse limit ({runaway_limit:.2f}): "
                             "surface water would be lost, as on Venus"))
 
     composition = inputs.composition
@@ -266,6 +293,19 @@ def build_atmosphere(
         issues.append(Issue("warning", "conflict", "atmosphere", "composition given but atmosphere is absent"))
         composition = "none"
 
+    if composition == "n2_ch4" and present and not no_surface:
+        if not inputs.pressure_is_user and t_eq < h.N2_TRIPLE_K and pressure > n2_vapour_pressure_bar(t_eq) * c.BAR:
+            pressure = n2_vapour_pressure_bar(t_eq) * c.BAR
+            prov["atmosphere.surface_pressure_bar"] = "derived"
+            issues.append(Issue("info", "note", "atmosphere",
+                                "N₂ frost holds the air at its vapour pressure at the surface temperature "
+                                "(Grundy et al. 2024)"))
+        if not albedo_fixed and pressure >= h.HAZE_MIN_BAR * c.BAR:
+            albedo, albedo_fixed = h.HAZE_ALBEDO, True
+            prov["atmosphere.bond_albedo"] = "heuristic"
+            t_eq = equilibrium_temperature(s, albedo, orbit.extra_flux_w_m2)
+            issues.append(Issue("info", "heuristic", "atmosphere",
+                                f"thick N₂–CH₄ air: Bond albedo {albedo:.2f} from its haze (Titan)"))
     tau = 0.0 if no_surface else greenhouse_optical_depth(composition, pressure)
     if present and not no_surface:
         tau += inputs.extra_optical_depth
@@ -291,7 +331,7 @@ def build_atmosphere(
         setting = climate_setting(s, orbit.eccentricity, orbit.obliquity_rad, orbit.periapsis_longitude_rad,
                                   orbit.spin_state == "synchronous", pressure, bulk.surface_gravity_m_s2,
                                   composition, optical_depth, orbit.rotation_period_s, orbit.orbital_period_s,
-                                  albedo, albedo_fixed, surface_water, reference)
+                                  albedo, albedo_fixed, surface_water, reference, orbit.extra_flux_w_m2)
         if inputs.frozen_branch and "initial" not in options:
             options.setdefault("start_k", COLD_START_K)
         return solve_zonal(setting, land_share, land_albedo=inputs.land_albedo, **options)
@@ -364,7 +404,7 @@ def build_atmosphere(
             t_surf = zonal.mean_k
         if not albedo_fixed:
             albedo = zonal.albedo
-            t_eq = equilibrium_temperature(s, albedo)
+            t_eq = equilibrium_temperature(s, albedo, orbit.extra_flux_w_m2)
         if surface_water:
             open_water, open_ocean = zonal.open_water_fraction, zonal.open_ocean_fraction
         climate = ClimateSummary(
@@ -388,9 +428,13 @@ def build_atmosphere(
     elif inputs.bond_albedo is None and has_water and not no_surface and t_surf < h.ICE_COVER_BELOW_K:
         # Preliminary estimate: ice-covered planets are brighter.
         albedo = h.ALBEDO_ICE
-        t_eq = equilibrium_temperature(s, albedo)
+        t_eq = equilibrium_temperature(s, albedo, orbit.extra_flux_w_m2)
         t_surf = surface_temperature(t_eq, tau)
 
+    if (composition == "n2_ch4" and present and not no_surface and not inputs.pressure_is_user
+            and t_surf < h.N2_TRIPLE_K and pressure > n2_vapour_pressure_bar(t_surf) * c.BAR):
+        pressure = n2_vapour_pressure_bar(t_surf) * c.BAR     # the frost sits at the surface temperature
+        prov["atmosphere.surface_pressure_bar"] = "derived"
     mu = h.MEAN_MOLECULAR_WEIGHT[composition]
     scale_height = c.K_B * t_surf / (mu * c.M_H * bulk.surface_gravity_m_s2) if mu > 0 else 0.0
     wstate = "none" if no_surface else water_state(has_water, present, pressure, t_surf, runaway,

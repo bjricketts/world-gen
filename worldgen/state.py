@@ -72,6 +72,7 @@ class OrbitState:
     hill_radius_m: float
     habitable_zone: HabitableZone
     periapsis_longitude_rad: float = 0.0   # solar longitude at periapsis
+    extra_flux_w_m2: float = 0.0           # absorbed non-stellar heat: a parent's glow and tidal heat (W/m²)
 
 
 @dataclass
@@ -201,6 +202,145 @@ class SurfaceSummary:
 
 
 @dataclass
+class GiantAppearance:
+    """Cloud class, colour and banding of a giant planet (task 11.2)."""
+
+    sudarsky_class: str            # "I" ... "V" (Sudarsky, Burrows & Pinto 2000)
+    effective_temperature_k: float
+    internal_temperature_k: float
+    internal_flux_w_m2: float
+    bond_albedo: float
+    colour: str                    # disc-mean colour under the star (hex sRGB)
+    zone_colour: str
+    belt_colour: str
+    visible_albedo: float          # brightness of the disc-mean colour
+    regime: str                    # "banded" or "locked"
+    jet_speed_m_s: float           # speed scale of the Rhines length
+    rhines_length_m: float         # at the equator
+    jet_count: int
+    equatorial_jet: str            # "prograde" or "retrograde"
+    jet_half_width_deg: float      # width of the equatorial band or jet
+    hot_spot_offset_deg: float     # east of the substellar point (locked giants)
+    polar_vortices: bool
+    atmospheric_metallicity: float = 1.0   # C/H relative to protosolar (task 11.11)
+    cloud_deck: str = ""           # uppermost cloud of classes I–II: "NH3", "H2O", "CH4" or "none"
+    cloud_deck_bar: float = 0.0    # its base
+    haze_optical_depth: float = 0.0   # tropospheric or methane-level haze at 800 nm
+    vortex_colour: str = ""        # chromophore-rich storms (hex sRGB), "" without chromophores
+
+
+@dataclass
+class MoonState:
+    """One moon in a planet's system summary."""
+
+    name: str
+    mass_kg: float
+    radius_m: float
+    density_kg_m3: float
+    semi_major_axis_m: float
+    eccentricity: float
+    inclination_rad: float
+    orbital_period_s: float
+    water_mass_fraction: float     # all water and ice / moon mass
+    origin: str                    # "user", "regular" (circumplanetary disc), "ring" (spread from rings), "impact",
+                                   # "captured" (binary exchange)
+    retrograde: bool = False
+    resonance: Optional[str] = None   # e.g. "2:1 with Europa"
+
+
+@dataclass
+class RingState:
+    """One ring of a planet."""
+
+    inner_radius_m: float
+    outer_radius_m: float
+    mass_kg: float
+    optical_depth: float
+    kind: str                      # "icy", "polluted", "dark", "dusty"
+    colour: str                    # "#rrggbb" under the star
+    name: str = ""
+    bond_albedo: float = 0.0
+    arcs: list = field(default_factory=list)   # [start, end] longitudes (degrees) of denser arcs, if any
+
+
+@dataclass
+class SystemLimits:
+    """Where moons and rings can orbit a planet."""
+
+    hill_radius_m: float
+    stable_prograde_m: float       # outermost stable prograde orbit (fraction of the Hill radius)
+    stable_retrograde_m: float     # outermost stable retrograde orbit
+    roche_icy_m: float             # ring–moon boundary for porous icy material
+    roche_rocky_m: float           # ring–moon boundary for rocky material
+    synchronous_orbit_m: float     # orbit whose period equals the planet's rotation
+    max_surviving_moon_mass_kg: float   # largest moon that survives tidal migration for the planet's age
+
+
+@dataclass
+class SystemState:
+    """A planet's moons and rings, summarised; a moon becomes a world on request."""
+
+    limits: SystemLimits
+    moons: list[MoonState] = field(default_factory=list)
+    rings: list[RingState] = field(default_factory=list)
+    source: str = "none"           # "user", "drawn" or "none" (moons)
+    ring_regime: str = "none"      # "broad", "narrow", "dusty warm", "dusty cold", "user" or "none"
+    moon_regime: str = "none"      # drawn moons: "jovian", "saturnian", "uranian", "rings only", "impact" or "none"
+
+
+@dataclass
+class ParentState:
+    """The planet a moon orbits, and the moon's orbit about it."""
+
+    name: str
+    mass_kg: float
+    radius_m: float
+    density_kg_m3: float
+    rotation_period_s: float
+    obliquity_rad: float
+    bond_albedo: float
+    tidal_q: float
+    love_number_k2: float
+    semi_major_axis_m: float       # the moon's orbit about the parent
+    eccentricity: float
+    inclination_rad: float
+    orbital_period_s: float        # the moon's period about the parent
+    parent_hill_radius_m: float    # the parent's Hill radius about the star
+    stable_limit_m: float          # outermost stable prograde moon orbit
+    roche_limit_m: float           # fluid Roche limit for this moon's density
+    # energy and environment from the parent (task 11.6)
+    effective_temperature_k: float = 0.0      # the parent's, (T_eq⁴ + T_int⁴)^¼
+    magnetic_moment_am2: float = 0.0          # the parent's dipole moment
+    star_instellation_earth: float = 0.0      # starlight alone, before eclipses and planetshine
+    eclipse_fraction: float = 1.0             # share of starlight not eclipsed by the parent (x_s)
+    reflected_fraction: float = 0.0           # parent-reflected starlight over direct starlight
+    planet_heat_w_m2: float = 0.0             # parent's thermal emission absorbed, per m² of the moon
+    tidal_heating_w: float = 0.0              # tidal heat raised in the moon by the parent
+    tidal_k2_over_q: float = 0.0              # the moon's dissipation used for it
+    partially_molten: bool = False            # tides keep the interior partially molten (task 11.8)
+    magnetopause_standoff_m: float = 0.0      # the parent's magnetopause, towards the star
+    magnetosphere_fraction: float = 0.0       # share of the moon's orbit inside the parent's magnetosphere
+    moon_origin: str = ""                     # "regular", "captured", "impact", or "" when not given
+    initial_eccentricity: float = 0.0         # before tidal damping (moon calibration, 2026-10-25)
+    eccentricity_damping_time_s: float = float("inf")   # inf when the eccentricity is given or forced
+    ice_shell_dissipation: bool = False       # tides dissipate in an ice shell over an ocean
+
+
+@dataclass
+class IceShellState:
+    """An ice shell over a subsurface ocean on a frozen body (task 11.6)."""
+
+    water_layer_m: float           # all surface water as a layer
+    shell_thickness_m: float       # conductive ice above the melting point (the whole layer when frozen through)
+    ocean_depth_m: float           # liquid water below the shell; 0 when frozen through
+    basal_heat_flux_w_m2: float    # endogenic heat through the base of the shell
+    rayleigh_number: float         # basal Rayleigh number of the shell
+    convective: bool               # above the critical Rayleigh number: the shell would convect
+    high_pressure_ice_m: float = 0.0   # ice III/V/VI below the ocean, where the liquid is not stable (task 11.8)
+    ocean_temperature_k: float = 0.0   # melting point at the base of the shell, taken through the ocean
+
+
+@dataclass
 class TimelineEvent:
     """An event in a planet's history (history mode)."""
 
@@ -246,6 +386,10 @@ class PlanetState:
     biosphere: Optional[BiosphereState] = None
     events: list[TimelineEvent] = field(default_factory=list)       # history mode: what happened, oldest first
     overrides: list[Override] = field(default_factory=list)         # history mode: user values applied at the end
+    system: Optional[SystemState] = None     # moons and rings of a planet (format 7)
+    parent: Optional[ParentState] = None     # the planet a moon orbits (format 7)
+    appearance: Optional[GiantAppearance] = None   # giants only (format 7, task 11.2)
+    ice_shell: Optional[IceShellState] = None      # frozen bodies with surface water (task 11.6)
 
     def to_dict(self) -> dict:
         """Return the state as nested plain Python types."""
@@ -274,6 +418,19 @@ class PlanetState:
             d["surface"] = SurfaceSummary(**d["surface"])
         d["events"] = [TimelineEvent(**e) for e in d.get("events", [])]
         d["overrides"] = [Override(**o) for o in d.get("overrides", [])]
+        if d.get("system") is not None:
+            sy = dict(d["system"])
+            d["system"] = SystemState(limits=SystemLimits(**sy["limits"]),
+                                      moons=[MoonState(**m) for m in sy.get("moons", [])],
+                                      rings=[RingState(**r) for r in sy.get("rings", [])],
+                                      source=sy.get("source", "none"), ring_regime=sy.get("ring_regime", "none"),
+                                      moon_regime=sy.get("moon_regime", "none"))
+        if d.get("parent") is not None:
+            d["parent"] = ParentState(**d["parent"])
+        if d.get("appearance") is not None:
+            d["appearance"] = GiantAppearance(**d["appearance"])
+        if d.get("ice_shell") is not None:
+            d["ice_shell"] = IceShellState(**d["ice_shell"])
         return cls(**d)
 
 

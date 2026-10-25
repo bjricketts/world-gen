@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 from typing import Optional
 
 from .. import atmosphere as atm
@@ -13,9 +14,12 @@ from .. import star as star_model
 from .. import water as water_model
 from ..constants import AU, SECONDS_PER_GYR, SECONDS_PER_HOUR
 from .. import heuristics as h
+from ..giants import build_appearance, build_parent, build_system, is_giant
+from ..giants.parent import apply_parent_energy
 from ..biosphere.life import LifeInputs, build_biosphere, methane_optical_depth, tier0_land_albedo
 from ..heuristics import WEATHERING_TARGET_K
 from ..priors import draw_until_satisfied, resolve, score_planet
+from ..priors.archetypes import get_archetype
 from ..spec import PlanetSpec
 from ..state import Issue, PlanetState, Timeline
 from ..surface import relief_factor
@@ -66,6 +70,18 @@ class SnapshotEvolver:
 
         a_au = v("orbit.semi_major_axis_au")
         rotation_h = v("orbit.rotation_period_h")
+        parent = None
+        moon_archetype = inputs.archetype is not None and get_archetype(inputs.archetype).moon
+        if spec.parent is not None or moon_archetype:
+            if v("parent.mass_mearth") is None or v("parent.semi_major_axis_rp") is None:
+                raise ValueError("a moon's parent needs mass_mearth and semi_major_axis_rp "
+                                 "(or leave them to a moon archetype such as habitable_moon)")
+            a_star = (a_au * AU if a_au is not None else orbit_model.semi_major_axis_for_instellation(
+                star.luminosity_w, v("orbit.instellation_earth"), v("orbit.eccentricity", 0.0)))
+            parent_prov: dict[str, str] = {}
+            parent, new = build_parent(v, star, bulk, a_star, v("orbit.eccentricity", 0.0), parent_prov,
+                                       spec.parent.name if spec.parent is not None else None, seed)
+            merge(new, parent_prov)
         orbit, new, prov = orbit_model.build_orbit(
             star=star,
             bulk=bulk,
@@ -78,8 +94,25 @@ class SnapshotEvolver:
             obliquity_is_user=inputs.is_user("orbit.obliquity_deg"),
             tidal_q=_tidal_q(inputs, bulk),
             periapsis_longitude_rad=math.radians(v("orbit.periapsis_longitude_deg", 0.0)),
+            parent=parent,
         )
         merge(new, prov)
+        tidal_w = v("body.tidal_heating_w") if inputs.is_user("body.tidal_heating_w") else None
+        if parent is not None:
+            internal = (interior_model.silicate_mass(bulk) * h.INVERSE_UREY_RATIO
+                        * interior_model.radiogenic_heat_per_kg(age, v("body.radiogenic_abundance", 1.0)))
+            free = not inputs.is_user("parent.eccentricity")     # drawn moons have no resonance partner
+            parent, orbit = apply_parent_energy(parent, orbit, bulk, h.TIDAL_K2_ROCKY, tidal_w, internal,
+                                                inputs.is_user("body.tidal_q"), age * SECONDS_PER_GYR, free)
+            tidal_w = parent.tidal_heating_w
+            merge([], {"body.tidal_heating_w": "heuristic"})          # raised by the parent, not drawn
+        else:
+            tidal_w = v("body.tidal_heating_w", 0.0)
+            orbit = replace(orbit, extra_flux_w_m2=tidal_w / (4.0 * math.pi * bulk.radius_m**2))
+        system = None
+        if parent is None:
+            system, new = build_system(spec, star, orbit, bulk)
+            merge(new, {})
 
         atm_inputs = atm.AtmosphereInputs(
             present=v("atmosphere.present"),
@@ -102,7 +135,7 @@ class SnapshotEvolver:
             bulk=bulk,
             age_gyr=age,
             radiogenic_abundance=v("body.radiogenic_abundance", 1.0),
-            tidal_power_w=v("body.tidal_heating_w", 0.0),
+            tidal_power_w=tidal_w,
             surface_temperature_k=preliminary.surface_temperature_k,
             surface_water=preliminary.surface_water in ("liquid", "ice"),
             regime_override=v("interior.tectonic_regime"),
@@ -143,6 +176,16 @@ class SnapshotEvolver:
         merge(new, prov)
         merge(bio_new, bio_prov)
 
+        appearance = None
+        if is_giant(bulk):
+            appearance = build_appearance(star, orbit, bulk, atmosphere, seed,
+                                          inputs.get("body.atmospheric_metallicity"))
+            merge([], {"body.atmospheric_metallicity": "heuristic"})
+        ice_shell = None
+        if not is_giant(bulk) and atmosphere.surface_water == "ice" and water.surface_mass_kg > 0:
+            ice_shell = water_model.build_ice_shell(bulk, water, atmosphere.surface_temperature_k,
+                                                    interior.radiogenic_power_w + interior.tidal_power_w)
+
         occupiability = score_planet(star, bulk, interior, atmosphere, spec.priors.occupiability_weights,
                                      biosphere)
 
@@ -164,6 +207,10 @@ class SnapshotEvolver:
             water=water,
             climate=climate,
             biosphere=biosphere,
+            system=system,
+            parent=parent,
+            appearance=appearance,
+            ice_shell=ice_shell,
             inputs=dict(inputs.values),
             provenance=provenance,
             issues=_deduplicate(issues),

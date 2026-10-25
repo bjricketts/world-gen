@@ -38,6 +38,8 @@ WET_SURFACE = Constraint("surface water as liquid or ice",
 MOSTLY_LAND = Constraint("at least half the surface is land (estimated from the water inventory)",
                          lambda s: s.water is None or s.water.land_fraction_estimate >= 0.5)
 NOT_RUNAWAY = Constraint("not in a runaway greenhouse", lambda s: not s.atmosphere.runaway_greenhouse)
+STABLE_MOON_ORBIT = Constraint("a moon orbiting within the stable part of its parent's Hill sphere",
+                               lambda s: s.parent is not None and s.parent.semi_major_axis_m <= s.parent.stable_limit_m)
 
 
 def surface_temperature_between(low_k: float, high_k: float) -> Constraint:

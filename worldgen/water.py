@@ -13,7 +13,7 @@ import numpy as np
 
 from . import constants as c
 from . import heuristics as h
-from .state import BulkState, WaterState
+from .state import BulkState, IceShellState, WaterState
 
 # Reference hypsometries: land fraction against the ocean volume per unit
 # planet area (m) at Earth gravity. The plate-tectonic curve comes from
@@ -133,3 +133,102 @@ def build_water(bulk: BulkState, regime: str, relief: float) -> WaterState:
 def has_surface_water(water: WaterState, bulk: BulkState) -> bool:
     """Return whether the planet has enough surface water to count."""
     return water.surface_mass_kg / bulk.mass_kg > h.SURFACE_WATER_MIN_FRACTION
+
+
+def integrated_ice_conductivity(t_k: float) -> float:
+    """Return ∫k dT for ice, k = 632/T + 0.38 − 0.00197T W/m/K (Andersson & Inaba 2005, as in Carnahan et al. 2021)."""
+    return 632.0 * np.log(t_k) + 0.38 * t_k - 0.000985 * t_k**2
+
+
+def melting_depth(endogenic_w: float, radius_m: float, surface_k: float, melting_k: float = h.ICE_MELTING_K) -> float:
+    """Return the depth (m) at which conduction from the surface reaches the melting point (Tjoa et al. 2020, eq. 9).
+
+    No insulating regolith is assumed. Without internal heat the depth is the
+    whole radius.
+    """
+    if endogenic_w <= 0.0 or surface_k >= melting_k:
+        return radius_m if endogenic_w <= 0.0 else 0.0
+    span = integrated_ice_conductivity(melting_k) - integrated_ice_conductivity(surface_k)
+    return float(radius_m - 1.0 / (4.0 * np.pi * span / endogenic_w + 1.0 / radius_m))
+
+
+# Melting curves of the ices (IAPWS R14-08, 2011): (branch, T* K, p* MPa, coefficient, exponent) for
+# π = 1 − a (1 − θ^b), θ = T/T*, π = p/p*; ice Ih has its three-term form below.
+_ICE_IH = ((0.119539337e7, 3.0), (0.808183159e5, 25.75), (0.333826860e4, 103.75))
+_HIGH_PRESSURE_ICES = (("III", 251.165, 208.566, 0.299948, 60.0), ("V", 256.164, 350.1, 1.18721, 8.0),
+                       ("VI", 273.31, 632.4, 1.07476, 4.6))
+IH_LIMIT_MPA = 208.566        # ice Ih – ice III – liquid triple point
+
+
+def ice_ih_melting_pressure_mpa(t_k: float) -> float:
+    """Return the melting pressure (MPa) of ice Ih at a temperature, 251.165–273.16 K (IAPWS R14-08)."""
+    theta = t_k / 273.16
+    return 611.657e-6 * (1.0 + sum(a * (1.0 - theta**b) for a, b in _ICE_IH))
+
+
+def melting_temperature_k(pressure_mpa: float) -> float:
+    """Return the melting point (K) of water ice at a pressure, along Ih, III, V and VI (IAPWS R14-08)."""
+    if pressure_mpa <= IH_LIMIT_MPA:
+        lo, hi = 251.165, 273.16
+        for _ in range(60):      # Ih melting pressure falls as the temperature rises
+            mid = 0.5 * (lo + hi)
+            lo, hi = (mid, hi) if ice_ih_melting_pressure_mpa(mid) > pressure_mpa else (lo, mid)
+        return 0.5 * (lo + hi)
+    for name, t_star, p_star, a, b in reversed(_HIGH_PRESSURE_ICES):
+        if pressure_mpa >= p_star:
+            return t_star * (1.0 + (pressure_mpa / p_star - 1.0) / a) ** (1.0 / b)
+    raise AssertionError("unreachable")
+
+
+def high_pressure_ice_onset_mpa(ocean_k: float) -> float:
+    """Return the pressure (MPa) at which ice III, V or VI freezes out of water at a temperature (IAPWS R14-08)."""
+    for name, t_star, p_star, a, b in reversed(_HIGH_PRESSURE_ICES):
+        if ocean_k >= t_star:
+            return p_star * (1.0 - a * (1.0 - (ocean_k / t_star) ** b))
+    return IH_LIMIT_MPA
+
+
+def build_ice_shell(bulk: BulkState, water: WaterState, surface_k: float, endogenic_w: float) -> IceShellState:
+    """Return the ice shell, any subsurface ocean and the high-pressure ice below it, on a frozen body.
+
+    The shell's base sits at the melting point at its own pressure (iterated);
+    the ocean keeps that temperature and ends where ice III, V or VI become
+    stable (IAPWS R14-08 melting curves; adiabatic warming and salts ignored).
+    Pressures use the surface gravity. A porous, fractured lid insulates the
+    coldest ice: conduction through solid ice starts at ICE_LID_EFFECTIVE_K
+    when the surface is colder (moon calibration, 2026-10-25).
+    """
+    surface_k = max(surface_k, h.ICE_LID_EFFECTIVE_K)
+    rho = h.SUBSURFACE_WATER_DENSITY
+    g = bulk.surface_gravity_m_s2
+    inner = max(bulk.radius_m**3 - 3.0 * water.surface_mass_kg / (4.0 * np.pi * rho), 0.0) ** (1.0 / 3.0)
+    layer = bulk.radius_m - inner
+    melt_k = h.ICE_MELTING_K
+    depth = melting_depth(endogenic_w, bulk.radius_m, surface_k, melt_k)
+    for _ in range(20):
+        p_base = min(h.ICE_SHELL_DENSITY * g * min(depth, layer) / 1e6, 2000.0)
+        new_k = min(melting_temperature_k(p_base), h.ICE_MELTING_K)
+        new_depth = melting_depth(endogenic_w, bulk.radius_m, surface_k, new_k)
+        if abs(new_depth - depth) < 1.0:
+            depth, melt_k = new_depth, new_k
+            break
+        depth, melt_k = new_depth, new_k
+    p_base = h.ICE_SHELL_DENSITY * g * depth / 1e6
+    ih_limit_m = IH_LIMIT_MPA * 1e6 / (h.ICE_SHELL_DENSITY * g)
+    frozen = depth >= min(layer, h.ICE_SHELL_MAX_DEPTH_FRACTION * bulk.radius_m) or depth >= ih_limit_m
+    # frozen through: ice Ih down to its stability limit, high-pressure ice below it
+    shell = min(layer, ih_limit_m) if frozen else depth
+    ocean, high = 0.0, (max(layer - ih_limit_m, 0.0) if frozen else 0.0)
+    if not frozen:
+        onset = high_pressure_ice_onset_mpa(melt_k)
+        floor = depth + max(onset - p_base, 0.0) * 1e6 / (rho * g)
+        ocean = min(floor, layer) - depth
+        high = max(layer - floor, 0.0)
+    kappa = h.ICE_SHELL_CONDUCTIVITY / (h.ICE_SHELL_DENSITY * h.ICE_SHELL_CP)
+    rayleigh = (h.ICE_SHELL_DENSITY * g * h.ICE_EXPANSION * max(melt_k - surface_k, 0.0)
+                * shell**3 / (h.ICE_BASAL_VISCOSITY * kappa))
+    flux = endogenic_w / (4.0 * np.pi * (bulk.radius_m - shell) ** 2)
+    return IceShellState(water_layer_m=float(layer), shell_thickness_m=float(shell), ocean_depth_m=float(ocean),
+                         basal_heat_flux_w_m2=float(flux), rayleigh_number=float(rayleigh),
+                         convective=bool(rayleigh > h.ICE_CRITICAL_RAYLEIGH), high_pressure_ice_m=float(high),
+                         ocean_temperature_k=float(melt_k) if not frozen else 0.0)

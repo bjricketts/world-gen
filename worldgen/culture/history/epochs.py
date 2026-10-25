@@ -137,7 +137,7 @@ def place_epoch(world, spec: CultureSpec, seed: int, cultures: list[Culture], st
 
 def organic_civilisation(world, spec: CultureSpec, seed: int, cultures: list[Culture]) -> Civilisation:
     """Return the civilisation an organic history leaves at the present, with the earlier kept epochs."""
-    if world.surface is None:
+    if not world.has_ground:
         raise ValueError("an organic history needs the planet's surface")
     geo = geology_layers(world)
     cov = covariates(world, geo.get("resource_potential"))

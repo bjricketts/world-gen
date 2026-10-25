@@ -11,7 +11,7 @@ from .. import star as star_model
 from ..spec import PlanetSpec
 from ..util import named_rng
 from .archetypes import ARCHETYPES, BASE_PRIORS, get_archetype
-from .distributions import HZFraction, LogUniform, Uniform
+from .distributions import Conditional, HZFraction, LogUniform, Relative, Uniform
 
 # Fields whose [low, high] ranges are drawn log-uniformly.
 LOG_SCALE_FIELDS = frozenset({
@@ -25,6 +25,7 @@ LOG_SCALE_FIELDS = frozenset({
     "body.radiogenic_abundance",
     "body.tidal_heating_w",
     "body.tidal_q",
+    "body.atmospheric_metallicity",
     "atmosphere.surface_pressure_bar",
     "atmosphere.volatile_richness",
     "history.initial_water_mass_fraction",
@@ -38,6 +39,11 @@ LOG_SCALE_FIELDS = frozenset({
     "history.life_origin_delay_gyr",
     "history.oxygen_burial_efficiency",
     "history.reductant_decay_gyr",
+    "parent.mass_mearth",
+    "parent.radius_rearth",
+    "parent.rotation_period_h",
+    "parent.tidal_q",
+    "parent.semi_major_axis_rp",
 })
 
 # Spec fields that are read from the spec directly rather than resolved.
@@ -74,14 +80,25 @@ def _spec_values(spec: PlanetSpec) -> dict[str, Any]:
             if f"{section}.{name}" in NOT_DRAWN_FIELDS:
                 continue
             out[f"{section}.{name}"] = value
+    if spec.parent is not None:
+        for name, value in spec.parent.model_dump().items():
+            if name != "name":
+                out[f"parent.{name}"] = value
     return out
 
 
 def compatible_archetypes(user: dict[str, Any]) -> list[str]:
-    """Return the archetypes whose priors do not contradict any user-fixed value or range."""
+    """Return the archetypes whose priors do not contradict any user-fixed value or range.
+
+    A spec with a ``parent`` section is a moon, so only moon archetypes fit it. Without one, a moon archetype
+    fits only when the spec fixes nothing about the body, so a planet the user has described does not
+    become a moon by chance.
+    """
+    is_moon = any(k.startswith("parent.") and v is not None for k, v in user.items())
+    body_fixed = any(k.startswith("body.") and v is not None for k, v in user.items())
     names = []
     for name, archetype in ARCHETYPES.items():
-        ok = True
+        ok = (archetype.moon and (is_moon or not body_fixed)) or (not archetype.moon and not is_moon)
         for path, dist in archetype.priors.items():
             value = user.get(path)
             if value is None:
@@ -156,16 +173,41 @@ def resolve(spec: PlanetSpec, seed: Optional[int] = None) -> ResolvedInputs:
             result.values[path] = None
 
     hz_position = None
+    relative = []
     for path, dist in priors.items():
         if result.values.get(path) is not None or _skip_prior(path, user):
             continue
+        if isinstance(dist, Conditional):
+            relative.append((path, dist, None))
+            continue
         value = dist.sample(named_rng(spec.seed, path))
+        if isinstance(dist, Relative):
+            relative.append((path, dist, value))
+            continue
         if isinstance(dist, HZFraction):
             hz_position = value
             value = None       # converted to instellation below
         result.values[path] = value
         result.provenance[path] = "archetype" if path in archetype_priors else "prior"
 
+    # conditional priors take the branch of their field's drawn value; ratios are applied last
+    pending = []
+    for path, dist, ratio in relative:
+        if isinstance(dist, Conditional):
+            value = result.values[dist.on]
+            if value not in dist.branches:
+                raise ValueError(f"{path}: no prior for {dist.on} = {value!r}" + (f"; {dist.missing}" if dist.missing else ""))
+            dist = dist.branches[value]
+            if isinstance(dist, Relative):
+                pending.append((path, dist, dist.sample(named_rng(spec.seed, path))))
+            else:
+                result.values[path] = dist.sample(named_rng(spec.seed, path))
+                result.provenance[path] = "archetype" if path in archetype_priors else "prior"
+        else:
+            pending.append((path, dist, ratio))
+    for path, dist, ratio in pending:
+        result.values[path] = ratio * result.values[dist.base]
+        result.provenance[path] = "archetype" if path in archetype_priors else "prior"
     _clip_age(spec, result)
     if hz_position is not None:
         result.values["orbit.instellation_earth"] = _instellation_from_hz(result, hz_position)

@@ -71,6 +71,79 @@ class LogUniform:
 
 
 @dataclass(frozen=True)
+class Relative:
+    """A multiple of another drawn field: ``base`` × a ratio drawn from ``ratio`` (resolved after the others).
+
+    ``base_range`` bounds the base field so user values can be checked against
+    the archetype before anything is drawn.
+    """
+
+    base: str
+    ratio: LogUniform
+    base_range: tuple[float, float]
+
+    def sample(self, rng: np.random.Generator) -> float:
+        """Draw the ratio (the caller multiplies it by the base field)."""
+        return self.ratio.sample(rng)
+
+    def quantile(self, q: float) -> float:
+        """Return the ratio's quantile."""
+        return self.ratio.quantile(q)
+
+    def allows(self, low, high) -> bool:
+        """Return whether a user value or range overlaps the product of the ratio and base ranges."""
+        return low <= self.ratio.high * self.base_range[1] and high >= self.ratio.low * self.base_range[0]
+
+
+@dataclass(frozen=True)
+class Conditional:
+    """A distribution chosen by the drawn value of another field (resolved after the other draws)."""
+
+    on: str
+    branches: dict
+    missing: str = ""        # why a value of ``on`` has no branch, for the error
+
+    def sample(self, rng: np.random.Generator):
+        """Not drawn directly: the resolver picks the branch for the drawn value of ``on``."""
+        raise TypeError("a Conditional prior is drawn through its branch")
+
+    def quantile(self, q: float):
+        """Return the quantile of the first branch (for summaries only)."""
+        return next(iter(self.branches.values())).quantile(q)
+
+    def allows(self, low, high) -> bool:
+        """Return whether any branch allows the user value or range."""
+        return any(d.allows(low, high) for d in self.branches.values())
+
+
+@dataclass(frozen=True)
+class Mixture:
+    """One of several distributions, chosen with weights (e.g. prograde or retrograde inclinations)."""
+
+    parts: tuple
+    weights: tuple
+
+    def _p(self) -> np.ndarray:
+        w = np.asarray(self.weights, dtype=float)
+        return w / w.sum()
+
+    def sample(self, rng: np.random.Generator):
+        """Draw a part, then a value from it."""
+        return self.parts[int(rng.choice(len(self.parts), p=self._p()))].sample(rng)
+
+    def quantile(self, q: float):
+        """Return the quantile, taking the parts in order."""
+        p = self._p()
+        edges = np.concatenate([[0.0], np.cumsum(p)])
+        k = int(min(np.searchsorted(edges, min(max(q, 0.0), 1.0), side="right") - 1, len(p) - 1))
+        return self.parts[k].quantile((q - edges[k]) / p[k])
+
+    def allows(self, low, high) -> bool:
+        """Return whether any part allows the user value or range."""
+        return any(d.allows(low, high) for d in self.parts)
+
+
+@dataclass(frozen=True)
 class TruncNormal:
     """Normal distribution truncated to [low, high]."""
 
@@ -163,4 +236,4 @@ def _erf_inverse(y: float) -> float:
     return x - (math.erf(x) - y) / (2.0 / math.sqrt(math.pi) * math.exp(-x * x))
 
 
-Distribution = Union[Fixed, Uniform, LogUniform, TruncNormal, Choice, HZFraction]
+Distribution = Union[Fixed, Uniform, LogUniform, TruncNormal, Choice, HZFraction, Mixture]

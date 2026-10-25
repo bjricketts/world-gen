@@ -7,7 +7,7 @@ from typing import Optional
 
 from . import constants as c
 from . import heuristics as h
-from .state import BulkState, HabitableZone, Issue, OrbitState, StarState
+from .state import BulkState, HabitableZone, Issue, OrbitState, ParentState, StarState
 
 # Kopparapu et al. (2014) coefficients, from the authors' hzcalc.py:
 # S_eff = S_sun + a T + b T^2 + c T^3 + d T^4, with T = T_eff - 5780 K.
@@ -37,9 +37,9 @@ def semi_major_axis_for_instellation(luminosity_w: float, s_earth: float, eccent
     return c.AU * math.sqrt((luminosity_w / c.L_SUN) / (s_earth * math.sqrt(1 - eccentricity**2)))
 
 
-def equilibrium_temperature(s_earth: float, bond_albedo: float) -> float:
-    """Return the planet's equilibrium temperature (K), assuming full heat redistribution."""
-    return (s_earth * c.S_EARTH * (1 - bond_albedo) / (4 * c.SIGMA_SB)) ** 0.25
+def equilibrium_temperature(s_earth: float, bond_albedo: float, extra_flux_w_m2: float = 0.0) -> float:
+    """Return the equilibrium temperature (K) with full heat redistribution, plus any absorbed non-stellar flux."""
+    return ((s_earth * c.S_EARTH * (1 - bond_albedo) / 4 + extra_flux_w_m2) / c.SIGMA_SB) ** 0.25
 
 
 def _seff(coeffs: tuple[float, ...], teff_k: float) -> float:
@@ -161,8 +161,15 @@ def build_orbit(
     obliquity_is_user: bool,
     tidal_q: Optional[float] = None,
     periapsis_longitude_rad: float = 0.0,
+    parent: Optional[ParentState] = None,
 ) -> tuple[OrbitState, list[Issue], dict[str, str]]:
-    """Return the orbit and spin state, notes, and provenance of any values set by physics."""
+    """Return the orbit and spin state, notes, and provenance of any values set by physics.
+
+    For a moon (``parent`` given) the orbit is the parent's about the star,
+    the spin is despun by the parent's tides rather than the star's, the
+    obliquity defaults to the parent's, and the Hill radius is the moon's
+    about the parent.
+    """
     issues: list[Issue] = []
     provenance: dict[str, str] = {}
 
@@ -175,18 +182,26 @@ def build_orbit(
     if instellation_earth is None:
         provenance["orbit.instellation_earth"] = "derived"
 
-    period = orbital_period(semi_major_axis_m, star.mass_kg, bulk.mass_kg)
+    companion = parent.mass_kg if parent is not None else 0.0
+    period = orbital_period(semi_major_axis_m, star.mass_kg, bulk.mass_kg + companion)
     if tidal_q is None:
         tidal_q = default_tidal_q(bulk)
         provenance["body.tidal_q"] = "default"
-    t_lock = tidal_lock_time(semi_major_axis_m, star.mass_kg, bulk, tidal_q)
+    if parent is None:
+        t_lock = tidal_lock_time(semi_major_axis_m, star.mass_kg, bulk, tidal_q)
+    else:
+        t_lock = tidal_lock_time(parent.semi_major_axis_m, parent.mass_kg, bulk, tidal_q)
     issues.append(Issue("info", "heuristic", "orbit",
                         "tidal locking uses an assumed initial spin and Love number k2"))
 
     spin_state = "free"
     if t_lock < star.age_s:
-        spin_state = "3:2 resonance" if eccentricity > h.RESONANCE_ECCENTRICITY else "synchronous"
-        locked_period = period * (2 / 3 if spin_state == "3:2 resonance" else 1.0)
+        if parent is not None:
+            spin_state = "synchronous with parent"
+            locked_period = parent.orbital_period_s
+        else:
+            spin_state = "3:2 resonance" if eccentricity > h.RESONANCE_ECCENTRICITY else "synchronous"
+            locked_period = period * (2 / 3 if spin_state == "3:2 resonance" else 1.0)
         if rotation_period_s is not None and rotation_is_user:
             if abs(rotation_period_s / locked_period - 1) > 0.05:
                 issues.append(Issue("warning", "conflict", "orbit",
@@ -202,6 +217,9 @@ def build_orbit(
             elif not obliquity_is_user:
                 obliquity_rad = 0.0
                 provenance["orbit.obliquity_deg"] = "derived"
+    if parent is not None and not obliquity_is_user:
+        obliquity_rad = parent.obliquity_rad
+        provenance["orbit.obliquity_deg"] = "derived"
     if rotation_period_s is None:
         raise ValueError("rotation period must be supplied for a planet that is not tidally locked")
 
@@ -219,7 +237,8 @@ def build_orbit(
         tidal_lock_time_s=t_lock,
         tidal_q=tidal_q,
         spin_state=spin_state,
-        hill_radius_m=hill_radius(semi_major_axis_m, eccentricity, star.mass_kg, bulk.mass_kg),
+        hill_radius_m=(hill_radius(semi_major_axis_m, eccentricity, star.mass_kg, bulk.mass_kg) if parent is None
+                       else hill_radius(parent.semi_major_axis_m, parent.eccentricity, parent.mass_kg, bulk.mass_kg)),
         habitable_zone=hz,
         periapsis_longitude_rad=periapsis_longitude_rad,
     )

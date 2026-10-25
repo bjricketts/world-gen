@@ -26,7 +26,7 @@ dev = ["pytest>=7", "pytest-xdist>=3", "nbclient>=0.9", "nbformat>=5.9", "ipyker
 notebooks = ["jupyterlab>=4"]
 explore = ["ipywidgets>=8", "ipympl>=0.9"]
 export = ["rasterio>=1.3", "trimesh>=4"]
-globe = ["pyvista[jupyter]>=0.44", "trame-pyvista", "ipywidgets>=8"]
+globe = ["pyvista[jupyter]>=0.44", "trame-pyvista", "ipywidgets>=8", "imageio>=2.30", "imageio-ffmpeg", "nest_asyncio2"]
 
 [project.scripts]
 worldgen = "worldgen.cli:app"
@@ -36,4 +36,17 @@ packages = ["worldgen"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = ["slow: generates worlds or runs the tectonic simulation (deselect with -m \"not slow\")"]
+markers = [
+    "slow: generates worlds or runs the tectonic simulation (deselect with -m \"not slow\")",
+    "physics: star, orbit, bulk, interior, atmosphere, water, priors, spec, state, report, saving, giants",
+    "history: planet history mode",
+    "surface: grid, noise, surfaces and the plate simulation",
+    "climate: climate tiers and the biosphere",
+    "hydrology: drainage, lakes, rivers and erosion",
+    "zoom: zoomed regions and local maps",
+    "culture: user-scoped culture",
+    "organic: organic culture histories",
+    "render: maps, figures and the globe viewer",
+    "export: rasters, regions, pyramid and meshes",
+    "cli: command-line interface",
+]

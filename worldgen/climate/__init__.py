@@ -32,7 +32,8 @@ __all__ = ["ClimateSetting", "MoistClimate", "SurfaceClimate", "SurfaceState", "
 def climate_setting(instellation_earth: float, eccentricity: float, obliquity_rad: float,
                     periapsis_longitude_rad: float, synchronous: bool, pressure_pa: float, gravity_m_s2: float,
                     composition: str, optical_depth: float, rotation_period_s: float, orbital_period_s: float,
-                    albedo: float, albedo_fixed: bool, has_water: bool, reference_k: float) -> ClimateSetting:
+                    albedo: float, albedo_fixed: bool, has_water: bool, reference_k: float,
+                    extra_flux_w_m2: float = 0.0) -> ClimateSetting:
     """Return the climate setting of a planet from its orbit-averaged instellation and atmosphere."""
     e = min(max(eccentricity, 0.0), 0.95)
     return ClimateSetting(
@@ -51,6 +52,7 @@ def climate_setting(instellation_earth: float, eccentricity: float, obliquity_ra
         albedo_fixed=albedo_fixed,
         has_water=has_water,
         reference_k=reference_k,
+        extra_flux_w_m2=extra_flux_w_m2,
     )
 
 
@@ -70,6 +72,7 @@ def planet_climate(state: "PlanetState",
         summary.albedo_fixed if summary is not None else True,
         water,
         summary.mean_temperature_k if summary is not None else a.surface_temperature_k,
+        o.extra_flux_w_m2,
     )
     from ..biosphere.life import tier0_land_albedo   # imported here: the biosphere package builds on this one
 
