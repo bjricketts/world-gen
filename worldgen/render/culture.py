@@ -23,7 +23,7 @@ from .rivers import smooth_line
 
 CULTURE_FIELDS = ("population", "cultures", "polities", "settlements", "roads", "political", "habitat", "resources",
                   "suitability")
-# layers only an organic history leaves (task 9.16)
+# layers only an organic history leaves
 HISTORY_LAYER_FIELDS = ("energy", "transport", "communication", "bands", "livestock", "land")
 LEVEL_AXES = {"energy": 0, "transport": 1, "communication": 2}
 RESOURCE_BEST_MIN = 0.5          # resources:best colours a cell by its richest resource of at least this potential

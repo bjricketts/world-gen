@@ -1,4 +1,4 @@
-"""Colonists in the organic history: competition, faster frontiers, colonial states, immigration and contact epidemics (task 9.8)."""
+"""Colonists in the organic history: competition, faster frontiers, colonial states, immigration and contact epidemics."""
 
 import math
 from pathlib import Path
@@ -100,7 +100,6 @@ def test_contact_epidemics_strike_the_natives_of_the_landmass(colony, earth, mon
 
 
 def test_no_great_dying_without_herds_or_against_herders(colony, earth):
-    from worldgen.culture.history.livestock import Livestock
 
     settlers = colony.cultures[1].id
     assert any(e.kind == "epidemic" and e.refs.get("culture") == settlers for e in colony.chronicle.entries)

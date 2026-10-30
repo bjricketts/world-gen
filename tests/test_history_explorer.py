@@ -1,4 +1,4 @@
-"""The notebook history explorer: fields, drawing, cell lookup, cell values and the widget (task 9.17)."""
+"""The notebook history explorer: fields, drawing, cell lookup, cell values and the widget."""
 
 from pathlib import Path
 

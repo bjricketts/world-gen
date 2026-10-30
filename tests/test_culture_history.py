@@ -1,4 +1,4 @@
-"""Organic mode (milestone 9): history spec, step schedule, state, the history run, kept epochs and their storage."""
+"""Organic mode: history spec, step schedule, state, the history run, kept epochs and their storage."""
 
 import warnings
 from pathlib import Path

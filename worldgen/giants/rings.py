@@ -1,4 +1,4 @@
-"""Rings of a planet: which kind it has, and the rings themselves (task 11.4).
+"""Rings of a planet: which kind it has, and the rings themselves.
 
 The kind follows Hedman (2015): dense rings form where weak icy material sits
 near 70 K. A planet whose ring material can reach that temperature with an

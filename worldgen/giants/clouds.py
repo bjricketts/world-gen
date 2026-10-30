@@ -1,4 +1,4 @@
-"""Cloud tops of giant planets: a small model of bands, winds and vortices, evaluated at any points (task 11.3).
+"""Cloud tops of giant planets: a small model of bands, winds and vortices, evaluated at any points.
 
 The model is drawn once from the planet's state and kept with its surface;
 maps, rasters, meshes and the globe evaluate it at their own points, so

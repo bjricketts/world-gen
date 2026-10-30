@@ -4,7 +4,7 @@
 - ``arable``: land a crop grows on, the fuzzy minimum of growing season, moisture,
   slope and permafrost (after Zabel et al. 2014).
 - ``access``: closeness to the coast and to large rivers, the routes of early trade.
-- ``resources``: the richest potential among the metals, salt and coal (milestone 8 classes).
+- ``resources``: the richest potential among the metals, salt and coal (the resource classes of the user-scoped mode).
 - ``climate``: the mean annual temperature people favour.
 - ``defensibility``: rugged ground (the terrain ruggedness index of Nunn & Puga
   2012, from the sub-grid slope), sea on the cell's edges and a large river.

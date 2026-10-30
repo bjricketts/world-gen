@@ -1,4 +1,4 @@
-"""Synthesise sub-grid relief when a region is zoomed (milestone 7).
+"""Synthesise sub-grid relief when a region is zoomed.
 
 The global surface resolves relief down to its grid spacing; zoom continues its
 relief spectrum below that, one octave at a time down to the region's own

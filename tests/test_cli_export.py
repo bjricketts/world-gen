@@ -1,4 +1,4 @@
-"""The export and globe commands (task 10.6): every subcommand writes its files, and bad requests fail cleanly."""
+"""The export and globe commands: every subcommand writes its files, and bad requests fail cleanly."""
 
 import json
 from pathlib import Path

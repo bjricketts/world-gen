@@ -1,4 +1,4 @@
-"""Measures and rows of scripts/validate_organic.py (task 9.11)."""
+"""Measures and rows of scripts/validate_organic.py."""
 
 import importlib.util
 from pathlib import Path

@@ -1,4 +1,4 @@
-"""Cloud tops of giant planets: winds, bands, vortices, poles, locked giants, and their maps and exports (task 11.3)."""
+"""Cloud tops of giant planets: winds, bands, vortices, poles, locked giants, and their maps and exports."""
 
 import math
 

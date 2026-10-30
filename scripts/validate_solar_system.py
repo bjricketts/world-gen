@@ -6,7 +6,7 @@ The four giants are built from their masses, radii, orbits and envelope
 fractions; their moons and rings are drawn, and drawn systems are compared
 over ``--seeds`` draws with the architectures they should reproduce. The big
 moons are then built as worlds from their real masses, radii and orbits,
-listed on their planets (task 11.8). Each check names its source. The exit
+listed on their planets. Each check names its source. The exit
 code is 1 if any check fails.
 """
 
@@ -155,7 +155,7 @@ OBSERVED_COLOURS = {"Jupiter": "#c1c1b2", "Saturn": "#c4b99b", "Uranus": "#a0c3c
 
 
 def colour_checks(states: dict) -> list[Check]:
-    """Return checks of the layered giant colours (task 11.11) at each giant's mass-trend metallicity, the
+    """Return checks of the layered giant colours at each giant's mass-trend metallicity, the
     ice giants with their observed deep methane and internal heat, the seeded haze scatter left out."""
     from worldgen.giants import colours as gc
 

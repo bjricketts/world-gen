@@ -16,7 +16,7 @@ A world enters a largest-state row only once some occupied cell holds Earth's le
 (and, at 2800 BCE, once it has a state);
 the Mongol row counts only worlds whose largest steppe region spans STEPPE_BELT_KM.
 
-Rows marked as known gaps failed when the script was written (task 9.11). Since then (tasks 9.12–9.13) the
+Rows marked as known gaps failed when the script was written. Since then (tasks 9.12–9.13) the
 population from 5000 BCE to 1800, the farming front, the largest state from 500 BCE to 1700 and the steppe
 empire are met; populations stay below HYDE from 1900, half the worlds never industrialise, the largest state is
 0.46 × Taagepera's at 1900, and most worlds have no state yet at 2800 BCE (see OPEN_POINTS.md).
@@ -52,9 +52,9 @@ TAAGEPERA = [(4815, 0.25, "2800 BCE"), (2515, 5.5, "500 BCE"), (2015, 6.2, "1 CE
              (315, 12.0, "1700"), (115, 30.0, "1900")]
 # Earth's leading energy level in force at each Taagepera date: farming (the 1 CE population anchor) until 1 CE,
 # water_wind (the 1700 anchor) in 1300 and 1700, fossil (the 1900 anchor) in 1900. A world enters a date's
-# largest-state row only once some occupied cell holds that level (Ben's choice, after task 9.13).
+# largest-state row only once some occupied cell holds that level (the date's leading level, not a count of states).
 TAAGEPERA_LEVEL = {4815: 1, 2515: 1, 2015: 1, 715: 2, 315: 2, 115: 3}
-# At 2800 BCE only worlds with a state (writing) by then count (Ben's choice, after the steppe pass).
+# At 2800 BCE only worlds with a state (writing) by then count (an earlier state is not required of worlds that have none).
 TAAGEPERA_NEEDS_STATE = {4815}
 EARTH_LAND_MM2 = 133.0
 # The Eurasian steppe runs ~8000 km from Hungary to Manchuria (Britannica, "The Steppe"); a world's largest connected
@@ -339,7 +339,7 @@ def rows(measures: list[dict]) -> list:
         model = "-" if not np.isfinite(agg) else f"{fmt.format(agg)} ({spread})"
         if median and np.isfinite(agg):
             model = f"{fmt.format(agg)} (mean {fmt.format(_summary(values)[0])}; {spread})"
-        if count and count.split("/")[0] != count.split("/")[1]:
+        if "/" in count and count.split("/")[0] != count.split("/")[1]:
             model += f" [{count}]"
         e = earth_text if earth_text is not None else ("" if earth is None else fmt.format(earth))
         return (label, e, model, verdict(test, kind, agg, earth) if np.isfinite(agg) else "")

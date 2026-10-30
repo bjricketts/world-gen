@@ -1,4 +1,4 @@
-"""Relict features left by the planet's past (milestone 6)."""
+"""Relict features left by the planet's past."""
 
 import matplotlib
 import numpy as np
@@ -8,7 +8,6 @@ matplotlib.use("Agg")
 
 from worldgen import constants as c                                    # noqa: E402
 from worldgen import heuristics as h                                   # noqa: E402
-from worldgen.generate import generate_world                           # noqa: E402
 from worldgen.grid import build_grid                                   # noqa: E402
 from worldgen.report import format_report                              # noqa: E402
 from worldgen.spec import PlanetSpec, load_spec                        # noqa: E402

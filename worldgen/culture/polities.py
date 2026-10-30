@@ -112,7 +112,6 @@ def _solve_count(partition, n_min: int, n_max: int, target: float, cell_area: fl
         value = run(n)
         if value >= target or n >= n_max:
             break
-        best_so_far = max(v for v, _, _ in tried.values())
         stall = stall + 1 if value < (1 + h.POLITY_COUNT_GROWTH_MIN) * tried[below][0] else 0
         if stall >= h.POLITY_COUNT_STALL_STEPS:
             break

@@ -1,4 +1,4 @@
-"""Settlement regions, rank-size systems and placement (task 8.4)."""
+"""Settlement regions, rank-size systems and placement."""
 
 from pathlib import Path
 

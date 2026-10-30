@@ -1,4 +1,4 @@
-"""A planet's system in 3D (task 11.9): the planet, its rings and moons lit by the star, with shadows.
+"""A planet's system in 3D: the planet, its rings and moons lit by the star, with shadows.
 
 The scene frame has z normal to the planet's orbit; the planet's spin axis is
 tilted from it by the obliquity, and the star lies in the orbit plane at an

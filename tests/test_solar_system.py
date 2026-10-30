@@ -1,4 +1,4 @@
-"""Solar System validation: icy air, high-pressure ice, melt feedback and the validation script (task 11.8)."""
+"""Solar System validation: icy air, high-pressure ice, melt feedback and the validation script."""
 
 import importlib.util
 import sys

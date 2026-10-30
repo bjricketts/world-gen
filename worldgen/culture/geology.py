@@ -153,7 +153,7 @@ def geology(world) -> Geology:
     margin = continental & (d["coast"] <= h.PASSIVE_MARGIN_WIDTH_KM) & (elevation < h.PASSIVE_MARGIN_MAX_ELEVATION_M)
     setting[margin] = Setting.PASSIVE_MARGIN
     setting[continental & (d["transform"] <= h.STRIKE_SLIP_WIDTH_KM)] = Setting.STRIKE_SLIP
-    setting[continental & (d["rift"] <= h.RIFT_WIDTH_KM)] = Setting.RIFT
+    setting[continental & (d["rift"] <= h.GEOLOGY_RIFT_WIDTH_KM)] = Setting.RIFT
     setting[continental & (d["collision"] <= h.FORELAND_WIDTH_KM)] = Setting.FORELAND
     setting[continental & (d["subduction"] <= h.SUBDUCTION_MARGIN_WIDTH_KM)] = Setting.SUBDUCTION_MARGIN
     setting[continental & (terrain == Terrain.MOUNTAIN)] = Setting.OROGEN

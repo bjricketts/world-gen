@@ -6,8 +6,8 @@ import pytest
 from worldgen.constants import R_EARTH
 from worldgen.hydrology.graph import priority_flood, steepest_receivers
 from worldgen.zoom import tiles
-from worldgen.zoom.tiles import (RegionGrid, TileId, face_uv_to_unit, level_for_resolution, region_for,
-                                 region_grid, tile_at, unit_to_face_uv)
+from worldgen.zoom.tiles import (TileId, face_uv_to_unit, level_for_resolution, region_for,
+                                 region_grid, unit_to_face_uv)
 
 
 def _random_unit_vectors(n, seed=0):

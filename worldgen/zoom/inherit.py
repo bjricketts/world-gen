@@ -1,4 +1,4 @@
-"""Inherit the global surface into a zoomed region, and downscale its climate (milestone 7).
+"""Inherit the global surface into a zoomed region, and downscale its climate.
 
 A region's coarse fields come from the planet grid by barycentric interpolation
 on its triangulation: continuous fields (elevation, climate, the structural

@@ -1,5 +1,5 @@
 """Outputs of an organic history: epochs on maps and reports, the chronicle, the series, figures and commands
-(task 9.10)."""
+."""
 
 from pathlib import Path
 

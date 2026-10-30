@@ -10,7 +10,7 @@ the integration restarts. Tier 0 climate is quasi-static and comes from
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from typing import Callable, Optional
 
 import numpy as np
@@ -425,7 +425,7 @@ class HistoryModel:
 
 def pending_event(model: "HistoryModel", t: float, y: np.ndarray, modes: Modes, done: set) -> Optional[str]:
     """Return a terminal event whose condition already holds at (t, y), so it would never be crossed."""
-    d = model.diagnostics(t, y, modes)
+    model.diagnostics(t, y, modes)        # fills the cache the event functions read
     for name, fn, terminal, direction in model.events(modes):
         if not terminal or name in done or name == "hot":
             continue

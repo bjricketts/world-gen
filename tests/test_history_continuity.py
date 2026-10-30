@@ -1,4 +1,4 @@
-"""Settlements, roads and trade carried through the kept epochs of an organic history (task 9.7)."""
+"""Settlements, roads and trade carried through the kept epochs of an organic history."""
 
 from pathlib import Path
 

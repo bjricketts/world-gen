@@ -1,4 +1,4 @@
-"""Farming origins, growth of knowledge and spread of levels in the organic history (task 9.4)."""
+"""Farming origins, growth of knowledge and spread of levels in the organic history."""
 
 from pathlib import Path
 

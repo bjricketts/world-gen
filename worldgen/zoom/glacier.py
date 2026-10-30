@@ -1,4 +1,4 @@
-"""Glaciers, ice sheets and glacial erosion on a zoomed region (milestone 7).
+"""Glaciers, ice sheets and glacial erosion on a zoomed region.
 
 Ice is built on the region from the local mass balance, which gains ice above
 the snowline and loses it below (Hergarten 2021). The ice flux is carried down

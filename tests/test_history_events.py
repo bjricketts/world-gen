@@ -1,5 +1,5 @@
 """Planet events in the organic history: eruptions, droughts, pandemics, impacts, sea level, stress and knowledge
-loss (task 9.9)."""
+loss."""
 
 import math
 from pathlib import Path

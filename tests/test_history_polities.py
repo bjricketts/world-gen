@@ -1,4 +1,4 @@
-"""States in the organic history: formation, warfare, break-up and their epochs (task 9.5)."""
+"""States in the organic history: formation, warfare, break-up and their epochs."""
 
 from pathlib import Path
 

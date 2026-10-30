@@ -1,4 +1,4 @@
-"""Export core (task 10.1): planet CRS, samplers, field registry, raster writers and global rasters."""
+"""Export core: planet CRS, samplers, field registry, raster writers and global rasters."""
 
 from pathlib import Path
 

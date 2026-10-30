@@ -1,9 +1,9 @@
-"""Organic mode (milestone 9): cultures that emerge from a simulated history on the planet.
+"""Organic mode: cultures that emerge from a simulated history on the planet.
 
 The history steps per-cell people and development on the global grid (rules on
 the mesh) with polities and factions as agents, from a start date to the
 present, and keeps the states at the requested epochs. Each kept state is
-turned into settlements, roads, borders and names by the milestone 8 steps.
+turned into settlements, roads, borders and names by the user-scoped steps.
 """
 
 from .clock import next_date, step_years, stops

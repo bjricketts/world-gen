@@ -1,4 +1,4 @@
-"""The system and moon commands and the giant and moon report (task 11.10)."""
+"""The system and moon commands and the giant and moon report."""
 
 import matplotlib
 

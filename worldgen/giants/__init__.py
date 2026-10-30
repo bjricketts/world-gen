@@ -1,4 +1,4 @@
-"""Giants and moons (milestone 11): giant appearance, system limits, the system summary, parent planets, moon worlds."""
+"""Giants and moons: giant appearance, system limits, the system summary, parent planets, moon worlds."""
 
 from .appearance import build_appearance, is_giant, sudarsky_class
 from .clouds import CloudModel, build_cloud_model, cloud_model, cloud_surface, evaluate, is_cloud_surface

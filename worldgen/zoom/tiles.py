@@ -1,4 +1,4 @@
-"""Cube-sphere quadtree tiles and the local grid a zoomed region is built on (milestone 7).
+"""Cube-sphere quadtree tiles and the local grid a zoomed region is built on.
 
 A region of the planet is addressed on a cube-sphere: six faces, each an
 equiangular square that a quadtree subdivides into tiles. A tile is named by

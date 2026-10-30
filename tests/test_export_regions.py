@@ -1,4 +1,4 @@
-"""Region exports (task 10.2): node fields, native and LAEA rasters, georeferencing, bundles, vectors, engines."""
+"""Region exports: node fields, native and LAEA rasters, georeferencing, bundles, vectors, engines."""
 
 import json
 from pathlib import Path

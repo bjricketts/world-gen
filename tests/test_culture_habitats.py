@@ -1,4 +1,4 @@
-"""Habitats of colonists, landing sites and space elevators (task 8.8)."""
+"""Habitats of colonists, landing sites and space elevators."""
 
 from dataclasses import replace
 from pathlib import Path

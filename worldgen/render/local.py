@@ -1,4 +1,4 @@
-"""Stylised 2D map of a zoomed region (milestone 7).
+"""Stylised 2D map of a zoomed region.
 
 A region is a regular lattice, so its map is a flat raster rather than a
 projected globe: hypsometric or biome tints, hillshaded relief, a crenellated

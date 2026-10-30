@@ -1,6 +1,6 @@
 """People in an organic history: carrying capacity, logistic growth and spread over the travel graph.
 
-Capacity per cell follows the milestone 8 terms at the energy level each cell
+Capacity per cell follows the user-scoped terms at the energy level each cell
 has reached, scaled so the planet's productive land would hold Earth's
 population at that level (HYDE 3.2); early farming holds a fitted share of
 the step from foraging to farming. Cultures in one cell grow logistically
@@ -39,7 +39,7 @@ from ..suitability import Covariates, log_capacity, productive_area_km2
 
 def in_habitats(culture: Culture, world=None) -> bool:
     """Return whether a culture lives in built habitats: colonists, unless the world is habitable unaided (there
-    they farm like natives at their level, task 9.14)."""
+    they farm like natives at their level)."""
     if culture.inhabitants != "colonist":
         return False
     occ = getattr(getattr(world, "state", None), "occupiability", None) if world is not None else None

@@ -1,4 +1,4 @@
-"""What a moon receives from its parent (task 11.6): eclipses, planetshine, tidal heat and magnetic shelter.
+"""What a moon receives from its parent: eclipses, planetshine, tidal heat and magnetic shelter.
 
 - Eclipses (Heller 2012): on a circular orbit in the plane of the star, the
   moon spends R_p / (π a) of each orbit in the parent's shadow. When the moon's

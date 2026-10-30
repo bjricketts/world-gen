@@ -1,4 +1,4 @@
-"""Suitability, population density and default populations of cultures (task 8.3)."""
+"""Suitability, population density and default populations of cultures."""
 
 from dataclasses import replace
 from pathlib import Path

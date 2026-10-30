@@ -1,4 +1,4 @@
-"""The tectonic simulation driven by the integrated interior history (milestone 6)."""
+"""The tectonic simulation driven by the integrated interior history."""
 
 import numpy as np
 import pytest

@@ -1,4 +1,4 @@
-"""Milestone 1.1: drawn weathering target, habitable-zone-relative instellation, outcome constraints."""
+"""Drawn weathering target, habitable-zone-relative instellation, outcome constraints."""
 
 from functools import lru_cache
 

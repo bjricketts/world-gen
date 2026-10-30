@@ -1,4 +1,4 @@
-"""Drawn moon systems (task 11.5): regular moons of giants, ring-born moons, and impact moons of rocky planets.
+"""Drawn moon systems: regular moons of giants, ring-born moons, and impact moons of rocky planets.
 
 Three sources, each from its literature:
 

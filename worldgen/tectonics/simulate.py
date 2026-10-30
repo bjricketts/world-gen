@@ -9,7 +9,7 @@ import numpy as np
 from .. import constants as c
 from .. import heuristics as h
 from ..grid import SphereGrid
-from ..surface.drive import TectonicDrive, plate_speed_m_myr
+from ..surface.drive import TectonicDrive
 from ..surface.landforms import random_unit_vectors
 from ..util import named_rng
 from ..hydrology import WaterSetting, erode_surface

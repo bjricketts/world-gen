@@ -1,4 +1,4 @@
-"""Drawn moon systems: Jovian and Saturnian architectures, ring-born chains, impact moons and limits (task 11.5)."""
+"""Drawn moon systems: Jovian and Saturnian architectures, ring-born chains, impact moons and limits."""
 
 import math
 

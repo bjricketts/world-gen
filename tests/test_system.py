@@ -1,4 +1,4 @@
-"""System summary, parent planets and moon worlds (task 11.1)."""
+"""System summary, parent planets and moon worlds."""
 
 import math
 

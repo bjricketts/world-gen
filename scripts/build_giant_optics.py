@@ -1,4 +1,4 @@
-"""Build worldgen/data/giant_optics.npz: the optical tables of the giant-colour model (task 11.11).
+"""Build worldgen/data/giant_optics.npz: the optical tables of the giant-colour model.
 
 Reads the methane absorption of Karkoschka (1994) from the data folder (default
 ``giant_colours/``) and computes the Mie properties of the aerosol types with
@@ -14,7 +14,7 @@ Sources
   (r = 0.05 µm, real index 1.4).
 - Cloud particles: real index 1.42, non-absorbing (as used by Braude et al. 2020).
 The particle radii and the dilution of the chromophore in Saturn's tropospheric
-haze are the calibration of task 11.11 (heuristic).
+haze are the calibration (heuristic).
 """
 
 from __future__ import annotations

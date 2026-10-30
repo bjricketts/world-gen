@@ -248,7 +248,7 @@ def field_image(world: World, field: str, proj: ccrs.Projection, width: int, mon
     elif field == "rainfall" and "precipitation" not in ds:
         raise ValueError("'rainfall' needs surface water and an atmosphere")
     elif field in ("biomes", "koppen", "ice") and "biome" not in ds:
-        raise ValueError(f"'{field}' needs a saved world from milestone 5 or later")
+        raise ValueError(f"'{field}' needs a saved world that contains that field")
     elif field == "relicts" and "relict" not in ds:
         raise ValueError(f"{world.state.name} has no relict features; generate it in history mode")
     elif field == "basins" and "drainage_basin" not in ds:

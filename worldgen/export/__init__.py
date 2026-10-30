@@ -1,4 +1,4 @@
-"""Heightfield, raster and mesh export of worlds and zoomed regions (milestone 10)."""
+"""Heightfield, raster and mesh export of worlds and zoomed regions."""
 
 from .crs import equirect_geotransform, planet_crs_wkt
 from .fields import EXPORT_FIELDS, ExportField, export_field

@@ -1,4 +1,4 @@
-"""Appearance of giant planets: cloud class, albedo, colour and jets (task 11.2).
+"""Appearance of giant planets: cloud class, albedo, colour and jets.
 
 Internal heat sets the effective temperature with the starlight,
 T_eff⁴ = T_eq⁴ + T_int⁴, from intrinsic luminosities measured for Saturn

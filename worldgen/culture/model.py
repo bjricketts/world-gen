@@ -1,7 +1,7 @@
 """The civilisation placed on a planet: cultures, polities, settlements, roads, per-cell layers and a chronicle.
 
 Every object has a stable id, a founding time (years before the civilisation's
-epoch) and a parent, so the organic history of milestone 9 can record where
+epoch) and a parent, so the organic history can record where
 each came from. User-scoped mode fills the founding times it knows (colonies)
 and leaves the rest unknown (NaN or None).
 
@@ -94,7 +94,7 @@ class Polity:
 
 @dataclass
 class ChronicleEntry:
-    """One event in a civilisation's history (filled by the organic mode of milestone 9)."""
+    """One event in a civilisation's history (filled by the organic mode)."""
 
     years_ago: float
     kind: str

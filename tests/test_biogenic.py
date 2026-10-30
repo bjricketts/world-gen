@@ -1,4 +1,4 @@
-"""Sediment the sea makes itself: platforms, shelf and slope carbonate, pelagic rain (task 8.2)."""
+"""Sediment the sea makes itself: platforms, shelf and slope carbonate, pelagic rain."""
 
 import numpy as np
 

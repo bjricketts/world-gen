@@ -1,4 +1,4 @@
-"""The system diagram and the 3D system scene (task 11.9)."""
+"""The system diagram and the 3D system scene."""
 
 import math
 

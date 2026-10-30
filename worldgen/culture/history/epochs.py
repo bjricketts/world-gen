@@ -1,9 +1,9 @@
-"""A civilisation from an organic history: the milestone 8 placement run on the history's people at each kept epoch.
+"""A civilisation from an organic history: the user-scoped placement run on the history's people at each kept epoch.
 
 At every kept epoch the organic cultures take the development their people
 have reached and the density the history gives them; scoped cultures present
 at that date are placed as in user-scoped mode. Settlements, roads, trade and
-names then follow the milestone 8 steps, each epoch reusing the previous
+names then follow the user-scoped steps, each epoch reusing the previous
 epoch's roads, and settlements and roads get stable ids and founding dates
 (``continuity.py``); organic cultures keep the history's states
 and borders, with their ids, founding dates and parents. The present epoch is the

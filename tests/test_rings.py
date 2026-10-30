@@ -1,4 +1,4 @@
-"""Rings: which planets have which, their layout from the Roche limits, colours, meshes and saving (task 11.4)."""
+"""Rings: which planets have which, their layout from the Roche limits, colours, meshes and saving."""
 
 import numpy as np
 import pytest

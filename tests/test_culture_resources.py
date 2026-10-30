@@ -1,4 +1,4 @@
-"""Geological settings, deep time and resource potentials (task 8.2)."""
+"""Geological settings, deep time and resource potentials."""
 
 from dataclasses import replace
 

@@ -1,4 +1,4 @@
-"""Culture layers on maps, the culture report and the `worldgen culture` command (task 8.9)."""
+"""Culture layers on maps, the culture report and the `worldgen culture` command."""
 
 from pathlib import Path
 
@@ -6,7 +6,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-import numpy as np
 import pytest
 from typer.testing import CliRunner
 

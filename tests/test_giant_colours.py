@@ -1,4 +1,4 @@
-"""Giant colours from atmospheric composition (task 11.11)."""
+"""Giant colours from atmospheric composition."""
 
 import math
 

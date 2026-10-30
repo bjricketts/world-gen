@@ -1,8 +1,7 @@
 """Heuristic plate-tectonic terrain for mobile-lid planets.
 
 Plates are drawn once with present-day motions; mountain belts, trenches,
-ridges and rifts are placed from the boundary types. No time evolution:
-milestone 3 replaces this with a plate simulation.
+ridges and rifts are placed from the boundary types. No time evolution; the plate simulation replaces this layout when it is selected.
 """
 
 from __future__ import annotations

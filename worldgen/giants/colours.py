@@ -1,4 +1,4 @@
-"""Colours of cold giants from the composition of their atmospheres (task 11.11).
+"""Colours of cold giants from the composition of their atmospheres.
 
 Classes I and II (Sudarsky et al. 2000) are coloured by a layered reflectance
 model calibrated on the four Solar System giants:
@@ -296,7 +296,7 @@ def _hex(spectrum_nm: np.ndarray, star_temperature_k: float) -> tuple[str, float
 def layered_colours(column: CloudColumn, t_of_p: Callable, star_temperature_k: float) -> LayeredColours:
     """Return the disc, zone, belt and vortex colours of a cold giant.
 
-    Belts carry the chromophore tint of task 11.2, scaled with the chromophore
+    Belts carry the chromophore tint of the cloud class, scaled with the chromophore
     optical depth and hidden by the tropospheric haze; zones and belts average
     to the modelled disc.
     """

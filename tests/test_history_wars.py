@@ -1,4 +1,4 @@
-"""Rulers, provinces, wars and alliances of states in the organic history (task 9.6)."""
+"""Rulers, provinces, wars and alliances of states in the organic history."""
 
 from pathlib import Path
 

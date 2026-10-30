@@ -1,4 +1,4 @@
-"""Suitability components of the organic history (task 9.2)."""
+"""Suitability components of the organic history."""
 
 from pathlib import Path
 

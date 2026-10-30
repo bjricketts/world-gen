@@ -1,4 +1,4 @@
-"""Captured moons and impact systems of giants (task 11.7b)."""
+"""Captured moons and impact systems of giants."""
 
 import math
 

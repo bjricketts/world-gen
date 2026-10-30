@@ -1,4 +1,4 @@
-"""Culture spec, development axes, resolved cultures, the civilisation data model and its storage (task 8.1)."""
+"""Culture spec, development axes, resolved cultures, the civilisation data model and its storage."""
 
 from pathlib import Path
 

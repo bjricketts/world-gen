@@ -1,4 +1,4 @@
-"""Where a planet's moons are, and how a scene compresses distances (task 11.9).
+"""Where a planet's moons are, and how a scene compresses distances.
 
 Positions are in the planet frame: z along the spin axis, x towards the
 ascending node of the planet's orbit on its equator. Each moon follows a

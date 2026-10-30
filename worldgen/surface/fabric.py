@@ -2,7 +2,7 @@
 
 Mountain belts fold along strike and abyssal hills run parallel to the
 spreading ridge, so relief is elongated along a preferred direction. Zoom
-lays anisotropic detail along that direction (milestone 7), which needs the
+lays anisotropic detail along that direction, which needs the
 grain to be known at generation time and stored on the surface.
 
 The grain is recovered from the tectonic state the surface already carries:

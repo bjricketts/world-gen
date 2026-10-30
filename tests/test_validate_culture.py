@@ -1,4 +1,4 @@
-"""Verdict logic of scripts/validate_culture.py (task 8.11)."""
+"""Verdict logic of scripts/validate_culture.py."""
 
 import importlib.util
 from pathlib import Path

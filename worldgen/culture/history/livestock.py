@@ -117,7 +117,7 @@ class Livestock:
             t = int(np.clip(t, 0, len(h.LAND_SPEED_FACTOR) - 1))
             links = pop.links_for(t)
             live = source[links.rows] & (transport[links.rows] == t) & target[links.cols]
-            src, dst = links.rows[live], links.cols[live]
+            dst = links.cols[live]
             factor = h.LAND_SPEED_FACTOR[t] / h.LAND_SPEED_FACTOR[0]
             gain = (front_speed_km_yr() * factor * np.clip(self.arable[dst], 0.0, 1.0) ** h.FARMING_FRONT_ARABLE_EXPONENT
                     * years / links.flat_km[live])

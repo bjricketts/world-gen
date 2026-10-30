@@ -820,8 +820,8 @@ def system_cmd(
                 raise ValueError(f"unknown view '{view}'; use top or edge")
             if out is not None and out.suffix.lower() not in (".png", ".svg", ".pdf"):
                 raise ValueError(f"unknown output type '{out.suffix}'; use .png, .svg or .pdf")
-            fig = plot_system(planet, view, "linear" if linear else "log", highlight, moon_worlds, path=out,
-                              time_s=time * 86400.0)
+            plot_system(planet, view, "linear" if linear else "log", highlight, moon_worlds, path=out,
+                        time_s=time * 86400.0)
             if out is None:
                 import matplotlib.pyplot as plt
 

@@ -1,4 +1,4 @@
-"""A planet's system as a diagram (task 11.9): its moons' orbits, rings and limits, seen from above or edge-on.
+"""A planet's system as a diagram: its moons' orbits, rings and limits, seen from above or edge-on.
 
 Distances are in planet radii on a logarithmic radial axis by default (the
 planet's surface at 1, each further unit ten times farther), so close ring

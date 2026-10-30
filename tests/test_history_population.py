@@ -1,4 +1,4 @@
-"""Growth and spread of people in the organic history (task 9.3)."""
+"""Growth and spread of people in the organic history."""
 
 import math
 from pathlib import Path
@@ -89,7 +89,6 @@ def test_front_crosses_links_at_the_front_speed_and_conserves_people():
 
 def test_front_speed_is_the_same_on_coarse_and_fine_grids():
     """On a planet-wide uniform lattice the front runs at the target speed on every grid and step."""
-    from worldgen.grid import build_grid
 
     R = 6371.0
     speeds = []

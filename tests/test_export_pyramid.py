@@ -1,4 +1,4 @@
-"""Tile pyramid (task 10.3): global levels, re-levelling, decimation, chains with blend bands, tile files."""
+"""Tile pyramid: global levels, re-levelling, decimation, chains with blend bands, tile files."""
 
 import json
 from pathlib import Path

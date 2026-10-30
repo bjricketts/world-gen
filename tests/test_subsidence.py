@@ -1,4 +1,4 @@
-"""Tectonic subsidence of continental crust and the sediment that fills it (task 8.2)."""
+"""Tectonic subsidence of continental crust and the sediment that fills it."""
 
 import numpy as np
 import pytest

@@ -1,4 +1,4 @@
-"""Capitals, XTENT territories, polity counts and types (task 8.6)."""
+"""Capitals, XTENT territories, polity counts and types."""
 
 from pathlib import Path
 
@@ -43,12 +43,12 @@ def test_capitals_are_the_largest_settlements_kept_apart():
 
 
 def test_influence_goes_to_the_strongest_reachable_capital():
-    # a line of 10 cells, 1 h apart; capitals at 0 and 9, the one at 9 with 3 h more influence
+    # a line of 10 cells, 1 h apart; capitals at 0 and 9, the one at 9 with 3.5 h more influence (no cell is equidistant)
     n = 10
     rows = np.r_[np.arange(n - 1), np.arange(1, n)]
     cols = np.r_[np.arange(1, n), np.arange(n - 1)]
     m = sparse.csr_matrix((np.ones(rows.size), (rows, cols)), shape=(n, n))
-    owner = influence_owner(m, np.array([0, 9]), np.array([0.0, 3.0]))
+    owner = influence_owner(m, np.array([0, 9]), np.array([0.0, 3.5]))
     assert list(owner) == [0, 0, 0] + [1] * 7
     cut = sparse.csr_matrix((np.ones(2), ([0, 1], [1, 0])), shape=(n, n))
     assert list(influence_owner(cut, np.array([0]), np.array([0.0]))) == [0, 0] + [-1] * 8

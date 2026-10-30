@@ -1,4 +1,4 @@
-"""Local erosion and drainage on a zoomed region (milestone 7).
+"""Local erosion and drainage on a zoomed region.
 
 The whole requested region is eroded as one grid, so its rivers and valleys are
 continuous with no internal seams. Water leaves at the sea within the region and

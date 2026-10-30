@@ -137,7 +137,7 @@ def apply_parent_energy(parent: ParentState, orbit, bulk: BulkState, love_number
     tidal heat per square metre become the orbit's extra absorbed flux.
 
     Dissipation: a frozen water world dissipates in its ice shell
-    (``ice_shell_dissipation``). Otherwise, melt feedback (task 11.8): a moon
+    (``ice_shell_dissipation``). Otherwise, melt feedback: a moon
     whose tides, at the dissipation of a partially molten interior (Io's
     measured k₂/Q = 0.015), would exceed its other internal heat
     (``internal_heat_w``) is taken to be in that state. A spec that fixes Q

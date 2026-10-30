@@ -1,4 +1,4 @@
-"""Giant appearance: cloud class, albedo, colour and jets (task 11.2)."""
+"""Giant appearance: cloud class, albedo, colour and jets."""
 
 import pytest
 

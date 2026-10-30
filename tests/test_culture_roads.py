@@ -1,10 +1,9 @@
-"""Travel costs, gravity links, routing and road classes (task 8.5)."""
+"""Travel costs, gravity links, routing and road classes."""
 
 from pathlib import Path
 
 import numpy as np
 import pytest
-from scipy import sparse
 from scipy.sparse.csgraph import dijkstra
 
 from worldgen import heuristics as h

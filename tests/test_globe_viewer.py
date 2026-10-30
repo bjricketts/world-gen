@@ -1,4 +1,4 @@
-"""The 3D globe (task 10.5): building, recolouring by field and epoch, draped regions, images, HTML, widget."""
+"""The 3D globe: building, recolouring by field and epoch, draped regions, images, HTML, widget."""
 
 from pathlib import Path
 

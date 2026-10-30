@@ -1,4 +1,4 @@
-"""Meshes (task 10.4): RTIN simplification with locked borders, tile meshes, sea layer, frames and files."""
+"""Meshes: RTIN simplification with locked borders, tile meshes, sea layer, frames and files."""
 
 from pathlib import Path
 

@@ -1,4 +1,4 @@
-"""Sound systems, words and place names (task 8.7)."""
+"""Sound systems, words and place names."""
 
 import random
 from pathlib import Path

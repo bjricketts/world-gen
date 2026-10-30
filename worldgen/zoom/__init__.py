@@ -1,4 +1,4 @@
-"""Zoom: cube-sphere quadtree tiles and local maps of a region (milestone 7)."""
+"""Zoom: cube-sphere quadtree tiles and local maps of a region."""
 
 from .assemble import load_region, region_block, save_region, square_block, zoom_block, zoom_region
 from .detail import DetailedRegion, synthesize_detail, synthesize_region

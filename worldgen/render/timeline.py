@@ -7,7 +7,7 @@ marks the events from the timeline.
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Union
 
 import matplotlib.pyplot as plt
 import numpy as np

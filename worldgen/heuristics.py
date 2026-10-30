@@ -47,7 +47,7 @@ TIDAL_K2_ROCKY = 0.3
 TIDAL_Q_GIANT = 1e5
 TIDAL_K2_GIANT = 0.5
 
-# --- Moons and rings (milestone 11) --------------------------------------
+# --- Moons and rings --------------------------------------
 
 # Outermost stable moon orbits as fractions of the Hill radius: prograde from
 # Holman & Wiegert's binary integrations as applied by Barnes & O'Brien
@@ -63,11 +63,11 @@ ROCHE_GAMMA_RUBBLE = 1.6
 RING_DENSITY_ICY = 400.0
 RING_DENSITY_ROCKY = 860.0
 
-# --- Giant appearance (task 11.2) ------------------------------------------
+# --- Giant appearance ------------------------------------------
 
 # Intrinsic luminosity at 4.5 Gyr (units of 8.710e-10 L_sun, Linder et al.'s L_J) against
 # mass (M_E): Jupiter and Saturn from their Cassini-era intrinsic fluxes, 7.485 W/m² (Li et al.
-# 2018) and 2.84 W/m² (Wang et al. 2024, over mean radii of 69,911 and 58,232 km; task 11.8);
+# 2018) and 2.84 W/m² (Wang et al. 2024, over mean radii of 69,911 and 58,232 km);
 # ice giants at the geometric mean of Uranus (≤1.01e-3) and Neptune (9.85e-3)
 # at their mean mass, with a seeded scatter spanning the two; 5 and 10 M_J
 # from the Burrows et al. (1997) cooling tracks at 4.5 Gyr. Interpolated
@@ -83,7 +83,7 @@ ICE_GIANT_LUMINOSITY_SCATTER_DEX = 0.5
 SUDARSKY_BOUNDARIES_K = (150.0, 350.0, 900.0, 1500.0)
 SUDARSKY_LOW_GRAVITY_M_S2 = 10.0
 # Bond albedos: class I gas giants the mean of Jupiter's 0.503 (Li et al. 2018) and Saturn's 0.41
-# (Wang et al. 2024), the Cassini-era values (task 11.8; Voyager's were 0.34); class I ice giants
+# (Wang et al. 2024), the Cassini-era values (Voyager's were 0.34); class I ice giants
 # between Neptune's 0.29 (Pearl & Conrath 1991) and Uranus's 0.349 (Irwin et al. 2025); classes II–V
 # the Sudarsky G2V fiducial values.
 GIANT_ALBEDO = {"I gas": 0.46, "I ice": 0.30, "II": 0.81, "III": 0.12, "IV": 0.03, "V": 0.55}
@@ -110,7 +110,7 @@ BELT_SHARE = 0.5
 # Vortex colour: the chromophore tint raised to this power (redder than belts).
 VORTEX_CHROMOPHORE_POWER = 2.5
 
-# --- giant colours from composition (task 11.11) ---------------------------------
+# --- giant colours from composition ---------------------------------
 # Heavy-element enrichment: the Solar System C/H fit log ε = 8.84 − 1.13 log10(M/M_J)
 # (Lothringer et al. 2025), plus the star's [Fe/H]; the scatter is heuristic.
 GIANT_METALLICITY_LOG_EPS_MJ = 8.84
@@ -175,7 +175,7 @@ LOCKED_JET_MAX_LATITUDE_DEG = 60.0
 HOT_SPOT_OFFSET_DEG = 30.0
 GIANT_CP_OVER_R = 3.5                # c_p / R for an H2-He atmosphere
 
-# --- Giant cloud tops (task 11.3) ------------------------------------------
+# --- Giant cloud tops ------------------------------------------
 
 # Zonal wind: jets alternate in direction at the jet cores of the appearance
 # and peak at the belt–zone boundaries (Melin 2026). Equatorial peaks: Jupiter
@@ -258,7 +258,7 @@ DAY_NIGHT_HOT_K = 750.0
 DAY_NIGHT_T_EQ_K = (1300.0, 1600.0)
 POLAR_VORTEX_LOCKED_DEG = 20.0        # radius of the anticyclonic polar vortices (heuristic)
 
-# --- Rings (task 11.4) ------------------------------------------------------
+# --- Rings ------------------------------------------------------
 
 # Dense rings form where weak icy material sits near 70 K (Hedman 2015): ring
 # temperature T = 283 K (1 − A)^¼ (L/L☉)^¼ (1 AU/a)^½. A planet is in the
@@ -323,7 +323,7 @@ RING_MESH_SEGMENTS = 720               # azimuthal segments of a ring mesh on th
 RING_SPECTRA = {"icy": (0.62, 0.92, 1.0, 1.02), "polluted": (0.85, 0.95, 1.0, 1.03), "dark": (1.0, 1.0, 1.0, 1.0),
                 "dusty": (0.75, 0.9, 1.0, 1.05)}
 
-# --- Moon systems (task 11.5) ------------------------------------------------
+# --- Moon systems ------------------------------------------------
 # Gas-dominated giants take a Jovian or Saturnian architecture of regular moons after Sasaki, Stewart & Ida
 # (2010): a planet that opens a gap in its star's disc keeps 4–5 similar moons, the inner ones in resonance
 # (four most likely, 39 of 100 runs; 4 or 5 in 80%); one that does not keeps one dominant icy moon (67%).
@@ -400,7 +400,7 @@ IMPACT_MOON_INCLINATION_DEG = (0.0, 6.0)
 REGULAR_MOON_ECCENTRICITY = (0.0, 0.01)
 REGULAR_MOON_INCLINATION_DEG = (0.0, 0.5)
 
-# --- Captured moons and impact systems of giants (task 11.7b) ------------------
+# --- Captured moons and impact systems of giants ------------------
 # Impact systems of ice giants (Woo et al. 2021): a 3 M⊕ rocky impactor on proto-Uranus leaves a disc that
 # spreads and forms ~1e-4 M_p of moons, the mass rising outward from ~4 to 20 R_p, about half ice
 # (6.3e-5 ice, 5.5e-5 rock). The outcome is drawn about Uranus's five large moons (masses from JPL GM,
@@ -442,7 +442,7 @@ CAPTURED_FINAL_ECCENTRICITY = (0.0, 0.01)
 CAPTURED_TILT_DEG = (0.0, 30.0)
 CAPTURED_ICY_WATER_FRACTION = (0.25, 0.50)   # Triton and Pluto are about 70% rock (heuristic range)
 
-# --- Moons through the rocky pipeline (task 11.6) -----------------------------
+# --- Moons through the rocky pipeline -----------------------------
 # Energy on a moon (Heller & Barnes 2013, eq. 22; Heller 2012): starlight lost in eclipses, starlight
 # reflected by the parent (π R_p² α_p / 2a² of the direct flux), the parent's thermal emission
 # R_p² σ T_p⁴ / a² absorbed over the moon's sphere ((1 − α_IR)/4, with T_p⁴ = T_eq⁴ + T_int⁴ as in Heller
@@ -481,7 +481,7 @@ ICE_BASAL_VISCOSITY = 1e14
 ICE_CRITICAL_RAYLEIGH = 1e6
 SUBSURFACE_WATER_DENSITY = 1000.0
 
-# --- Habitable moons (task 11.7) ------------------------------------------------
+# --- Habitable moons ------------------------------------------------
 # Archetype priors: stars of 0.5–1.2 M☉ (moons of planets around stars below ~0.5 M☉ are disturbed by the
 # star; Heller 2012); orbits of 8–30 parent radii (beyond the habitable edge for small eccentricities,
 # Heller & Barnes 2013) and e of 1e-4–0.02. Two origins with heuristic shares: regular moons from the
@@ -505,7 +505,7 @@ HABITABLE_MOON_ECCENTRICITY = (1e-4, 0.02)
 # heuristic, since a moon's spec gives no envelope fraction).
 JOVIAN_MIN_MEARTH_FOR_GLOW = 50.0
 
-# --- Solar System validation (task 11.8) ---------------------------------------
+# --- Solar System validation ---------------------------------------
 # Melt feedback: tides that, at the dissipation of a partially molten interior, would exceed a moon's
 # radiogenic heat keep it partially molten (or its shell decoupled over an ocean), with Io's measured
 # k₂/Q (Lainey et al. 2009; within 2σ of Juno's Im(k₂), Park et al. 2025, via Paris et al. 2026, whose
@@ -554,7 +554,7 @@ PARENT_ROTATION_ROCKY_H = 24.0
 RESONANCE_ECCENTRICITY = 0.1
 
 # --- Bulk -----------------------------------------------------------------
-# Small rocky bodies (task 11.6): below 0.1 M⊕ radii follow uncompressed densities of iron, rock and ice
+# Small rocky bodies: below 0.1 M⊕ radii follow uncompressed densities of iron, rock and ice
 # (heuristic; from their radii these give the Moon a core fraction of 0, Io 0.06, Mars 0.24 and Mercury
 # 0.66), blended log-log into the Zeng-type relation by 1 M⊕. Implied core fractions within 0.1 of 0–1
 # are clipped without a warning.
@@ -712,7 +712,7 @@ RELIEF_FACTOR_RANGE = (0.3, 4.0)     # clamp for very high or very low gravity
 # Noise amplitudes below are peak values; fractal noise has a standard
 # deviation of about 0.22 times its amplitude.
 
-# --- Surface: plate terrain (heuristic plates, milestone 2) ----------------
+# --- Surface: plate terrain (heuristic plates) ----------------
 
 PLATES_EARTH = 12                    # typical plate count for Earth
 PLATES_RANGE = (4, 40)
@@ -748,11 +748,11 @@ ARC_WIDTH_KM = 120.0
 TRENCH_DEPTH_M = 4500.0              # extra depth below the surrounding sea floor
 TRENCH_WIDTH_KM = 80.0
 RIFT_DEPTH_M = 1500.0                # continental rift valley
-RIFT_WIDTH_KM = 90.0
+RIFT_WIDTH_KM = 400.0                # continental rift valley width on the surface
 HOTSPOTS_EARTH = 8
 HOTSPOTS_MAX = 30
 
-# Relict features (milestone 6). A mark on the surface survives RELICT_MEMORY_BASE_MYR divided by the
+# Relict features. A mark on the surface survives RELICT_MEMORY_BASE_MYR divided by the
 # erosion the planet applies to it: rain and plate tectonics rework Earth's surface within ~100 Myr,
 # while a dry stagnant lid keeps its record for billions of years (Mars's valley networks).
 RELICT_MEMORY_BASE_MYR = 6000.0
@@ -769,10 +769,10 @@ RELICT_RESURFACING_RATIO = 3.0       # past melting this many times the present 
 RESURFACING_EARTH_MYR = 100.0        # time Earth's melt production takes to bury its whole surface
 RELICT_RESURFACED_MAX = 0.9          # cap on the share it can cover
 
-# --- Surface: tectonic simulation (milestone 3) ------------------------------
+# --- Surface: tectonic simulation ------------------------------
 
 TECTONIC_DURATION_MYR = 400.0        # default simulated time
-# History mode drives the simulation from the integrated interior (milestone 6). Plate speed follows
+# History mode drives the simulation from the integrated interior. Plate speed follows
 # the plate creation rate, bounded so a very hot or very cold planet stays in a sensible range; the
 # simulated span is scaled so the plates travel about as far as Earth's do in TECTONIC_DURATION_MYR,
 # and Earth replaces its sea floor (3 km²/yr over a 3.1 × 10⁸ km² ocean) in about a hundred Myr.
@@ -826,7 +826,7 @@ SIM_MARGIN_DROP_M = 1000.0           # continental crust thins toward the ocean,
 SIM_MARGIN_WIDTH_KM = 250.0
 SIM_MOUNTAIN_SHARPNESS = 1.5         # higher values concentrate mountain uplift into narrower, higher ranges
 
-# --- Surface: structural fabric (milestone 7) --------------------------------
+# --- Surface: structural fabric --------------------------------
 # The dominant grain of the surface, stored per cell so zoom can orient detail:
 # the belt axis along continental elevation contours, the ridge axis along
 # oceanic crust-age contours. Strength runs 0 to 1.
@@ -837,7 +837,7 @@ FABRIC_OROGENY_FADE_MYR = 300.0      # the fold grain of an orogen subsides as i
 FABRIC_CONFIDENCE_FRACTION = 0.3     # slope, relative to the typical belt slope, needed for a defined grain
 FABRIC_MIN_STRENGTH = 0.05           # grains weaker than this are dropped, keeping the field sparse
 
-# --- Zoom: local downscaling (milestone 7) -----------------------------------
+# --- Zoom: local downscaling -----------------------------------
 # The sub-grid relief added when a region is zoomed carries its own local rain
 # shadow, applied on top of the global climate the tile inherits.
 ZOOM_OROGRAPHIC_SLOPE = 0.02         # along-wind grade at which the rain-shadow effect is strong
@@ -1041,14 +1041,14 @@ GLACIAL_EROSION_TIMESCALE_MYR = 5.0
 
 # --- Hydrology: erosion ------------------------------------------------------
 # Stream power E = K Q^m S (Q in m³/yr, E in m/Myr), solved implicitly (Braun & Willett 2013).
-# 0.10 since task 8.2: subsidence and biogenic sediment keep material on the continents, and 0.08 then left
+# 0.10: subsidence and biogenic sediment keep material on the continents, and 0.08 then left
 # land ~100 m too high on the Earth example (0.12 makes it too low).
 STREAM_POWER_K = 0.10
 ZOOM_STREAM_POWER_K = 0.08           # zoomed regions keep the value their erosion was calibrated with
 STREAM_POWER_M = 0.5
 # Deposition from the river load, G r̄ Q_s / Q (Davy & Lague 2009; Yuan et al. 2019). G/p̃ is of order 1 or
 # greater for natural rivers; the implicit solve iterates (Gauss–Seidel) to this tolerance.
-STREAM_DEPOSITION_G = 0.0                # off by default (Ben, task 8.2); 1 is typical of natural rivers
+STREAM_DEPOSITION_G = 0.0                # off by default; 1 is typical of natural rivers
 DEPOSITION_MAX_ITERATIONS = 50
 DEPOSITION_TOLERANCE_M = 0.01
 CREEP_M2_PER_MYR = 5e7               # hillslope diffusivity at grid scale
@@ -1178,7 +1178,7 @@ BREATHING_GEAR_SCORE = 0.3
 NO_FOOD_SCORE = 0.3
 XUV_HARSH_RATIO = 10.0
 
-# --- History mode (milestone 6) ------------------------------------------------
+# --- History mode ------------------------------------------------
 # Integration: planet ages in Gyr from HISTORY_START_GYR (after the magma ocean).
 HISTORY_START_GYR = 0.03
 HISTORY_OUTPUT_POINTS = 200               # timeline samples for figures
@@ -1330,13 +1330,13 @@ BIOSPHERE_ESTABLISH_GYR = 0.05            # a new biosphere reaches its full pro
 LAND_SPREAD_GYR = 0.2                     # and spreads over the land over this one
 HISTORY_MAX_STEP_GYR = 0.02
 
-# --- Surface record for resources (milestone 8) -------------------------------
+# --- Surface record for resources -------------------------------
 
 # Heuristic plate layouts label a cell with the belt (Andean, arc, collision) that raised it
 # most, where that belt raised it by more than this (scaled by the relief factor).
 OROGENY_KIND_MIN_UPLIFT_M = 300.0
 
-# --- Culture (milestone 8) --------------------------------------------------
+# --- Culture --------------------------------------------------
 
 # Development of a culture whose spec names no axis: natives default to an agrarian
 # society with writing (roughly Earth's first millennium), colonists to the level that
@@ -1346,12 +1346,12 @@ CULTURE_DEFAULT_DEVELOPMENT = {
     "colonist": {"energy": "fusion", "transport": "spaceflight", "communication": "interplanetary"},
 }
 
-# --- Organic culture history (milestone 9) -------------------------------------
+# --- Organic culture history -------------------------------------
 
 # An organic history runs from HISTORY_START_YEARS_AGO (the Holocene span of HYDE 3.2, which starts at
 # 10 000 BCE) to the present in steps of HISTORY_STEP_YEARS (one generation), shortened to
 # HISTORY_LATE_STEP_YEARS once any organic culture reaches HISTORY_LATE_FROM_ENERGY (fossil), so the
-# industrial centuries get finer events (Ben's choice in task 9.1).
+# industrial centuries get finer events.
 HISTORY_START_YEARS_AGO = 12_000.0
 HISTORY_STEP_YEARS = 25.0
 HISTORY_LATE_STEP_YEARS = 5.0
@@ -1359,7 +1359,7 @@ HISTORY_LATE_FROM_ENERGY = 3
 # Organic natives start as foragers on foot with oral culture; everything above that emerges.
 HISTORY_START_DEVELOPMENT = {"energy": "foraging", "transport": "foot", "communication": "oral"}
 
-# Suitability components of the organic history (task 9.2), each 0–1 per cell.
+# Suitability components of the organic history, each 0–1 per cell.
 # Arable land is the fuzzy minimum of four factors after Zabel et al. (2014): crops grow only in months
 # above ARABLE_GROWTH_MIN_C (their 5 °C), need a season of ARABLE_SEASON_MONTHS such months (ramp,
 # heuristic) and a ratio of precipitation to potential evaporation of ARABLE_MOISTURE (ramp, heuristic),
@@ -1401,7 +1401,7 @@ DEFENCE_RUGGEDNESS = (0.25, 4.0)
 DEFENCE_SEA = 0.6
 DEFENCE_RIVER = 0.3
 
-# Growth and spread of people in the organic history (task 9.3). People grow logistically at
+# Growth and spread of people in the organic history. People grow logistically at
 # SPREAD_GROWTH_RATE. Fronts into empty land advance at the time-delayed wave-of-advance speed
 # √(am/T)/(1 + aT/2) (Fort & Méndez 1999) = 0.81 km/yr with the middle of Pinhasi et al.'s (2005) ranges
 # (a = 0.029–0.035 /yr, m = 900–2200 km² per generation, T = 29–35 yr; 0.6–1.1 km/yr predicted,
@@ -1427,7 +1427,7 @@ SPREAD_MAX_SHARE = 0.5
 SPREAD_MIN_PEOPLE = 1.0
 SPREAD_LANDFALL_PEOPLE = 1000.0
 
-# Farming and development in the organic history (task 9.4). Energy is a real-valued level whose anchor
+# Farming and development in the organic history. Energy is a real-valued level whose anchor
 # populations (POPULATION_ANCHOR, HYDE 3.2 mid-era values) apply at the integers; level k is in force from
 # k − 0.5 to k + 0.5, and capacity is interpolated log-linearly between anchors.
 # Origins: a forager cell starts farming at FARMING_ORIGIN_RATE × people × arable per year (the surplus
@@ -1437,7 +1437,7 @@ SPREAD_LANDFALL_PEOPLE = 1000.0
 FARMING_START_ENERGY = 0.5
 # Early farming (FARMING_START_ENERGY) holds this share of the log step from foraging to farming capacity
 # (0.5 would be the geometric mean of the two anchors), fitted to HYDE 3.2's 19 million people in 5000 BCE over
-# two Earth worlds × two history seeds with the slowed farming front below (task 9.12; 0.5 gave 2.1 × HYDE, 0.37
+# two Earth worlds × two history seeds with the slowed farming front below (0.5 gave 2.1 × HYDE, 0.37
 # gave 1.17). Heuristic.
 EARLY_FARMING_LOG_SHARE = 0.35
 # The front of a level into forager land runs at its speed × the destination's arable component to this power:
@@ -1451,7 +1451,7 @@ FARMING_ORIGIN_RATE = 1e-9
 # Kremer, is hyperbolic). Past INDUSTRIAL_FROM_ENERGY (the end of water_wind) energy rises only with
 # coal or hydrocarbons of potential INDUSTRIAL_FUEL_MIN within the sphere, INDUSTRIAL_RATE_FACTOR times
 # faster; it stops at HISTORY_MAX_ENERGY (electric in force). KNOWLEDGE_RATE was fitted to a median first
-# fossil of ~215 years ago over six Earth worlds × history seeds 0–2 (0.022 after task 9.11). Task 9.12 lowered early
+# fossil of ~215 years ago over six Earth worlds × history seeds 0–2 (0.022 before the early-farming capacity was lowered). Lowering early
 # farming's capacity and knowledge grows with the people in the sphere, so g is raised provisionally to keep the
 # timing (two worlds × two seeds); the multi-seed refit follows the investigation of the timing spread.
 KNOWLEDGE_RATE = 0.026
@@ -1470,24 +1470,24 @@ INDUSTRIAL_FUEL_MIN = 0.5
 HISTORY_MAX_ENERGY = 4.45
 # Transport and communication of organic natives follow energy through Earth's pairing (energy, transport,
 # communication), interpolated: foragers walk and talk, early farmers have boats, farming at its anchor
-# goes with wheel and sail and writing (the milestone 8 default native), and later levels move together.
+# goes with wheel and sail and writing (the default native culture), and later levels move together.
 DEVELOPMENT_PAIRING = ((0.0, 0.0, 0.0), (0.5, 1.0, 0.0), (1.0, 2.0, 1.0), (2.0, 2.0, 2.0), (3.0, 3.0, 3.0),
                        (4.0, 4.0, 4.0), (5.0, 5.0, 5.0))
-# Polities (task 9.5). Before states, occupied cells hold sub-cell polities of SUBPOLITY_FORAGING_KM2
+# Polities. Before states, occupied cells hold sub-cell polities of SUBPOLITY_FORAGING_KM2
 # (bands and tribes) or, once farming is in force, SUBPOLITY_FARMING_KM2 (chiefdoms). A state forms in a
 # cell without one whose communication has reached POLITY_FORM_COMMUNICATION (writing) and whose density
 # is POLITY_FORM_DENSITY people/km², at POLITY_FORM_RATE per year. Border cells attack a neighbour without a state at
 # POLITY_ATTACK_RATE per year with power 1 + β·c·S (Turchin et al. 2013; β = POLITY_POWER_BETA, S area in
 # POLITY_UNIT_KM2, Turchin's 100 km cells, c cohesion), the attacker's weakened by exp(−d / reach), the reach
 # interpolated log-linearly in the real-valued communication at its capital between POLITY_REACH_KM at the
-# integer levels (task 9.13: Taagepera's largest state grew a hundredfold within the writing era); the
+# integer levels (Taagepera's largest state grew a hundredfold within the writing era); the
 # defender adds POLITY_DEFENCE_GAMMA × defensibility. Cohesion changes per POLITY_PERIOD_YEARS by
 # POLITY_COHESION_GAIN × frontier share − POLITY_COHESION_LOSS × ln(1 + S), within [POLITY_COHESION_MIN, 1].
 # A polity breaks up (at the successions of its rulers) with a chance per period of POLITY_BREAKUP_BASE +
 # POLITY_BREAKUP_SIZE·S·(r_writing/r)^POLITY_BREAKUP_REACH_EXP − POLITY_BREAKUP_COHESION·c, r the reach at its
 # capital (faster communication holds larger states together). Values fitted
-# to Taagepera's largest polities and effective numbers and Arbesman's lifetimes on Earth worlds (task 9.5);
-# task 9.13 raised POLITY_FORM_DENSITY from 2 (first states ~7200 years ago) and lowered the reach of oral
+# to Taagepera's largest polities and effective numbers and Arbesman's lifetimes on Earth worlds;
+# POLITY_FORM_DENSITY was raised from 2 (first states ~7200 years ago) and the reach of oral
 # and writing from 1000 and 2500 km (largest state 32 × Taagepera's at 2800 BCE), fitted on two Earth worlds × two
 # history seeds against Taagepera's largest states by date; with travel-time distance (follow-up) the density is 7,
 # fitted on the six-world validation (8 left most worlds stateless at 2800 BCE, 6 gave 5 × Taagepera's).
@@ -1503,11 +1503,11 @@ POLITY_DEFENCE_GAMMA = 2.0
 POLITY_REACH_KM = (200.0, 1500.0, 5000.0, 10000.0, 20000.0, 20000.0)
 # The distance d in the attacker's power is the travel time from its capital over the travel graph of its
 # capital's transport level, counted in km at that level's flat-ground pace (Tobler on level ground times the
-# level's speed factor; task 9.13 follow-up, great-circle distance before). Travel times are searched out to POLITY_TRAVEL_LIMIT_REACHES reaches
+# level's speed factor; great-circle distance in earlier versions). Travel times are searched out to POLITY_TRAVEL_LIMIT_REACHES reaches
 # and kept for at most POLITY_TRAVEL_CACHE polity-level pairs before ended polities are dropped.
 POLITY_TRAVEL_LIMIT_REACHES = 5.0
 POLITY_TRAVEL_CACHE = 4000
-# Steppe empires (after the task 9.13 follow-up; Ben chose riding and confederations). Turchin (2009): over 90% of
+# Steppe empires (riding and confederations). Turchin (2009): over 90% of
 # the 60-odd empires of at least 10⁶ km² (3000 BCE–1800 CE) arose in or next to the Old World's arid belt, from
 # the interaction of steppe pastoralists and farmers; Currie et al. (2020) find distance from the steppe a leading
 # predictor of imperial density, with horse-based warfare first developed in the steppe's pastoral societies.
@@ -1533,7 +1533,7 @@ POLITY_BREAKUP_BASE = 0.05
 POLITY_BREAKUP_SIZE = 0.0005
 POLITY_BREAKUP_COHESION = 0.04
 POLITY_BREAKUP_REACH_EXP = 1.5
-# Rulers and provinces (task 9.6). Mean reigns without and with primogeniture (Kokkonen & Sundell 2012,
+# Rulers and provinces. Mean reigns without and with primogeniture (Kokkonen & Sundell 2012,
 # European monarchs 1000–1800); primogeniture cuts the break-up hazard by PRIMOGENITURE_BREAKUP_CUT (their
 # 75% lower hazard of deposition) and is adopted at PRIMOGENITURE_ADOPT_RATE per year once the capital has
 # writing (heuristic). A state breaking up splits into provinces of PROVINCE_KM2 (heuristic).
@@ -1542,7 +1542,7 @@ RULER_REIGN_PRIMOGENITURE_YEARS = 20.9
 PRIMOGENITURE_BREAKUP_CUT = 0.75
 PRIMOGENITURE_ADOPT_RATE = 0.0007
 PROVINCE_KM2 = 4e5
-# Wars between states (task 9.6, after Cederman 2003): onset rate per year at peace (his pAttack 0.01, fitted
+# Wars between states (after Cederman 2003): onset rate per year at peace (his pAttack 0.01, fitted
 # to Clauset's 2018 onset rate), the
 # logistic threshold and slope of the power ratio needed to attack (his supThresh 3 and supSlope 20), the
 # rate of leaving alert (his pDeactivate), the rate of ending a war (his pDropCampaign); the battle rate per
@@ -1561,7 +1561,7 @@ ALLIANCE_RATE = 0.02
 ALLIANCE_BREAK_AT_SUCCESSION = 0.3
 # Conflicts of at least WAR_CHRONICLE_STATES states enter the chronicle.
 WAR_CHRONICLE_STATES = 12
-# Colonists and natives (task 9.8). A colonist culture's front moves at the population front speed times the
+# Colonists and natives. A colonist culture's front moves at the population front speed times the
 # land speed factor of its transport level (LAND_SPEED_FACTOR; the US frontier crossed ~4.6 Mkm² in 1790–1890,
 # Bazzi et al. 2017). Natives on a landmass colonists reach suffer contact epidemics: an extra death rate that
 # removes EPIDEMIC_DEATH_SHARE of them over EPIDEMIC_YEARS (90% in a century in the Americas after 1492, Koch
@@ -1623,7 +1623,7 @@ HOME_POWER = 15.0
 COLONY_EMIGRATION_RATE = 0.001
 # Technology passes between cultures under rule: a culture's cell ruled by a state of another culture with a
 # higher level in force there takes that level (at its bottom) at a rate 1 / TECH_ADOPTION_LAG_YEARS[level] per
-# year (Ben chose rule only: on any contact the natives caught up and colonies stayed enclaves).
+# year (rule only: on any contact the natives caught up and colonies stayed enclaves).
 # Comin & Hobijn (2010): mean adoption lag 45 years over 15 technologies and 166 countries, 1820–2003; steam
 # ships ~120, passenger railways ~97, telegraph ~46, electricity ~56, cars ~44, personal computers ~14 years.
 # Levels 1–2 take the steam-ship lag (heuristic, no data before 1820). Natives take energy; their transport and
@@ -1635,7 +1635,7 @@ TECH_ADOPTION_LAG_YEARS = (float("inf"), 120.0, 120.0, 100.0, 50.0, 14.0)
 # by 1990) curves read from their Fig. 1 (0.089 and 0.084). The fitted minority statuses were 0.26–0.46 (median
 # 0.40); the culture at the higher energy level in the cell, or between equals the one ruling it, has status
 # LANGUAGE_STATUS, and otherwise both 0.5 (heuristic).
-# Supremacy (heuristic; Ben's choice: drawn per ruling, weighted by the gap): the chance that a culture rules the
+# Supremacy (heuristic: drawn per ruling, weighted by the gap): the chance that a culture rules the
 # people of another as a people apart is SUPREMACY_BASE + SUPREMACY_PER_LEVEL × its lead in energy level.
 # Bilingualism (Mira & Paredes 2005, their extension of Abrams & Strogatz): where a culture rules people of another
 # without supremacy, of those who take up the other language a share BILINGUAL_EASE become bilingual and the rest
@@ -1656,13 +1656,13 @@ LANGUAGE_SHIFT_RATE = 0.086
 LANGUAGE_STATUS = 0.60
 EPIDEMIC_YEARS = 100.0
 EPIDEMIC_SPEED_KM_YR = 500.0
-# Livestock and crowd diseases (task 9.14; Ben chose a terrain-weighted draw). Wolfe, Dunavan & Diamond (2007): 8 of
+# Livestock and crowd diseases (terrain-weighted draw). Wolfe, Dunavan & Diamond (2007): 8 of
 # the 15 major temperate diseases probably came from domestic animals; crowd diseases need several hundred thousand
 # people; 13 of the 14 major livestock species are Old World. A farming origin keeps herd animals with probability
 # LIVESTOCK_P_CLOSED + (LIVESTOCK_P_OPEN − LIVESTOCK_P_CLOSED) × the share of LIVESTOCK_OPEN_BIOMES (open land where
 # large grazers live) within LIVESTOCK_NEIGHBOURHOOD_KM (heuristic). Only colonists that carry herds' diseases cause
 # contact epidemics, and only among people of cells without livestock. People struck do not grow for
-# EPIDEMIC_NO_GROWTH_YEARS after the epidemic arrives (Ben chose a slower recovery; heuristic: Jones et al. 2021
+# EPIDEMIC_NO_GROWTH_YEARS after the epidemic arrives (slower recovery; heuristic: Jones et al. 2021
 # find decline continuing as long as contact was sustained, e.g. California's missions 1770–1834, without a rate).
 LIVESTOCK_OPEN_BIOMES = ("TEMPERATE_GRASSLAND", "SAVANNA", "WOODLAND_SHRUBLAND")
 LIVESTOCK_NEIGHBOURHOOD_KM = 500.0
@@ -1670,7 +1670,7 @@ LIVESTOCK_P_CLOSED = 0.1
 LIVESTOCK_P_OPEN = 0.9
 EPIDEMIC_NO_GROWTH_YEARS = 250.0
 EPIDEMIC_CHRONICLE_PEOPLE = 1e5
-# Planet events (task 9.9). Eruptions: VOLCANIC_EVENTS_PER_YEAR large stratospheric sulfur injections (eVolv2k:
+# Planet events. Eruptions: VOLCANIC_EVENTS_PER_YEAR large stratospheric sulfur injections (eVolv2k:
 # 106 from 500 BCE to 1900 CE, Toohey & Sigl 2017), times the planet's volcanic activity index. Their sulfur follows
 # a Pareto law from VOLCANIC_SULFUR_MIN_TG with slope VOLCANIC_SULFUR_SLOPE, fitted to 10.6 events per century,
 # 6 of at least Tambora's 28.1 Tg S and 2 of at least 59 Tg S in 2400 years (Wolff et al. 2023: larger than 1257
@@ -1746,7 +1746,7 @@ IMPACT_AREA_KM2 = 2000.0
 KNOWLEDGE_LOSS_PEOPLE = (4e3, 1e4, 1e5, 1e6, 1e7, 1e8)
 KNOWLEDGE_LOSS_RATE = 0.002
 EVENT_CHRONICLE_PEOPLE = 1e5
-# Reading the chronicle (task 9.10): wars and break-ups of CHRONICLE_MAJOR_KM2 or more, wars of
+# Reading the chronicle: wars and break-ups of CHRONICLE_MAJOR_KM2 or more, wars of
 # CHRONICLE_MAJOR_WAR_STATES states or more, and pandemics and impacts killing CHRONICLE_MAJOR_DEATHS or more are
 # written out; smaller ones are counted. Periods are 1000 years long
 # before 3000 years ago, 500 years to 1000 years ago and 100 years after (CHRONICLE_PERIOD_YEARS: (older than, length)).
@@ -1755,13 +1755,13 @@ CHRONICLE_MAJOR_KM2 = 1e7
 CHRONICLE_MAJOR_WAR_STATES = 100
 CHRONICLE_MAJOR_DEATHS = 1e7
 CHRONICLE_PERIOD_YEARS = ((3000.0, 1000.0), (1000.0, 500.0), (0.0, 100.0))
-# Settlement ages (task 9.7): the history records each cell's people every SETTLEMENT_RECORD_YEARS.
+# Settlement ages: the history records each cell's people every SETTLEMENT_RECORD_YEARS.
 SETTLEMENT_RECORD_YEARS = 100.0
 # The chronicle records each culture's first state and the rise, conquest and break-up of states of
 # POLITY_CHRONICLE_KM2.
 POLITY_CHRONICLE_KM2 = 1e6
 
-# --- Tectonic subsidence (task 8.2) -------------------------------------------------
+# --- Tectonic subsidence -------------------------------------------------
 
 # Planets with rivers let continental crust subside where it was stretched (McKenzie 1978) and
 # beside mountain belts (DeCelles & Giles 1996); the rivers fill the space with sediment.
@@ -1775,7 +1775,7 @@ FLEXURAL_PARAMETER_KM = 100.0         # α; DeCelles & Giles give 26–150 km (9
 FLEXURE_MIN_LOAD_M = 500.0            # topography above the continental base that counts as a load
 FLEXURE_LOAD_RATIO = 1.0              # peak foredeep deflection per metre of adjacent load
 
-# --- Biogenic sediment (task 8.2) ----------------------------------------------------
+# --- Biogenic sediment ----------------------------------------------------
 
 # Long-term accumulation of sediment the sea makes itself, on planets with sea life (strength
 # ramps up over BIOGENIC_LIFE_GYR of biosphere age). Tropical platforms fill their space up to
@@ -1799,7 +1799,7 @@ CARBONATE_COMPENSATION_DEPTH_M = 4500.0
 PELAGIC_ABOVE_CCD_M_MYR = 1.1
 PELAGIC_BELOW_CCD_M_MYR = 0.18
 
-# --- Culture: tectonic settings and resources (task 8.2) --------------------------
+# --- Culture: tectonic settings and resources --------------------------
 
 # Settings are read from distances to plate boundaries on the finished surface.
 GEOLOGY_DISTANCE_LIMIT_KM = 2500.0
@@ -1807,7 +1807,7 @@ SAG_BASIN_MIN_SEDIMENT_M = 300.0          # continental interior with this much 
 PASSIVE_MARGIN_WIDTH_KM = 300.0           # coastal plain and shelf counted as passive margin
 PASSIVE_MARGIN_MAX_ELEVATION_M = 200.0
 STRIKE_SLIP_WIDTH_KM = 300.0
-RIFT_WIDTH_KM = 400.0
+GEOLOGY_RIFT_WIDTH_KM = 400.0             # distance from a rift axis that counts as rift setting
 FORELAND_WIDTH_KM = 800.0                 # foreland basins reach several hundred km from a collision front
 SUBDUCTION_MARGIN_WIDTH_KM = 400.0
 STABLE_CRUST_MYR = 500.0                  # no mountain building for this long: stable crust
@@ -1843,7 +1843,7 @@ LEAD_ZINC_SEDIMENT_M = (500.0, 3000.0)
 # terranes 28%, strike-slip 6%, subduction margins <1%.
 HYDROCARBON_BURIAL_M = (1000.0, 4000.0)
 HYDROCARBON_LIFE_GYR = (0.2, 1.0)
-# Fitted after subsidence and biogenic sediment (task 8.2); strike-slip (6%) cannot be reached because transforms
+# Fitted after subsidence and biogenic sediment; strike-slip (6%) cannot be reached because transforms
 # rarely cross continents on the grid, so the other targets are renormalised over 95%. Rifts cover only 0–3% of
 # continental crust, which is why their factor is high: it is a calibration, not a ranking of settings.
 HYDROCARBON_SETTING_FACTOR = {"PASSIVE_MARGIN": 0.21, "SAG_BASIN": 0.5, "RIFT": 1.0, "FORELAND": 0.24,
@@ -1894,7 +1894,7 @@ PLACER_MIN_DISCHARGE_M3_S = 10.0
 DISTRICT_SCALE_KM = 400.0
 DISTRICT_NOISE_RANGE = (0.05, 0.35)
 
-# --- Culture: suitability and population density (task 8.3) -------------------------
+# --- Culture: suitability and population density -------------------------
 
 # Carrying capacity per cell: ln K = Σ terms. Two sets are anchored on Earth data and levels in
 # between are interpolated on the energy axis (weight = level / 4, capped at 1):
@@ -1948,7 +1948,7 @@ COLONY_REACH_KM = 500.0
 COLONY_SPREAD_KM_PER_YEAR = 5.0
 EARTH_HABITABLE_LAND_KM2 = 1.33e8
 
-# --- Culture: settlements (task 8.4) -----------------------------------------------------
+# --- Culture: settlements -----------------------------------------------------
 
 # Each culture's land is split into settlement regions (population-weighted k-means). A region's
 # whole population lives in a rank-size (Zipf) hierarchy from SETTLEMENT_SMALLEST people up; its
@@ -1975,7 +1975,7 @@ SETTLEMENT_JITTER = 0.3
 # Settlement forms by population (heuristic; 5000 is the amorphous/networked split of Ortman et al. 2014).
 FORM_LIMITS = {"hamlet": 100.0, "village": 5000.0, "town": 1e5, "city": 1e6}
 
-# --- Culture: roads (task 8.5) -------------------------------------------------------------
+# --- Culture: roads -------------------------------------------------------------
 
 # Travel time on the grid. On land, speed follows Tobler's hiking function, v = 6 e^(−3.5 |g + 0.05|)
 # km/h (Goodchild 2020), times a factor per transport level; the slope g is the relief between cells
@@ -2001,10 +2001,10 @@ ROAD_PARTNERS = 3
 ROAD_GRAVITY_MASS_EXPONENT = 1.0          # μ in (P_i P_j)^μ / d²; 0.5 and 0.3 were tried (8.5 report)
 ROAD_WAVES = 5
 # Cells without a listed settlement join the road network as nodes, weighted by their people, once they
-# hold ROAD_RURAL_MIN_PEOPLE (task 8.11), so main roads reach rural land as they do on Earth.
+# hold ROAD_RURAL_MIN_PEOPLE, so main roads reach rural land as they do on Earth.
 ROAD_RURAL_MIN_PEOPLE = 500.0
 ROAD_REUSE_DISCOUNT = 0.6
-# Gravity falls with distance as d^ROAD_DISTANCE_EXPONENT[transport level] (task 9.7): 1.9 for overland
+# Gravity falls with distance as d^ROAD_DISTANCE_EXPONENT[transport level]: 1.9 for overland
 # trade in the Bronze Age (Barjamovic et al. 2019) up to wheel_and_sail, 0.91 for modern trade (Disdier &
 # Head 2008) from rail_and_steam on. Roads of an earlier kept epoch cost ROAD_OLD_DISCOUNT of their time
 # when an organic history routes the next epoch (heuristic, the reuse discount), so networks persist.
@@ -2020,7 +2020,7 @@ ROAD_CLASSES_BY_TRANSPORT = (("track",), ("track", "road"), ("track", "road", "t
                              ("track", "road", "trunk", "highway"))
 ROAD_CLASS_LENGTH_RATIO = 2.0
 
-# --- Culture: polities and borders (task 8.6) -------------------------------------------------
+# --- Culture: polities and borders -------------------------------------------------
 
 # Territories follow XTENT (Renfrew & Level 1979), I = C^a − k d, on travel time: each cell goes to the
 # capital with the highest influence, POLITY_INFLUENCE_KM × (P / P_largest settlement)^a converted to
@@ -2049,7 +2049,7 @@ POLITY_EFFECTIVE_NUMBER = (1e5, 300.0, 40.0, 15.0, 24.0, 10.0)
 # federations for the polities larger than POLITY_LARGE_KM2.
 POLITY_LARGE_KM2 = 1e6
 
-# --- Culture: names (task 8.7) -----------------------------------------------------------
+# --- Culture: names -----------------------------------------------------------
 
 # Each culture draws a sound system. Inventory sizes follow WALS (Maddieson 2013): consonants in 563
 # languages (6–14: 89, 15–18: 122, 19–25: 201, 26–33: 94, 34+: 57, capped here at the offered set),
@@ -2104,7 +2104,7 @@ POLITY_NAMED_AFTER_CAPITAL = 0.5
 POLITY_LAND_ELEMENT_SHARE = 0.5
 NAME_MAX_LETTERS = 24
 
-# --- Culture: habitats of colonists (task 8.8) ------------------------------------------------
+# --- Culture: habitats of colonists ------------------------------------------------
 
 # Each land cell gets the habitat colonists need there. Open: breathable air (O₂ partial pressure in
 # OXYGEN_BREATHABLE_BAR), total pressure and temperature in the shirt-sleeve bands of the occupiability
@@ -2137,7 +2137,7 @@ ELEVATOR_CHARACTERISTIC_HEIGHT_KM = 2150.0
 ELEVATOR_MAX_TAPER = 100.0
 ELEVATOR_MAX_LATITUDE_DEG = 30.0
 
-# --- Culture on zoomed maps (task 8.10) ---------------------------------------------------------
+# --- Culture on zoomed maps ---------------------------------------------------------
 
 # Villages and hamlets: each global cell's people outside the listed settlements are split into
 # settlements whose sizes follow a truncated power law (pdf exponent 1 + ζ, the rank-size law continued)
@@ -2174,16 +2174,16 @@ ZOOM_BORDER_BAND_KM = 60.0
 ZOOM_BORDER_RIVER_ORDER = 5
 ZOOM_BORDER_RIVER_HOURS = 24.0
 
-# --- Export (milestone 10) ---
+# --- Export ---
 # 16-bit heightmaps of one world share one height scale: the world's elevation range widened by this share
 # of it on each side, so zoomed detail and erosion, which add up to a few hundred metres above the global
 # grid's peaks and below its deeps, fit inside it (heuristic; 0.31 m steps on the Earth example).
 EXPORT_HEIGHT_MARGIN_FRACTION = 0.15
 # Native lattices are georeferenced by ground control points at every tile corner, and at least this many
 # along each side; a thin-plate-spline warp through them places a 5900 km continent block within 0.3 lattice
-# steps (task 10.2 prototype; GDAL's default polynomial is off by up to 17 steps on such blocks).
+# steps (GDAL's default polynomial is off by up to 17 steps on such blocks).
 EXPORT_GCP_MIN_PER_SIDE = 17
-# Tile pyramid (task 10.3). Tiles of 129 nodes (2ⁿ + 1, 128 quads). The global part is built at
+# Tile pyramid. Tiles of 129 nodes (2ⁿ + 1, 128 quads). The global part is built at
 # PYRAMID_TOP_LEVEL (~9 km on Earth: one block per cube face) and coarser levels keep every other node.
 # Each level is re-levelled onto its parent: the part of (level − parent) smoother than
 # PYRAMID_RELEVEL_SIGMA parent spacings (a Gaussian) is removed, since zoom erosion lowers coarse lattices
@@ -2193,17 +2193,17 @@ PYRAMID_NODES_PER_TILE = 129
 PYRAMID_TOP_LEVEL = 3
 PYRAMID_RELEVEL_SIGMA = 0.5
 PYRAMID_BLEND_FRACTION = 0.1
-# Meshes (task 10.4): a tile's default vertical tolerance is this share of its node spacing (31 m at ~0.6 km,
+# Meshes: a tile's default vertical tolerance is this share of its node spacing (31 m at ~0.6 km,
 # 490 m at ~9.8 km), measured on the exaggerated heights plus the chord's sag below the sphere (heuristic).
 MESH_ERROR_FRACTION = 0.05
-# Globe viewer (task 10.5): default height exaggeration of the 3D globe (relief is ~0.1% of the radius on Earth),
+# Globe viewer: default height exaggeration of the 3D globe (relief is ~0.1% of the radius on Earth),
 # and how far a draped region is raised above the globe, in metres before exaggeration, so it draws over the
 # globe tiles beneath it (heuristic).
 GLOBE_EXAGGERATION = 20.0
 GLOBE_CLOUD_EXAGGERATION = 3.0          # cloud-top relief of giants is shading only
 GLOBE_REGION_LIFT_M = 5.0
 
-# --- System diagram and 3D system scene (task 11.9) ----------------------------
+# --- System diagram and 3D system scene ----------------------------
 # Diagram: moon markers scale with log radius; colours by type (heuristic palette).
 SYSTEM_MOON_MARKER_PT = (3.0, 14.0)         # marker size (points) for moons of 10 km and 3000 km radius
 SYSTEM_MOON_COLOURS = {"rocky": "#a0785a", "icy": "#b9d3e8", "ocean": "#4f8fc9", "air": "#d9a441",

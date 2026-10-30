@@ -1,4 +1,4 @@
-"""Evolvers that turn a spec into a planet state: snapshot now, history in milestone 6."""
+"""Evolvers that turn a spec into a planet state: snapshot now, or a history."""
 
 from __future__ import annotations
 

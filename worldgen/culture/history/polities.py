@@ -24,7 +24,7 @@ belongs to the culture that founded it and may rule people of others.
 - *Wars between states* (``wars.py``, after Cederman 2003).
 - *Cohesion* (0–1, a heuristic stand-in for Turchin's ultrasocial traits)
   grows with the share of a state's cells on its frontier and falls with its size.
-- *Secession* (task 9.8, heuristic). Connected cells of a state where another
+- *Secession* (heuristic). Connected cells of a state where another
   literate culture holds SECESSION_SHARE of the people break away as a state
   of that culture.
 - *Successions and break-up* (rulers in ``rulers.py``). A state can break up

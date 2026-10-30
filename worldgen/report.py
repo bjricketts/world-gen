@@ -350,7 +350,7 @@ def format_report(state: PlanetState, kept_moons: Optional[list[str]] = None) ->
     ``kept_moons`` names the moons kept as worlds in the planet's saved folder.
     """
     p = state.provenance
-    s, o, b, i, a, occ = state.star, state.orbit, state.bulk, state.interior, state.atmosphere, state.occupiability
+    s, o, b, _, _, occ = state.star, state.orbit, state.bulk, state.interior, state.atmosphere, state.occupiability
     hz = o.habitable_zone
     lines = [
         f"=== {state.name} ===",
@@ -591,17 +591,17 @@ def format_history(civ) -> str:
 
     rows = ["", "History", f"  {'epoch':<18}{'people':>9}{'cultures':>10}{'states':>8}  {'largest state':<30}"
                            f"highest levels"]
-    for c in [*civ.epochs, civ]:
-        living = [k for k in c.cultures if (k.population or 0) > 0]
+    for ep in [*civ.epochs, civ]:
+        living = [k for k in ep.cultures if (k.population or 0) > 0]
         people = sum(k.population for k in living)
-        when = "present" if c.epoch_years_ago <= 0 else f"{c.epoch_years_ago:,.0f} years ago"
-        big = max(c.polities, key=lambda p: p.area_km2 or 0, default=None)
+        when = "present" if ep.epoch_years_ago <= 0 else f"{ep.epoch_years_ago:,.0f} years ago"
+        big = max(ep.polities, key=lambda p: p.area_km2 or 0, default=None)
         largest = f"{big.name or big.id} ({(big.area_km2 or 0) / 1e6:.2f} M km²)" if big is not None else "-"
         top = [max((getattr(k.development, axis) for k in living), default=0)
                for axis in ("energy", "transport", "communication")]
         levels = ", ".join(names[t].replace("_", " ") for names, t in
                            zip((ENERGY_LEVELS, TRANSPORT_LEVELS, COMMUNICATION_LEVELS), top))
-        rows.append(f"  {when:<18}{_people(people):>9}{len(living):>10}{len(c.polities):>8}  {largest:<30}{levels}")
+        rows.append(f"  {when:<18}{_people(people):>9}{len(living):>10}{len(ep.polities):>8}  {largest:<30}{levels}")
     if civ.chronicle:
         from .culture.chronicle import is_major
         rows.append(_row("chronicle", f"{len(civ.chronicle)} entries, {sum(map(is_major, civ.chronicle))} major "
@@ -622,17 +622,17 @@ def format_culture(civ, world=None) -> str:
         lines.append(_row("earlier epochs kept", ", ".join(f"{e.epoch_years_ago:,.0f}" for e in civ.epochs)
                           + " years ago"))
     st, roads = civ.settlements, civ.roads
-    for c in civ.cultures:
-        mine = np.flatnonzero(st.culture == c.id)
-        mode = ", organic" if c.mode == "organic" else ""
-        lines += ["", f"  {c.name or f'culture {c.id}'} ({c.inhabitants}{mode})"]
-        dev = c.development.to_names()
+    for cu in civ.cultures:
+        mine = np.flatnonzero(st.culture == cu.id)
+        mode = ", organic" if cu.mode == "organic" else ""
+        lines += ["", f"  {cu.name or f'culture {cu.id}'} ({cu.inhabitants}{mode})"]
+        dev = cu.development.to_names()
         lines.append(_row("development", f"{dev['energy']}, {dev['transport']}, {dev['communication']}"))
-        if c.population is not None:
-            lines.append(_row("population", _people(c.population)))
-        if c.inhabitants == "colonist":
-            lines.append(_row("founded", f"{c.founded_years_ago or 0:.0f} years ago"))
-            for site in c.landing_sites:
+        if cu.population is not None:
+            lines.append(_row("population", _people(cu.population)))
+        if cu.inhabitants == "colonist":
+            lines.append(_row("founded", f"{cu.founded_years_ago or 0:.0f} years ago"))
+            for site in cu.landing_sites:
                 lines.append(_row("landing site", f"{site['lat_deg']:.1f}°, {site['lon_deg']:.1f}°"))
         if mine.size:
             top = mine[np.argsort(-st.population[mine])][:5]
@@ -641,19 +641,19 @@ def format_culture(civ, world=None) -> str:
             forms = np.bincount(st.form[mine], minlength=len(SETTLEMENT_FORMS))
             lines.append(_row("settlement forms", ", ".join(
                 f"{SETTLEMENT_FORMS[f]} {n}" for f, n in enumerate(forms) if n)))
-        polities = [p for p in civ.polities if p.culture == c.id]
+        polities = [p for p in civ.polities if p.culture == cu.id]
         if polities:
             big = sorted(polities, key=lambda p: -(p.area_km2 or 0))[:5]
             lines.append(_row("polities", f"{len(polities)}; largest " + ", ".join(
                 f"{p.name} ({p.type}, {(p.area_km2 or 0) / 1e6:.2f} M km²)" for p in big)))
         if len(roads):
-            ours = roads.culture == c.id
+            ours = roads.culture == cu.id
             km = {ROAD_KINDS[k]: roads.length_km[ours & (roads.kind == k)].sum() for k in np.unique(roads.kind[ours])}
             if km:
                 lines.append(_row("roads (grid, km)", ", ".join(
                     f"{k.replace('_', ' ')} {v:,.0f}" for k, v in km.items())))
-        if c.phonology:
-            ph = c.phonology
+        if cu.phonology:
+            ph = cu.phonology
             lines.append(_row("sound system", f"{len(ph['consonants'])} consonants, {len(ph['vowels'])} vowels, "
                                               f"{ph['syllables']} syllables"))
     if world is not None and "habitat" in civ.layers and any(c.inhabitants == "colonist" for c in civ.cultures):

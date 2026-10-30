@@ -1,4 +1,4 @@
-"""Livestock, crowd-disease carriers, colonies passed to heirs and colonists farming on habitable worlds (task 9.14)."""
+"""Livestock, crowd-disease carriers, colonies passed to heirs and colonists farming on habitable worlds."""
 
 from dataclasses import replace
 from pathlib import Path

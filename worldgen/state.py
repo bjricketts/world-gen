@@ -203,7 +203,7 @@ class SurfaceSummary:
 
 @dataclass
 class GiantAppearance:
-    """Cloud class, colour and banding of a giant planet (task 11.2)."""
+    """Cloud class, colour and banding of a giant planet."""
 
     sudarsky_class: str            # "I" ... "V" (Sudarsky, Burrows & Pinto 2000)
     effective_temperature_k: float
@@ -222,7 +222,7 @@ class GiantAppearance:
     jet_half_width_deg: float      # width of the equatorial band or jet
     hot_spot_offset_deg: float     # east of the substellar point (locked giants)
     polar_vortices: bool
-    atmospheric_metallicity: float = 1.0   # C/H relative to protosolar (task 11.11)
+    atmospheric_metallicity: float = 1.0   # C/H relative to protosolar
     cloud_deck: str = ""           # uppermost cloud of classes I–II: "NH3", "H2O", "CH4" or "none"
     cloud_deck_bar: float = 0.0    # its base
     haze_optical_depth: float = 0.0   # tropospheric or methane-level haze at 800 nm
@@ -308,7 +308,7 @@ class ParentState:
     parent_hill_radius_m: float    # the parent's Hill radius about the star
     stable_limit_m: float          # outermost stable prograde moon orbit
     roche_limit_m: float           # fluid Roche limit for this moon's density
-    # energy and environment from the parent (task 11.6)
+    # energy and environment from the parent
     effective_temperature_k: float = 0.0      # the parent's, (T_eq⁴ + T_int⁴)^¼
     magnetic_moment_am2: float = 0.0          # the parent's dipole moment
     star_instellation_earth: float = 0.0      # starlight alone, before eclipses and planetshine
@@ -317,7 +317,7 @@ class ParentState:
     planet_heat_w_m2: float = 0.0             # parent's thermal emission absorbed, per m² of the moon
     tidal_heating_w: float = 0.0              # tidal heat raised in the moon by the parent
     tidal_k2_over_q: float = 0.0              # the moon's dissipation used for it
-    partially_molten: bool = False            # tides keep the interior partially molten (task 11.8)
+    partially_molten: bool = False            # tides keep the interior partially molten
     magnetopause_standoff_m: float = 0.0      # the parent's magnetopause, towards the star
     magnetosphere_fraction: float = 0.0       # share of the moon's orbit inside the parent's magnetosphere
     moon_origin: str = ""                     # "regular", "captured", "impact", or "" when not given
@@ -328,7 +328,7 @@ class ParentState:
 
 @dataclass
 class IceShellState:
-    """An ice shell over a subsurface ocean on a frozen body (task 11.6)."""
+    """An ice shell over a subsurface ocean on a frozen body."""
 
     water_layer_m: float           # all surface water as a layer
     shell_thickness_m: float       # conductive ice above the melting point (the whole layer when frozen through)
@@ -336,7 +336,7 @@ class IceShellState:
     basal_heat_flux_w_m2: float    # endogenic heat through the base of the shell
     rayleigh_number: float         # basal Rayleigh number of the shell
     convective: bool               # above the critical Rayleigh number: the shell would convect
-    high_pressure_ice_m: float = 0.0   # ice III/V/VI below the ocean, where the liquid is not stable (task 11.8)
+    high_pressure_ice_m: float = 0.0   # ice III/V/VI below the ocean, where the liquid is not stable
     ocean_temperature_k: float = 0.0   # melting point at the base of the shell, taken through the ocean
 
 
@@ -388,8 +388,8 @@ class PlanetState:
     overrides: list[Override] = field(default_factory=list)         # history mode: user values applied at the end
     system: Optional[SystemState] = None     # moons and rings of a planet (format 7)
     parent: Optional[ParentState] = None     # the planet a moon orbits (format 7)
-    appearance: Optional[GiantAppearance] = None   # giants only (format 7, task 11.2)
-    ice_shell: Optional[IceShellState] = None      # frozen bodies with surface water (task 11.6)
+    appearance: Optional[GiantAppearance] = None   # giants only (format 7)
+    ice_shell: Optional[IceShellState] = None      # frozen bodies with surface water
 
     def to_dict(self) -> dict:
         """Return the state as nested plain Python types."""
