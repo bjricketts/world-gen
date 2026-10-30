@@ -1,0 +1,338 @@
+# References
+
+Sources for the model, its constants and its validation targets, sorted by first author. The text and the code cite them as Author Year (for example Heller & Zuluaga 2013). The CRUST1.0 entry is a conference abstract and carries only its ADS link. Entries without a link are books or reports with no identifier.
+
+- Abbot, D., Cowan, N. & Ciesla, F. 2012, ApJ, 756, 178 — Indication of Insensitivity of Planetary Weathering Behavior and Habitable Zone to Surface Land Fraction. doi:10.1088/0004-637X/756/2/178
+- Abrams, D. & Strogatz, S. 2003, Nature, 424, 900 — Modelling the dynamics of language death. doi:10.1038/424900a
+- Acemoglu, D., Johnson, S. & Robinson, J. 2001, American Economic Review, 91(5), 1369 — The colonial origins of comparative development: an empirical investigation. doi:10.1257/aer.91.5.1369
+- Ackerman, A. & Marley, M. 2001, ApJ, 556, 872 — Precipitating condensation clouds in substellar atmospheres. doi:10.1086/321540
+- Acuña, M. et al. 1999, Science, 284, 790 — Global distribution of crustal magnetization discovered by the Mars Global Surveyor MAG/ER experiment. doi:10.1126/science.284.5415.790
+- Agnor, C. & Hamilton, D. 2006, Nature, 441, 192 — Neptune's capture of its moon Triton in a binary–planet gravitational encounter. doi:10.1038/nature04792
+- Albouy, D. 2008, NBER Working Paper 14130 — The colonial origins of comparative development: an investigation of the settler mortality data. https://www.nber.org/papers/w14130
+- Alesina, A., Easterly, W. & Matuszeski, J. 2011, J. European Economic Association, 9, 246 — Artificial States. doi:10.1111/j.1542-4774.2010.01009.x
+- Alley, R. et al. 2003, Nature, 424, 758 — Stabilizing feedbacks in glacier-bed erosion. doi:10.1038/nature01839
+- Allison, M. et al. 1990, Science, 247, 1061 — A wave dynamical interpretation of Saturn's polar hexagon. doi:10.1126/science.247.4946.1061
+- Andersson, O. & Inaba, A. 2005, Phys. Chem. Chem. Phys., 7, 1441 — Thermal conductivity of crystalline and amorphous ices and its implications on amorphization and glassy water. doi:10.1039/B500373C
+- Angel, S. et al. 2011, Progress in Planning, 75, 53 — The dimensions of global urban expansion: Estimates and projections for all countries, 2000–2050. doi:10.1016/j.progress.2011.04.001
+- Arbesman, S. 2011, Historical Methods, 44(3) — The life-spans of empires. doi:10.1080/01615440.2011.577733
+- Asplund, M., Grevesse, N., Sauval, A. & Scott, P. 2009, ARA&A, 47, 481 — The chemical composition of the Sun. doi:10.1146/annurev.astro.46.060407.145222
+- Axtell, R. et al. 2002, PNAS, 99, 7275 — Population growth and collapse in a multiagent model of the Kayenta Anasazi in Long House Valley. doi:10.1073/pnas.092080799
+- Bagheri, A. et al. 2025, PSJ, 6, 245 — Exploring the interior structure and mode of tidal heating in Enceladus. https://arxiv.org/abs/2505.14743
+- Bagheri, A. et al. 2026 — Joint dynamical-geophysical evidence for a limit cycle in the Galilean moons. https://arxiv.org/abs/2608.04226
+- Baraffe, I., Homeier, D., Allard, F. & Chabrier, G. 2015, A&A, 577, A42 — New evolutionary models for pre-main sequence and main sequence low-mass stars down to the hydrogen-burning limit. doi:10.1051/0004-6361/201425481, https://arxiv.org/abs/1503.04107
+- Barjamovic, G., Chaney, T., Coşar, K. & Hortaçsu, A. 2019, Quarterly Journal of Economics, 134(3), 1455 — Trade, merchants, and the lost cities of the Bronze Age. https://academic.oup.com/qje/article/134/3/1455/5420484
+- Barnes, J. & O'Brien, D. 2002, ApJ, 575, 1087 — Stability of Satellites around Close-in Extrasolar Giant Planets. https://arxiv.org/abs/astro-ph/0205035
+- Barnes, R., Lehman, C. & Mulla, D. 2014, Computers & Geosciences, 62, 117 — Priority-flood: An optimal depression-filling and watershed-labeling algorithm for digital elevation models. doi:10.1016/j.cageo.2013.04.024
+- Barstow, J. et al. 2016, Icarus, 271, 400 — Probing Saturn's tropospheric cloud with Cassini/VIMS. doi:10.1016/j.icarus.2016.01.013, https://arxiv.org/abs/1601.02978
+- Barthélemy, M. 2011, Physics Reports, 499, 1 — Spatial networks. doi:10.1016/j.physrep.2010.11.002
+- Batalha, N. E., Smith, A. J. R. W., Lewis, N. K., Marley, M. S., Fortney, J. J. & Macintosh, B. 2018, AJ, article 158 — Color Classification of Extrasolar Giant Planets: Prospects and Cautions. doi:10.3847/1538-3881/aad59d
+- Batty, M. 2006, Nature, 444, 592 — Rank clocks. doi:10.1038/nature05302
+- Bazzi, S., Fiszbein, M. & Gebresilasse, M. 2017, NBER Working Paper 23997 — Frontier culture: the roots and persistence of "rugged individualism" in the United States. https://www.nber.org/papers/w23997
+- Beck, J. & Sieber, A. 2010, PLoS ONE, 5, e10416 — Is the spatial distribution of mankind's most basic economic traits determined by climate and soil alone?. doi:10.1371/journal.pone.0010416
+- Beck, H. E. et al. 2018, Scientific Data, 5, 180214 — Present and future Köppen-Geiger climate classification maps at 1-km resolution. doi:10.1038/sdata.2018.214
+- Bekker, A. et al. 2010, Economic Geology, 105, 467 — Iron formation: the sedimentary product of a complex interplay among mantle, tectonic, oceanic, and biospheric processes. doi:10.2113/gsecongeo.105.3.467
+- Benedictow, O. J. 2021, Boydell & Brewer — The Complete History of the Black Death.
+- Benn, D. & Hulton, N. 2010, Computers & Geosciences, 36, 605 — An Excel spreadsheet program for reconstructing the surface profile of former mountain glaciers and ice caps. doi:10.1016/j.cageo.2009.09.016
+- Berger, A. 1978, J. Atmos. Sci., 35, 2362 — Long-Term Variations of Daily Insolation and Quaternary Climatic Changes. ;2. doi:10.1175/1520-0469(1978)035<2362:LTVODI>2.0.CO
+- Berner, R. A. 1992, Geochim. Cosmochim. Acta, 56, 3225 — Weathering, plants, and the long-term carbon cycle. doi:10.1016/0016-7037(92)90300-8
+- Berner, R. A. 2003, Nature, 426, 323 — The long-term carbon cycle, fossil fuels and atmospheric composition. doi:10.1038/nature02131
+- Bertani, R. 2016, Geothermics, 60, 31 — Geothermal power generation in the world 2010–2014 update report. doi:10.1016/j.geothermics.2015.11.003
+- Bertrand, T. et al. 2021, Icarus (accepted) — Volatile transport modeling on Triton with new observational constraints. https://arxiv.org/abs/2110.11992
+- Bettencourt, L. et al. 2007, PNAS, 104, 7301 — Growth, innovation, scaling, and the pace of life in cities. doi:10.1073/pnas.0610172104
+- Bevan, A. et al. 2017, PNAS, 114, E10524 — Holocene fluctuations in human population demonstrate repeated links to food production and climate. doi:10.1073/pnas.1709190114
+- Blaydes, L. & Chaney, E. 2013, American Political Science Review, 107(1), 16 — The feudal revolution and Europe's rise: political divergence of the Christian West and the Muslim world before 1500 CE. https://econpapers.repec.org/RePEc:cup:apsrev:v:107:y:2013:i:01:p:16-34_00
+- Bocquet-Appel, J.-P. 2011, Science, 333, 560 — When the world's population took off: the springboard of the Neolithic demographic transition. doi:10.1126/science.1208880
+- Bosker, M. & Buringh, E. 2017, Journal of Urban Economics, 98, 139 — City seeds: geography and the origins of the European city system. https://ideas.repec.org/a/eee/juecon/v98y2017icp139-157.html
+- Bosscher, H. & Schlager, W. 1992, Sedimentology, 39, 503 — Computer simulation of reef growth. doi:10.1111/j.1365-3091.1992.tb02130.x
+- Braithwaite, R. J. 1995, J. Glaciol., 41, 153 — Positive degree-day factors for ablation on the Greenland ice sheet studied by energy-balance modelling. doi:10.1017/S0022143000017846
+- Braithwaite, R. J. 2008, J. Glaciol., 54, 437 — Temperature and precipitation climate at the equilibrium-line altitude of glaciers expressed by the degree-day factor for melting snow. doi:10.3189/002214308785836968
+- Braude, A. et al. 2020, Icarus, 338, 113589 — Colour and tropospheric cloud structure of Jupiter from MUSE/VLT: retrieving a universal chromophore. doi:10.1016/j.icarus.2019.113589, https://arxiv.org/abs/1912.00918
+- Braun, J. & Willett, S. 2013, Geomorphology, 180, 170 — A very efficient O(n), implicit and parallel method to solve the stream power equation governing fluvial incision and landscape evolution. doi:10.1016/j.geomorph.2012.10.008
+- Bridson, R. 2007, ACM SIGGRAPH 2007 Sketches — Fast Poisson disk sampling in arbitrary dimensions. doi:10.1145/1278780.1278807
+- Brown, P. et al. 2002, Nature, 420, 294 — The flux of small near-Earth objects colliding with the Earth. doi:10.1038/nature01238
+- Buck, A. 1981, J. Appl. Meteorol., 20, 1527 — New equations for computing vapor pressure and enhancement factor. ;2. doi:10.1175/1520-0450(1981)020<1527:NEFCVP>2.0.CO
+- Burrows, A. et al. 1997, ApJ, 491, 856 — A Nongray Theory of Extrasolar Giant Planets and Brown Dwarfs. https://arxiv.org/abs/astro-ph/9705201
+- Cabanes, S., Gastine, T. & Fournier, A. 2026, GRL (accepted) — Motional induction in Ganymede's ocean. https://arxiv.org/abs/2603.06305
+- Cahoy, K., Marley, M. & Fortney, J. 2010, ApJ — Exoplanet albedo spectra and colors as a function of planet phase, separation, and metallicity. https://arxiv.org/abs/1009.3071
+- Canup, R. & Ward, W. 2002, AJ, 124, 3404 — Formation of the Galilean satellites: conditions of accretion. doi:10.1086/344684
+- Canup, R. & Ward, W. 2006, Nature, 441, 834 — A common mass scaling for satellite systems of gaseous planets. doi:10.1038/nature04860
+- Canup, R. 2008, Icarus, 196, 518 — Lunar-forming collisions with pre-impact rotation. doi:10.1016/j.icarus.2008.03.011
+- Carnahan, E., Wolfenbarger, N., Jordan, J. & Hesse, M. 2021 — New insights into temperature-dependent ice properties and their effect on ice shell convection for icy ocean worlds. doi:10.1016/j.epsl.2021.116886, https://arxiv.org/abs/2011.12502
+- Castelló, X., Eguíluz, V. & San Miguel, M. 2006, New Journal of Physics, 8, 308 — Ordering dynamics with two non-excluding options: bilingualism in language competition. doi:10.1088/1367-2630/8/12/308
+- Cederman, L.-E. 2003, American Political Science Review, 97(1), 135 — Modeling the size of wars: from billiard balls to sandpiles. https://www.cambridge.org/core/journals/american-political-science-review/article/abs/modeling-the-size-of-wars-from-billiard-balls-to-sandpiles/84FFC9F035902B95419977608C5A628A
+- Charney, J. 1975, QJRMS, 101, 193 — Dynamics of deserts and drought in the Sahel. doi:10.1002/qj.49710142802
+- Chen, J. & Kipping, D. 2017, ApJ, 834, 17 — probabilistic mass–radius relation. https://arxiv.org/abs/1603.08614
+- Cilibrasi, M. et al. 2021, MNRAS — An N-body population synthesis framework for the formation of moons around Jupiter-like planets. https://arxiv.org/abs/2011.11513
+- Clauset, A., Shalizi, C. & Newman, M. 2009, SIAM Review, 51, 661 — Power-law distributions in empirical data. doi:10.1137/070710111
+- Clauset, A. 2018, Science Advances, 4, eaao3580 — Trends and fluctuations in the severity of interstate wars. doi:10.1126/sciadv.aao3580
+- Cohen, J. & Small, C. 1998, PNAS, 95, 14009 — Hypsographic demography: the distribution of human population by altitude. doi:10.1073/pnas.95.24.14009
+- Comin, D. & Hobijn, B. 2010, American Economic Review, 100(5), 2031 — An exploration of technology diffusion. https://ideas.repec.org/a/aea/aecrev/v100y2010i5p2031-59.html
+- Comin, D. & Mestieri, M. 2018, American Economic Journal: Macroeconomics, 10(3), 137 — If technology has arrived everywhere, why has income diverged?. doi:10.1257/mac.20150175
+- Cook, B. et al. 2022, Nature Reviews Earth & Environment, 3, 741 — Megadroughts in the Common Era and the Anthropocene. doi:10.1038/s43017-022-00329-1
+- Cortial, Y. et al. 2019, Computer Graphics Forum 38(2) — Procedural Tectonic Planets. https://perso.liris.cnrs.fr/eric.galin/Articles/2019-planets.pdf
+- Cowan, N. & Abbot, D. 2014, ApJ, 781, 27 — Water Cycling between Ocean and Mantle: Super-Earths Need Not Be Waterworlds. doi:10.1088/0004-637X/781/1/27
+- Creecy, E. C., Li, L., Jiang, X., West, R. A., Fry, P. M., Nixon, C. A., Kenyon, M. E. & Seignovert, B. 2021, Geophys. Res. Lett. — Titan's global radiant energy budget during the Cassini epoch (2004–2017). doi:10.1029/2021GL095356
+- Crida, A., Morbidelli, A. & Masset, F. 2006, Icarus — On the width and shape of gaps in protoplanetary disks. doi:10.1016/j.icarus.2005.10.007, https://arxiv.org/abs/astro-ph/0511082
+- Crida, A. & Charnoz, S. 2012, Science, 338, 1196 — Formation of regular satellites from ancient massive rings in the solar system. doi:10.1126/science.1226477, https://arxiv.org/abs/1301.3808
+- Cuney, M. 2009, Mineralium Deposita, 44, 3 — The extreme diversity of uranium deposits. doi:10.1007/s00126-008-0223-1
+- Currie, T. et al. 2010, Nature, 467, 801 — Rise and fall of political complexity in island South-East Asia and the Pacific. doi:10.1038/nature09461
+- Currie, T. et al. 2020, Humanities and Social Sciences Communications, 7, 34 — Duration of agriculture and distance from the steppe predict the evolution of large-scale human societies in Afro-Eurasia. doi:10.1057/s41599-020-0516-2
+- Dalgaard, C.-J., Kaarsen, N., Olsson, O. & Selaya, P. 2018, University of Gothenburg Working Papers in Economics 722 — Roman roads to prosperity: persistence and non-persistence of public infrastructure. https://ideas.repec.org/p/hhs/gunwpe/0722.html
+- Daniel, F., Petitdemange, L. & Gissinger, C. 2025 — New constraint on Europa's ice shell: magnetic signature from the ocean. https://arxiv.org/abs/2509.10903
+- Davison, K. et al. 2005, arXiv q-bio/0505013 — Environmental effects on the spread of the Neolithic. https://arxiv.org/abs/q-bio/0505013
+- Davison, K. et al. 2006, J. Archaeological Science, 33, 641 — The role of waterways in the spread of the Neolithic. doi:10.1016/j.jas.2005.09.017
+- Davy, P. & Lague, D. 2009, JGR Earth Surface, 114, F03007 — Fluvial erosion/transport equation of landscape evolution models revisited. doi:10.1029/2008JF001146
+- DeCelles, P. & Giles, K. 1996, Basin Research, 8, 105 — Foreland basin systems. doi:10.1046/j.1365-2117.1996.01491.x
+- Dencs, Z., Dobos, V. & Regály, Z. 2025 — Grand theft moons: formation of habitable moons around giant planets. https://arxiv.org/abs/2505.18144
+- de Soto, P. et al. 2025, Scientific Data, 12, 1731 — Itiner-e: a high-resolution dataset of roads of the Roman Empire. doi:10.1038/s41597-025-06140-z
+- Dijkstra, E. 1959, Numerische Mathematik, 1, 269 — A note on two problems in connexion with graphs. doi:10.1007/BF01386390
+- Disdier, A.-C. & Head, K. 2008, Review of Economics and Statistics, 90(1), 37 — The puzzling persistence of the distance effect on bilateral trade. https://ideas.repec.org/a/tpr/restat/v90y2008i1p37-48.html
+- Dobos, V., Haris, A., Kamp, I. E. E. & van der Tak, F. F. S. 2022, MNRAS — A Target List For Searching For Habitable Exomoons. https://arxiv.org/abs/2204.11614
+- Douçot, J. et al. 2026 — The atmospheric vertical structure of Uranus and Neptune from thermochemical models: the impact of model assumptions. https://arxiv.org/abs/2608.13157
+- Driscoll, P. & Bercovici 2014, Phys. Earth Planet. Inter., 236, 36 — On the thermal and magnetic histories of Earth and Venus: influences of melting, radioactivity, and conductivity.
+- Egholm, D. et al. 2009, Nature, 460, 884 — Glacial effects limiting mountain height. doi:10.1038/nature08263
+- Elser, S. et al. 2011, Icarus — How common are Earth-Moon planetary systems?. https://arxiv.org/abs/1105.4616
+- Emilien, A. et al. 2012, The Visual Computer — Procedural generation of villages on arbitrary terrains. doi:10.1007/s00371-012-0699-7
+- Encyclopaedia Britannica — The Steppe. https://www.britannica.com/place/the-Steppe
+- Erkaev, N. et al. 2007, A&A, 472, 329 — Roche lobe effects on the atmospheric loss from "hot Jupiters". doi:10.1051/0004-6361:20066929, https://arxiv.org/abs/astro-ph/0612729
+- Evans, W., Kirkpatrick, D. & Townsend, G. 2001, Algorithmica, 30, 264 — Right-Triangulated Irregular Networks. doi:10.1007/s00453-001-0006-x
+- Fernández-Villaverde, J., Koyama, M., Lin, Y. & Sng, T.-H. 2023, QJE, 138, 1173 — The Fractured-Land Hypothesis. doi:10.1093/qje/qjad003
+- Fletcher, L. et al. 2019, Space Sci. Rev. — How well do we understand the belt/zone circulation of giant planet atmospheres?. https://arxiv.org/abs/1907.01822
+- Foley, B. 2015 — The role of plate tectonic-climate coupling and exposed land area in the development of habitable climates on rocky planets. https://arxiv.org/abs/1509.00427
+- Fort, J. & Méndez, V. 1999, Physical Review Letters, 82, 867 — Time-delayed theory of the Neolithic transition in Europe. doi:10.1103/PhysRevLett.82.867
+- Fort, J. 2012, PNAS, 109, 18669 — Synthesis between demic and cultural diffusion in the Neolithic transition in Europe. doi:10.1073/pnas.1200662109
+- Fretwell, P. et al. 2013, The Cryosphere, 7, 375 — Bedmap2: improved ice bed, surface and thickness datasets for Antarctica. doi:10.5194/tc-7-375-2013
+- Freyssinet, Ph. et al. 2005, Economic Geology 100th Anniversary Volume, 681 — Ore-forming processes related to lateritic weathering. doi:10.5382/AV100.21
+- Fulchignoni, M. et al. 2005, Nature, 438, 785 — In situ measurements of the physical characteristics of Titan's environment. doi:10.1038/nature04314
+- Gabaix, X. 1999, QJE, 114, 739 — Zipf's law for cities: an explanation. doi:10.1162/003355399556133
+- Gabriel, K. & Sokal, R. 1969, Systematic Zoology, 18, 259 — A new statistical approach to geographic variation analysis. doi:10.2307/2412323
+- Galin, E. et al. 2010, Computer Graphics Forum — Procedural generation of roads. doi:10.1111/j.1467-8659.2009.01612.x
+- Garland, M. & Heckbert, P. 1997, Proceedings of SIGGRAPH '97, 209 — Surface simplification using quadric error metrics. doi:10.1145/258734.258849
+- Gavriel, N. & Kaspi, Y. 2021, Nat. Geosci., 14, 559 — The number and location of Jupiter's circumpolar cyclones explained by vorticity dynamics. https://arxiv.org/abs/2110.09422
+- Gavrilets, S., Anderson, D. & Turchin, P. 2010, Cliodynamics, 1(1), 58 — Cycling in the complexity of early societies. doi:10.21237/C7clio11193
+- Gladman, B. et al. 1996, Icarus, 122, 166 — Synchronous Locking of Tidally Evolving Satellites. doi:10.1006/icar.1996.0117
+- Goldblatt, C., Lenton, T. M. & Watson, A. J. 2006, Nature, 443, 683 — Bistability of atmospheric oxygen and the Great Oxidation. doi:10.1038/nature05169
+- Goldfarb, R., Groves, D. & Gardoll, S. 2001, Ore Geology Reviews, 18, 1 — Orogenic gold and geologic time: a global synthesis. doi:10.1016/S0169-1368(01)00016-6
+- Goldreich, P., Murray, N., Longaretti, P. Y. & Banfield, D. 1989, Science, 245, 500 — Neptune's story. doi:10.1126/science.245.4917.500
+- Golombek, M. et al. 2012, Space Science Reviews, 170, 641 — Selection of the Mars Science Laboratory landing site. doi:10.1007/s11214-012-9916-y
+- González-Jiménez, J. et al. 2014, Lithos, 189, 140 — Chromitites in ophiolites: how, where, when, why? Part II. doi:10.1016/j.lithos.2013.09.008
+- Goodchild, M. 2020, Geographical Analysis, 52, 558 — Beyond Tobler's hiking function. doi:10.1111/gean.12253
+- Goossens, S., van Noort, B., Mateo, A., Mazarico, E. & van der Wal, W. 2024, Nature Astronomy — A low density ocean inside Titan inferred from Cassini data. doi:10.1038/s41550-024-02253-4
+- Gough, D. O. 1981, Solar Physics, 74, 21 — Solar interior structure and luminosity variations. doi:10.1007/BF00151270
+- Groves, D. et al. 1998, Ore Geology Reviews, 13, 7 — Orogenic gold deposits: a proposed classification. doi:10.1016/S0169-1368(97)00012-7
+- Groves, D. & Bierlein, F. 2007, J. Geological Society, 164, 19 — Geodynamic settings of mineral deposit systems. doi:10.1144/0016-76492006-065
+- Grundy, W. et al. 2023, Icarus — Laboratory measurement of volatile ice vapor pressures with a quartz crystal microbalance. doi:10.1016/j.icarus.2023.115767, https://arxiv.org/abs/2309.05078
+- Grundy, W. M. et al. 2024, Icarus — Laboratory measurement of volatile ice vapor pressures with a quartz crystal microbalance. doi:10.1016/j.icarus.2023.115767, https://arxiv.org/abs/2309.05078
+- Guillot, T. & Gautier, D. 2015, Treatise on Geophysics, 2nd edn — Giant planets. doi:10.1016/B978-0-444-53802-4.00176-7, https://arxiv.org/abs/1405.3752
+- Hallet, B., Hunter, L. & Bogen, J. 1996, Global and Planetary Change, 12, 213 — Rates of erosion and sediment evacuation by glaciers: A review of field data and their implications. doi:10.1016/0921-8181(95)00021-6
+- Hansen, J., Sato, M. & Ruedy, R. 2012, PNAS, 109, E2415 — Perception of climate change. doi:10.1073/pnas.1205276109
+- Hare, T., Rossi, A., Frigeri, A. & Marmo, C. 2017, arXiv:1706.02683 — Interoperability in Planetary Research for Geospatial Data Analysis. https://arxiv.org/abs/1706.02683
+- Hassler, D. et al. 2014, Science, 343, 1244797 — Mars' surface radiation environment measured with the Mars Science Laboratory's Curiosity rover. doi:10.1126/science.1244797
+- Hayes, B. & Wilson, C. 2008, Linguistic Inquiry, 39, 379 — A maximum entropy model of phonotactics and phonotactic learning. doi:10.1162/ling.2008.39.3.379
+- Hedman, M. 2015, ApJL, 801, L33 — Why are dense planetary rings only found between 8 and 20 AU?. https://arxiv.org/abs/1502.07696
+- Held, I. M. 2001, J. Atmos. Sci., 58, 943 — The Partitioning of the Poleward Energy Transport between the Tropical Ocean and Atmosphere. ;2. doi:10.1175/1520-0469(2001)058<0943:TPOTPE>2.0.CO
+- Held, I. & Soden, B. 2006, J. Climate, 19, 5686 — Robust Responses of the Hydrological Cycle to Global Warming. doi:10.1175/JCLI3990.1
+- Helled, R. & Howard, S. 2024 — Giant planet interiors and atmospheres. https://arxiv.org/abs/2407.05853
+- Heller, R. 2012, A&A, 545, L8 — Exomoon habitability constrained by energy flux and orbital stability. https://arxiv.org/abs/1209.0050
+- Heller, R. & Barnes, R. 2013, Astrobiology, 13, 18 — Exomoon habitability constrained by illumination and tidal heating. https://arxiv.org/abs/1209.5323
+- Heller, R. & Zuluaga, J. 2013, ApJL — Magnetic shielding of exomoons beyond the circumplanetary habitable edge. https://arxiv.org/abs/1309.0811
+- Henning, O'Connell & Sasselov 2009, ApJ, 707, 1000 — Tidally heated terrestrial exoplanets: viscoelastic response models. doi:10.1088/0004-637X/707/2/1000, https://arxiv.org/abs/0912.1907
+- Henrich, J. 2004, American Antiquity, 69(2), 197 — Demography and cultural evolution: how adaptive cultural processes can produce maladaptive losses: the Tasmanian case. https://www2.psych.ubc.ca/~henrich/Website/Papers/HenrichTasmania.pdf
+- Hergarten, S. 2021, Earth Surface Dynamics, 9, 937 — Modeling glacial and fluvial landform evolution at large scales using a stream-power approach. doi:10.5194/esurf-9-937-2021
+- Howett, C. J. A., Spencer, J. R., Pearl, J. & Segura, M. 2011, J. Geophys. Res., 116 — High heat flow from Enceladus' south polar region measured using 10–600 cm⁻¹ Cassini/CIRS data. doi:10.1029/2010JE003718
+- Hsiang, S., Burke, M. & Miguel, E. 2013, Science, 341, 1235367 — Quantifying the influence of climate on human conflict. doi:10.1126/science.1235367
+- Hu, Y. & Yang, J. 2014, PNAS, 111, 629 — Role of ocean heat transport in climates of tidally locked exoplanets around M dwarf stars. doi:10.1073/pnas.1315215111
+- Hueso, R., Guillot, T. & Sánchez-Lavega, A. 2020, Phil. Trans. R. Soc. A, 378 — Convective storms and atmospheric vertical structure in Uranus and Neptune. doi:10.1098/rsta.2019.0476, https://arxiv.org/abs/2111.15494
+- Hunten, D. 1973, J. Atmos. Sci., 30, 1481 — The escape of light gases from planetary atmospheres. (Volume and pages from the reference list of Hunten, Pepin & Walker 1987, Icarus 69, 532.)
+- Hussmann, H., Sohl, F. & Spohn, T. 2006, Icarus, 185, 258 — Subsurface oceans and deep interiors of medium-sized outer planet satellites and large trans-Neptunian objects. doi:10.1016/j.icarus.2006.06.005
+- Hyodo, R. & Ida, S. 2025 — Ringed versus ringless worlds: how Poynting-Robertson drag shapes rings across the Solar System. https://arxiv.org/abs/2510.25302
+- IAPWS 2011, R14-08(2011) — Revised release on the pressure along the melting and sublimation curves of ordinary water substance. https://iapws.org/technical-guidance/release/MeltSub
+- IAU 2015, Resolution B3 (Mamajek, E. E. et al.) — IAU 2015 Resolution B3 on recommended nominal conversion constants for selected solar and planetary properties. https://arxiv.org/abs/1510.07674
+- Irwin, P. et al. 2022 — Hazy blue worlds: a holistic aerosol model for Uranus and Neptune, including Dark Spots. https://arxiv.org/abs/2201.04516
+- Irwin, P. et al. 2024, MNRAS — Modelling the seasonal cycle of Uranus's colour and magnitude, and comparison with Neptune. doi:10.1093/mnras/stad3761
+- Irwin, P. G. J., Wenkert, D. D., Simon, A. A., Dahl, E. & Hammel, H. B. 2025, MNRAS, 540, 1719 — The bolometric Bond albedo and energy balance of Uranus. doi:10.1093/mnras/staf800, https://arxiv.org/abs/2502.18971
+- Izdebski, A. et al. 2022, Nature Ecology & Evolution, 6, 297 — Palaeoecological data indicates land-use changes across Europe linked to spatial heterogeneity in mortality during the Black Death pandemic. https://www.nature.com/articles/s41559-021-01652-4
+- Jakosky, B. M. et al. 2018, Icarus, 315, 146 — Loss of the Martian atmosphere to space: present-day loss rates determined from MAVEN observations and integrated loss through time. doi:10.1016/j.icarus.2018.05.030
+- Jia, X. et al. 2025, J. Geophys. Res. Planets — Improved models of Ganymede's permanent and induced magnetic fields based on Galileo and Juno data. doi:10.1029/2024JE008309
+- Jones, T. et al. 2021, PNAS, 118(28), e2024802118 — Historic and bioarchaeological evidence supports late onset of post-Columbian epidemics in Native California. doi:10.1073/pnas.2024802118
+- Kaplan, J. et al. 2011, The Holocene, 21, 775 — Holocene carbon emissions as a result of anthropogenic land cover change. doi:10.1177/0959683610386983
+- Karkoschka, E. 1994, Icarus, 111, 174 — Spectrophotometry of the jovian planets and Titan at 300- to 1000-nm wavelength: the methane spectrum. doi:10.1006/icar.1994.1139
+- Kaspi, Y. & Showman, A. 2015, ApJ, 804, 60 — Atmospheric Dynamics of Terrestrial Exoplanets over a Wide Range of Orbital and Atmospheric Parameters. doi:10.1088/0004-637X/804/1/60
+- Kavanagh, P. et al. 2018, Nature Human Behaviour, 2(7) — Hindcasting global population densities reveals forces enabling the origin of agriculture. doi:10.1038/s41562-018-0358-8
+- Khurana, K. K., Kivelson, M. G., Stevenson, D. J., Schubert, G., Russell, C. T., Walker, R. J. & Polanskey, C. 1998, Nature, 395, 777 — Induced magnetic fields as evidence for subsurface oceans in Europa and Callisto. doi:10.1038/27394
+- Kiang, N. et al. 2007, Astrobiology, 7, 252 — Spectral Signatures of Photosynthesis. II. Coevolution with Other Stars and the Atmosphere on Extrasolar Worlds. doi:10.1089/ast.2006.0108
+- Kimura, J. 2025 — Icy worlds: moons and dwarf planets. https://arxiv.org/abs/2511.18776
+- Klein Goldewijk, K. et al. 2017, Earth System Science Data, 9, 927 — Anthropogenic land use estimates for the Holocene: HYDE 3.2. doi:10.5194/essd-9-927-2017
+- Klemme, H. & Ulmishek, G. 1991, AAPG Bulletin, 75 — Effective petroleum source rocks of the world. doi:10.1306/0C9B2A47-1710-11D7-8645000102C1865D
+- Koch, A., Brierley, C., Maslin, M. & Lewis, S. 2019, Quaternary Science Reviews, 207, 13 — Earth system impacts of the European arrival and Great Dying in the Americas after 1492. doi:10.1016/j.quascirev.2018.12.004
+- Kokkonen, A. & Sundell, A. 2012, QoG Working Paper 2012:3 (published in American Political Science Review 2014) — Delivering stability: primogeniture and autocratic survival in European monarchies 1000–1800. https://www.gu.se/sites/default/files/2020-05/2012_3_Kokkonen_Sundell.pdf
+- Kokkonen, A. & Sundell, A. 2020, Comparative Political Studies, 53(3–4), 434 — Leader succession and civil war. doi:10.1177/0010414019852712
+- Kokubo, E., Makino, J. & Ida, S. 2000, Icarus, 148, 419 — Evolution of a circumterrestrial disk and formation of a single moon.
+- Koll, D. & Abbot, D. 2016, ApJ, 825, 99 — Temperature Structure and Atmospheric Circulation of Dry Tidally Locked Rocky Exoplanets. doi:10.3847/0004-637X/825/2/99
+- Kopparapu, R. et al. 2013, ApJ, 765, 131 — habitable zones. https://iopscience.iop.org/article/10.1088/0004-637X/765/2/131
+- Kopparapu, R. et al. 2014, ApJL, 787, L29 — HZ dependence on planet mass. https://arxiv.org/abs/1404.5292
+- Koppes, M. & Montgomery, D. 2009, Nature Geoscience, 2, 644 — The relative efficacy of fluvial and glacial erosion over modern to orogenic timescales. doi:10.1038/ngeo616
+- Korenaga, J. 2006, AGU Geophysical Monograph 164 (Archean Geodynamics and Environments) — Archean geodynamics and the thermal evolution of Earth. doi:10.1029/164GM03
+- Korenaga, J. 2010, ApJL, 725, L43 — likelihood of plate tectonics on super-Earths. https://iopscience.iop.org/article/10.1088/2041-8205/725/1/L43
+- Kremer, M. 1993, Quarterly Journal of Economics, 108, 681 — Population growth and technological change: one million B.C. to 1990. doi:10.2307/2118405
+- Krissansen-Totton, J. & Catling, D. C. 2017, Nature Communications, 8, 15423 — Constraining climate sensitivity and continental versus seafloor weathering using an inverse geological carbon cycle model. doi:10.1038/ncomms15423
+- Kummu, M. et al. 2011, PLoS ONE, 6, e20578 — How close do we live to water? A global analysis of population distance to freshwater bodies. doi:10.1371/journal.pone.0020578
+- Lainey, V. et al. 2009, Nature, 459, 957 — Strong tidal dissipation in Io and Jupiter from astrometric observations. doi:10.1038/nature08108
+- Lainey, V., Karatekin, Ö., Desmars, J., Charnoz, S., Arlot, J.-E., Emelyanov, N., Le Poncin-Lafitte, C., Mathis, S., Remus, F., Tobie, G. & Zahn, J.-P. 2012 — Strong tidal dissipation in Saturn and constraints on Enceladus' thermal state from astrometry. https://arxiv.org/abs/1204.0895
+- Laitin, D., Moortgat, J. & Robinson, A. 2012, PNAS, 109, 10263 — Geographic axes and the persistence of cultural diversity. doi:10.1073/pnas.1205338109
+- Landgren, E. & Nadeau, A. 2022, JOSS, 7, 4872 — SWAMPE: A Shallow-Water Atmospheric Model in Python for Exoplanets. doi:10.21105/joss.04872
+- Larson, G. et al. 2014, PNAS, 111, 6139 — Current perspectives and the future of domestication studies. doi:10.1073/pnas.1323964111
+- Laske, G. et al. 2013, EGU General Assembly, EGU2013-2658 — Update on CRUST1.0: a 1-degree global model of Earth's crust (). https://ui.adsabs.harvard.edu/abs/2013EGUGA..15.2658L
+- Leach, D. et al. 2010, Economic Geology, 105, 593 — Sediment-hosted lead-zinc deposits in Earth history. doi:10.2113/gsecongeo.105.3.593
+- Le Brocq, A., Payne, A. & Siegert, M. 2006, Computers & Geosciences, 32, 1780 — West Antarctic balance calculations: Impact of flux-routing algorithm, smoothing algorithm and topography. doi:10.1016/j.cageo.2006.05.003
+- Lecavelier des Etangs, A. et al. 2008, A&A, 481, L83 — Rayleigh scattering in the transit spectrum of HD 189733b. doi:10.1051/0004-6361:200809388
+- Lesk, C., Rowhani, P. & Ramankutty, N. 2016, Nature, 529, 84 — Influence of extreme weather disasters on global crop production. doi:10.1038/nature16467
+- Levin et al. 2026, Nature Astronomy (article s41550-025-02718-0) — Europa's ice thickness and subsurface structure characterized by the Juno microwave radiometer.
+- Li, L., Jiang, X., West, R. A., Gierasch, P. J., Perez-Hoyos, S., Sanchez-Lavega, A., Fletcher, L. N., Fortney, J. J., Knowles, B., Porco, C. C., Baines, K. H., Fry, P. M., Mallama, A., Achterberg, R. K., Simon, A. A., Nixon, C. A., Orton, G. S., Dyudina, U. A., Ewald, S. P. & Schmude, R. W. 2018, Nature Communications, 9 — Less absorbed solar energy and more internal heat for Jupiter. doi:10.1038/s41467-018-06107-2
+- Lian, Y. & Showman, A. 2010, Icarus, 207, 373 — Generation of equatorial jets by large-scale latent heating on the giant planets. https://arxiv.org/abs/0910.3065
+- Liebl, M. et al. 2023, Geoscientific Model Development, 16, 1315 — Modeling large-scale landform evolution with a stream power law for glacial erosion (OpenLEM v37): benchmarking experiments against a more process-based description of ice flow (iSOSIA v3.4.3). doi:10.5194/gmd-16-1315-2023
+- Lieth, H. 1973, Human Ecology, 1, 303 — Primary production: Terrestrial ecosystems. doi:10.1007/BF01536729
+- Lin, P. et al. 2021, Scientific Data, 8, 28 — A new vector-based global river network dataset accounting for variable drainage density. doi:10.1038/s41597-021-00819-9
+- Linder, E. et al. 2019, A&A — Evolutionary models of cold and low-mass planets: cooling curves, magnitudes, and detectability. https://arxiv.org/abs/1812.02027
+- Lindsay, J. 2016, Hydrological Processes, 30, 846 — Efficient hybrid breaching-filling sink removal methods for flow path enforcement in digital elevation models. doi:10.1002/hyp.10648
+- Liu, J. & Schneider, T. 2010, J. Atmos. Sci. — Mechanisms of jet formation on the giant planets. https://arxiv.org/abs/0910.3682
+- Losasso, F. & Hoppe, H. 2004, ACM Transactions on Graphics, 23(3), 769 — Geometry clipmaps: terrain rendering using nested regular grids. (DOI not confirmed). https://hhoppe.com/proj/geomclipmap/
+- Lothringer, J. et al. 2025 — Solar System C/H mass–metallicity fit used for giant envelopes (task 11.11). https://arxiv.org/abs/2510.26785
+- Lyons, T. W., Reinhard, C. T. & Planavsky, N. J. 2014, Nature, 506, 307 — The rise of oxygen in Earth's early ocean and atmosphere. doi:10.1038/nature13068
+- Maddieson, I. 2013, Consonant inventories (chapter 1), Vowel quality inventories (chapter 2) and Syllable structure (chapter 12). In Dryer, M. & Haspelmath, M. (eds), The World Atlas of Language Structures Online. doi:10.5281/zenodo.7385533
+- Maier, W. & Groves, D. 2011, Mineralium Deposita, 46, 841 — Temporal and spatial controls on the formation of magmatic PGE and Ni–Cu deposits. doi:10.1007/s00126-011-0339-6
+- Mann, P., Gahagan, L. & Gordon, M. 2003, in Halbouty, M. (ed.), Giant Oil and Gas Fields of the Decade 1990–1999, AAPG Memoir 78, 15 — Tectonic setting of the world's giant oil and gas fields. No DOI found; AAPG Datapages, archives.datapages.com/data/specpubs/memoir78/CHAPTER_2/CHAPTER_2.HTM.
+- Marani, M., Katul, G., Pan, W. & Parolari, A. 2021, PNAS, 118, e2105482118 — Intensity and frequency of extreme novel epidemics. doi:10.1073/pnas.2105482118
+- McDonough, W. & Sun, S.-s. 1995, Chemical Geology, 120, 223 — The composition of the Earth. doi:10.1016/0009-2541(94)00140-4
+- McKenzie, D. 1978, EPSL, 40, 25 — Some remarks on the development of sedimentary basins. doi:10.1016/0012-821X(78)90071-7
+- Meijer, J. et al. 2018, Environmental Research Letters, 13, 064006 — Global patterns of current and future road infrastructure. doi:10.1088/1748-9326/aabd42
+- Melin, H. 2026, Oxford Research Encyclopedia of Planetary Science — Giant Planet Atmospheres. https://arxiv.org/abs/2606.29362
+- Menou, K. 2015, Earth Planet. Sci. Lett. — Climate stability of habitable Earth-like planets. doi:10.1016/j.epsl.2015.07.046, https://arxiv.org/abs/1411.5564
+- Miller, K. et al. 2023 — The composition of Saturn's rings. https://arxiv.org/abs/2311.17344
+- Milliman, J. 1993, Global Biogeochemical Cycles, 7, 927 — Production and accumulation of calcium carbonate in the ocean: budget of a nonsteady state. doi:10.1029/93GB02524
+- Mira, J. & Paredes, Á. 2005, EPL, 69, 1031 — Interlinguistic similarity and language death dynamics. doi:10.1209/epl/i2004-10438-4
+- Montgomery, D. & Dietrich, W. 1988, Nature, 336, 232 — Where do channels begin?. doi:10.1038/336232a0
+- Montgomery, D. & Dietrich, W. 1992, Science, 255, 826 — Channel Initiation and the Problem of Landscape Scale. doi:10.1126/science.255.5046.826
+- Moran, S., McCloy, D. & Forkel, R. 2019, PHOIBLE 2.0. doi:10.5281/zenodo.2626687
+- Mordecai, E. et al. 2013, Ecology Letters, 16, 22 — Optimal temperature for malaria transmission is dramatically lower than previously predicted. doi:10.1111/ele.12015
+- Moreau, C. et al. 2011, Science, 334, 1148 — Deep human genealogies reveal a selective advantage to be on an expanding wave front. doi:10.1126/science.1212880
+- Nelsen, M. et al. 2016, PNAS, 113, 2442 — Delayed fungal evolution did not cause the Paleozoic peak in coal production. doi:10.1073/pnas.1517943113
+- Nixon, C. 2024, ACS Earth Space Chem. — The composition and chemistry of Titan's atmosphere. https://arxiv.org/abs/2402.17116
+- Nogueira, E., Brasser, R. & Gomes, R. 2011, Icarus — Reassessing the origin of Triton. doi:10.1016/j.icarus.2011.05.003, https://arxiv.org/abs/1105.1179
+- Nordhaus, W. 2006, PNAS, 103, 3510 — Geography and macroeconomics: new data and new findings. doi:10.1073/pnas.0509842103
+- North, G. 1975, J. Atmos. Sci., 32, 2033 — Theory of Energy-Balance Climate Models. ;2. doi:10.1175/1520-0469(1975)032<2033:TOEBCM>2.0.CO
+- North, G. R., Cahalan, R. F. & Coakley, J. A. 1981, Rev. Geophys. Space Phys., 19, 91 — Energy balance climate models. doi:10.1029/RG019i001p00091
+- North, G., Short, D. & Mengel, J. 1983, JGR, 88, 6576 — Simple energy balance model resolving the seasons and the continents. doi:10.1029/JC088iC11p06576
+- Nunn, N. & Puga, D. 2012, Review of Economics and Statistics, 94, 20 — Ruggedness: the blessing of bad geography in Africa. doi:10.1162/REST_a_00161
+- Nye, J. 1952, J. Glaciol., 2, 82 — The mechanics of glacier flow. doi:10.1017/S0022143000033967
+- Nye, J. 1952, Nature, 169, 529 — A Method of Calculating the Thicknesses of the Ice-Sheets. doi:10.1038/169529a0
+- Ohmura, A., Kasser, P. & Funk, M. 1992, J. Glaciol., 38, 397 — Climate at the equilibrium line of glaciers. doi:10.1017/S0022143000002276
+- Ohtsuki, K. 2025 — Rings around giant planets and smaller bodies. https://arxiv.org/abs/2508.11963
+- Olson, S., Reinhard, C. & Lyons, T. 2016, Proc. Natl. Acad. Sci. — Limited role for methane in the mid-Proterozoic greenhouse. doi:10.1073/pnas.1608549113
+- O'Neill, C. & Lenardic, A. 2007, GRL, 34, L19204 — Geological consequences of super-sized Earths. doi:10.1029/2007GL030598
+- Opdyke, B. & Wilkinson, B. 1988, Paleoceanography, 3, 685 — Surface area control of shallow cratonic to deep marine carbonate accumulation. doi:10.1029/PA003i006p00685
+- Ortman, S. et al. 2014, PLoS ONE, 9, e87902 — The pre-history of urban scaling. doi:10.1371/journal.pone.0087902
+- Paradise, A. et al. 2022, MNRAS, 511, 3272 — ExoPlaSim: Extending the Planet Simulator for exoplanets. doi:10.1093/mnras/stac172
+- Paris, M., Mura, A., Zambon, F., Genova, A., Tosi, F., Consorzi, A., Mitri, G., Cicchetti, A., Bolton, S., Noschese, R., Piccioni, G., Plainaki, C., Sindoni, G. & Sordini, R. 2026 — Analysis of Io's tidal response as a function of the properties of the partially molten layer. https://arxiv.org/abs/2603.19095
+- Park, R. S. et al. 2025, Nature, 638, 69 — Io's tidal response precludes a shallow magma ocean. doi:10.1038/s41586-024-08442-5
+- Pavlov, A. A., Kasting, J. F., Brown, L. L., Rages, K. A. & Freedman, R. 2000, J. Geophys. Res., 105 — Greenhouse warming by CH₄ in the atmosphere of early Earth. doi:10.1029/1999JE001134
+- Payne, A. et al. 2025, PSJ (accepted) — A comprehensive spectroscopic reference of the solar system and its application to exoplanet direct imaging. ; data. doi:10.5281/zenodo.17470004, https://arxiv.org/abs/2508.13368
+- Pearl, J. C., Conrath, B. J., Hanel, R. A., Pirraglia, J. A. & Coustenis, A. 1990, Icarus, 84 — The albedo, effective temperature, and energy balance of Uranus, as determined from Voyager IRIS data. doi:10.1016/0019-1035(90)90155-3
+- Pearl, J. C. & Conrath, B. J. 1991, J. Geophys. Res. Suppl., 96 — The albedo, effective temperature, and energy balance of Neptune, as determined from Voyager data.
+- Pearson, J. 1975, Acta Astronautica, 2, 785 — The orbital tower: a spacecraft launcher using the Earth's rotational energy. doi:10.1016/0094-5765(75)90021-1
+- Peel, M., Finlayson, B. & McMahon, T. 2007, HESS, 11, 1633 — Updated world map of the Köppen-Geiger climate classification. doi:10.5194/hess-11-1633-2007
+- Petricca, F., Vance, S. D., Parisi, M. et al. 2025, Nature, 648, 556 — Titan's strong tidal dissipation precludes a subsurface ocean. doi:10.1038/s41586-025-09818-x
+- Pfeffer, W. T., Meier, M. F. & Illangasekare, T. H. 1991, JGR, 96, 22117 — Retention of Greenland runoff by refreezing: Implications for projected future sea level change. doi:10.1029/91JC02502
+- Pinhasi, R., Fort, J. & Ammerman, A. 2005, PLoS Biology, 3, e410 — Tracing the origin and spread of agriculture in Europe. doi:10.1371/journal.pbio.0030410
+- Plescia, J. B., Shoemaker, E. M., Wilhelms, D. E., Squyres, S. W. & Lucchitta, B. K. 1982 — The geology of Ganymede (NASA record 83A16238; cited in the code as Shoemaker et al. 1982).
+- Popelka, S. & Smith, L. 2020, Water Policy, 22, 293 — Rivers as political borders: a new subnational geospatial dataset. doi:10.2166/wp.2020.041
+- Porter, S. B. & Grundy, W. M. 2011, ApJ Letters, 736 — Post-capture evolution of potentially habitable exomoons. https://arxiv.org/abs/1106.2800
+- Prados de la Escosura, L. & Santiago-Caballero, C. 2018, EHES Working Paper 130 — The Napoleonic Wars: a watershed in Spanish history?. https://ehes.org/wp/EHES_130.pdf
+- Quinn, P. et al. 1991, Hydrological Processes, 5, 59 — The prediction of hillslope flow paths for distributed hydrological modelling using digital terrain models. doi:10.1002/hyp.3360050106
+- Ramankutty, N. et al. 2002, Global Ecology and Biogeography, 11, 377 — The global distribution of cultivable lands. doi:10.1046/j.1466-822x.2002.00294.x
+- Reba, M., Reitsma, F. & Seto, K. 2016, Scientific Data, 3, 160034 — Spatializing 6,000 years of global urbanization from 3700 BC to AD 2000. doi:10.1038/sdata.2016.34
+- Reinhart, C. & Rogoff, K. 2008, NBER Working Paper 13882 — This time is different: a panoramic view of eight centuries of financial crises. https://www.nber.org/papers/w13882
+- Renfrew, C. & Level, E. 1979, in Cooke, K. (ed.), Transformations: Mathematical Approaches to Culture Change, Academic Press, 145 — Exploring dominance: predicting polities from centers. doi:10.1016/B978-0-12-586050-5.50016-6
+- Rhines, P. 1975, J. Fluid Mech., 69, 417 — Waves and turbulence on a beta-plane. doi:10.1017/S0022112075001504
+- Ribas, I., Guinan, E. F., Güdel, M. & Audard, M. 2005 — Evolution of the solar activity over time and effects on planetary atmospheres. I. High-energy irradiances (1–1700 Å). doi:10.1086/427977, https://arxiv.org/abs/astro-ph/0412253
+- Robinson, T. & Catling, D. 2012 — An analytic radiative-convective model for planetary atmospheres. https://arxiv.org/abs/1209.1833
+- Romer, R. & Kroner, U. 2016, Gondwana Research, 31, 60 — Phanerozoic tin and tungsten mineralization. doi:10.1016/j.gr.2015.11.002
+- Rougier, J., Sparks, R., Cashman, K. & Brown, S. 2018, EPSL, 482, 621 — The global magnitude-frequency relationship for large explosive volcanic eruptions. doi:10.1016/j.epsl.2017.11.015
+- Rozenfeld, H. et al. 2008, PNAS, 105, 18702 — Laws of population growth. doi:10.1073/pnas.0807435105
+- Rozenfeld, H., Rybski, D., Gabaix, X. & Makse, H. 2010, arXiv:1001.5289 (published in the American Economic Review, 2011) — The area and population of cities: new insights from a different perspective on cities. https://arxiv.org/abs/1001.5289
+- Rufu, R. & Canup, R. M. 2017, AJ, 154, 208 — Triton's evolution with a primordial Neptunian satellite system. doi:10.3847/1538-3881/aa9184, https://arxiv.org/abs/1711.01581
+- Sangireddy, H. et al. 2016, J. Hydrology, 537, 271 — Controls of climate, topography, vegetation, and lithology on drainage density extracted from high resolution topography data. doi:10.1016/j.jhydrol.2016.02.051
+- Sankar, R. et al. 2024 — Jovian Vortex Hunter: a citizen science project to study Jupiter's vortices. https://arxiv.org/abs/2408.04772
+- Sasaki, T., Stewart, G. & Ida, S. 2010, ApJ, 714, 1052 — Origin of the Different Architectures of the Jovian and Saturnian Satellite Systems. https://arxiv.org/abs/1003.5737
+- Saur, J. et al. 2015, J. Geophys. Res. Space Phys., 120, 1715 — The search for a subsurface ocean in Ganymede with Hubble Space Telescope observations of its auroral ovals. doi:10.1002/2014JA020778
+- Sauro, F. et al. 2020, Earth-Science Reviews, 209, 103288 — Lava tubes on Earth, Moon and Mars: a review on their size and morphology revealed by comparative planetology. doi:10.1016/j.earscirev.2020.103288
+- Scheibe, L., Nettelmann, N. & Redmer, R. 2021, A&A, 650, A200 — Thermal evolution of Uranus and Neptune. II. Deep thermal boundary layer. doi:10.1051/0004-6361/202140663, https://arxiv.org/abs/2105.01359
+- Schlager, W. 2003, Int. J. Earth Sciences, 92, 445 — Benthic carbonate factories of the Phanerozoic. doi:10.1007/s00531-003-0327-x
+- Schneider, A. et al. 2017, GRL, 44, 2773 — Global-scale river network extraction based on high-resolution topography and constrained by lithology, climate, slope, and observed drainage density. doi:10.1002/2016GL071844
+- Schwartzman, D. & Volk, T. 1989, Nature, 340, 457 — Biotic enhancement of weathering and the habitability of Earth. doi:10.1038/340457a0
+- Seguinot, J. 2013, J. Glaciol., 59, 1202 — Spatial and seasonal effects of temperature variability in a positive degree-day glacier surface mass-balance model. doi:10.3189/2013JoG13J081
+- Shibley, N. & Goodman, J. 2023 — Europa's coupled ice-ocean system: temporal evolution of a pure ice shell. https://arxiv.org/abs/2309.16821
+- Showman, A. & Polvani, L. 2011, ApJ — Equatorial superrotation on tidally locked exoplanets. https://arxiv.org/abs/1103.3101
+- Sicardy, B. et al. 2024, Phil. Trans. R. Soc. A — Origins of rings in the solar system. https://arxiv.org/abs/2412.00853
+- Sigl, M. et al. 2015, Nature, 523, 543 — Timing and climate forcing of volcanic eruptions for the past 2,500 years. doi:10.1038/nature14565
+- Siler, N., Roe, G. & Armour, K. 2018, J. Climate, 31, 7481 — Insights into the Zonal-Mean Response of the Hydrologic Cycle to Global Warming from a Diffusive Energy Balance Model. doi:10.1175/JCLI-D-18-0081.1
+- Sillitoe, R. 2010, Economic Geology, 105, 3 — Porphyry copper systems. doi:10.2113/gsecongeo.105.1.3
+- Silva, F. & Steele, J. 2014, J. Archaeological Science, 52, 609 — New methods for reconstructing geographical effects on dispersal rates and routes from large-scale radiocarbon databases. doi:10.1016/j.jas.2014.04.021
+- Singer, D., Berger, V. & Moring, B. 2008, USGS Open-File Report 2008-1155 — Porphyry copper deposits of the world: database and grade and tonnage models. doi:10.3133/ofr20081155
+- Singer, K., McKinnon, W. & Schenk, P. 2023, JGR Planets, 128, e2023JE007928 — Thin ice lithospheres and high heat flows on Europa from large impact structure ring-graben. doi:10.1029/2023JE007928, https://arxiv.org/abs/2401.10380
+- Skellam, J. 1951, Biometrika, 38, 196 — Random dispersal in theoretical populations. doi:10.1093/biomet/38.1-2.196
+- Skinner, J. & Wei, S. 2025 — Bridging the atmospheric circulations of hot and warm giant exoplanets. https://arxiv.org/abs/2505.01397
+- Small, C. & Cohen, J. 2004, Current Anthropology, 45, 269 — Continental physiography, climate, and the global distribution of human population. doi:10.1086/382255
+- Smith, M. et al. 2016, Geoscience Frontiers, 7, 315 — From mantle to critical zone: a review of large and giant sized deposits of the rare earth elements. doi:10.1016/j.gsf.2015.12.006
+- Sánchez-Lavega, A. et al. 2024, GRL, 51, e2024GL108993 — The origin of Jupiter's Great Red Spot. https://arxiv.org/abs/2406.13222
+- Soo, K. 2005, Regional Science and Urban Economics, 35, 239 — Zipf's law for cities: a cross-country investigation. doi:10.1016/j.regsciurbeco.2004.04.004
+- Stein, C. & Stein, S. 1992, Nature, 359, 123 — A model for the global variation in oceanic depth and heat flow with lithospheric age. doi:10.1038/359123a0
+- Stevenson, D. J., Spohn, T. & Schubert, G. 1983, Icarus, 54, 466 — Magnetism and thermal evolution of the terrestrial planets. doi:10.1016/0019-1035(83)90241-5
+- Strang, D. 1991, International Studies Quarterly, 35(4), 429 — Global patterns of decolonization, 1500–1987. http://www.jstor.org/stable/2600949
+- Strano, E. et al. 2012, Scientific Reports, 2, 296 — Elementary processes governing the evolution of road networks. doi:10.1038/srep00296
+- Straume, E. et al. 2019, G-cubed, 20, 1756 — GlobSed: updated total sediment thickness in the world's oceans. doi:10.1029/2018GC008115
+- Strugar, F. 2009, Journal of Graphics, GPU, and Game Tools, 14(4), 57 — Continuous Distance-Dependent Level of Detail for Rendering Heightmaps. doi:10.1080/2151237X.2009.10129287
+- Sudarsky, D., Burrows, A. & Pinto, P. 2000, ApJ, 538, 885 — Albedo and Reflection Spectra of Extrasolar Giant Planets. doi:10.1086/309160
+- Taagepera, R. 1978, Social Science Research, 7, 108 — Size and duration of empires: systematics of size. doi:10.1016/0049-089X(78)90007-8
+- Taagepera, R. 1979, Social Science History, 3(3/4), 115 — Size and duration of empires: growth-decline curves, 600 B.C. to 600 A.D. No DOI on the article; JSTOR.
+- Taagepera, R. 1997, International Studies Quarterly, 41, 475 — Expansion and contraction patterns of large polities: context for Russia. doi:10.1111/0020-8833.00053
+- Tallavaara, M., Eronen, J. & Luoto, M. 2018, PNAS, 115, 1232 — Productivity, biodiversity, and pathogens influence the global hunter-gatherer population density. doi:10.1073/pnas.1715638115
+- Timmermann, A. & Friedrich, T. 2016, Nature, 538, 92 — Late Pleistocene climate drivers of early human migration. doi:10.1038/nature19365
+- Tjoa, J. N. K. Y., Mueller, M. & van der Tak, F. F. S. 2020 — The subsurface habitability of small, icy exomoons. https://arxiv.org/abs/2003.09231
+- Tokadjian, A. & Piro, A. 2023 — Tidal heating of exomoons in resonance and implications for detection. https://arxiv.org/abs/2206.11368
+- Toohey, M. & Sigl, M. 2017, Earth System Science Data, 9, 809 — Volcanic stratospheric sulfur injections and aerosol optical depth from 500 BCE to 1900 CE. doi:10.5194/essd-9-809-2017
+- Toussaint, G. 1980, Pattern Recognition, 12, 261 — The relative neighbourhood graph of a finite planar set. doi:10.1016/0031-3203(80)90066-7
+- Töpfer, F. & Pillewizer, W. 1966, The Cartographic Journal, 3, 10 — The Principles of Selection. doi:10.1179/caj.1966.3.1.10
+- Trenberth, K. E. & Caron, J. M. 2001, J. Climate, 14, 3433 — Estimates of Meridional Atmosphere and Ocean Heat Transports. ;2. doi:10.1175/1520-0442(2001)014<3433:EOMAAO>2.0.CO
+- Tria, F., Servedio, V., Mufwene, S. & Loreto, V. 2015, PLoS ONE, 10, e0120771 — Modeling the emergence of contact languages. doi:10.1371/journal.pone.0120771
+- Tu, L., Johnstone, C. P., Güdel, M. & Lammer, H. 2015, A&A, 577, L3 — The extreme ultraviolet and X-ray Sun in time: high-energy evolutionary tracks of a solar-like star. doi:10.1051/0004-6361/201526146
+- Turchin, P. 2009, Journal of Global History, 4(2), 191 — A theory for formation of large empires. doi:10.1017/S174002280900312X
+- Turchin, P. et al. 2013, PNAS, 110, 16384 — War, space, and the evolution of Old World complex societies. doi:10.1073/pnas.1308825110
+- Turchin, P. et al. 2018, PNAS, 115, E144 — Quantitative historical analysis uncovers a single dimension of complexity that structures global variation in human social organization. doi:10.1073/pnas.1708800115
+- Turchin, P. et al. 2022, Science Advances, 8, eabn3517 — Disentangling the evolutionary drivers of social complexity: a comprehensive test of hypotheses. doi:10.1126/sciadv.abn3517
+- Turcotte, D. & Schubert, G. 2002, Geodynamics, 2nd ed., Cambridge University Press — radiogenic heat production data.
+- Valencia, D. et al. 2007, ApJL, 670, L45 — inevitability of plate tectonics on super-Earths. https://iopscience.iop.org/article/10.1086/524012/pdf
+- Wake, L. M. & Marshall, S. J. 2015, J. Glaciol., 61, 329 — Assessment of current methods of positive degree-day calculation using in situ observations from glaciated regions. doi:10.3189/2015JoG14J116
+- Walker, J. C. G., Hays, P. B. & Kasting, J. F. 1981, J. Geophys. Res., 86, 9776 — A negative feedback mechanism for the long-term stabilization of Earth's surface temperature. doi:10.1029/JC086iC10p09776
+- Wang, X., Li, L., Jiang, X., Fry, P. M., West, R. A., Nixon, C. A. et al. 2024, Nature Communications, 15 — Cassini spacecraft reveals global energy imbalance of Saturn. doi:10.1038/s41467-024-48969-9
+- Warren, J. 2010, Earth-Science Reviews, 98, 217 — Evaporites through time. doi:10.1016/j.earscirev.2009.11.004
+- Warren, J. 2010, Earth-Science Reviews, 98, 217 — Evaporites through time: tectonic, climatic and eustatic controls in marine and nonmarine deposits. doi:10.1016/j.earscirev.2009.11.004
+- Watson, A. J., Donahue, T. M. & Walker, J. C. G. 1981, Icarus, 48, 150 — The dynamics of a rapidly escaping atmosphere: applications to the evolution of Earth and Venus. doi:10.1016/0019-1035(81)90101-9
+- Weiss, H. 2016, PAGES Magazine, 24(2), 62 — Global megadrought, societal collapse and resilience at 4.2–3.9 ka BP across the Mediterranean and west Asia. doi:10.22498/pages.24.2.62
+- Williams, D. & Kasting, J. 1997, Icarus, 129, 254 — Habitable Planets with High Obliquities. doi:10.1006/icar.1997.5759
+- Williams, D. M. 2013, Astrobiology, 13, 315 — Capture of terrestrial-sized moons by gas giant planets. doi:10.1089/ast.2012.0892
+- Williams, D. M. & Zugger, M. E. 2024, Planetary Science Journal — Forming massive terrestrial satellites through binary-exchange capture. doi:10.3847/PSJ/ad5a9a, https://arxiv.org/abs/2406.17093
+- Wolfe, N., Dunavan, C. & Diamond, J. 2007, Nature, 447, 279 — Origins of major human infectious diseases. doi:10.1038/nature05775
+- Wolff, E. et al. 2023, Climate of the Past, 19, 23 — Frequency of large volcanic eruptions over the past 200 000 years. doi:10.5194/cp-19-23-2023
+- Woo, J. M. Y., Reinhardt, C., Cilibrasi, M., Chau, A., Helled, R. & Stadel, J. 2021, Icarus — Did Uranus' regular moons form via a rocky giant impactor? doi:10.1016/j.icarus.2021.114842, https://arxiv.org/abs/2105.13663
+- Wordsworth, R. 2015, ApJ, 806, 180 — Atmospheric Heat Redistribution and Collapse on Tidally Locked Rocky Planets. doi:10.1088/0004-637X/806/2/180
+- Wyman, C., Sloan, P.-P. & Shirley, P. 2013, J. Computer Graphics Techniques, 2(2), 1 — Simple Analytic Approximations to the CIE XYZ Color Matching Functions. https://jcgt.org/published/0002/02/01/
+- Xu, C. et al. 2020, PNAS, 117, 11350 — Future of the human climate niche. doi:10.1073/pnas.1910114117
+- Yang, J., Cowan, N. & Abbot, D. 2013, ApJL, 771, L45 — Stabilizing Cloud Feedback Dramatically Expands the Habitable Zone of Tidally Locked Planets. doi:10.1088/2041-8205/771/2/L45
+- Yuan, X. et al. 2019, JGR Earth Surface, 124, 1346 — A new efficient method to solve the stream power law model taking into account sediment deposition. doi:10.1029/2018JF004867
+- Zabel, F., Putzenlechner, B. & Mauser, W. 2014, PLoS ONE, 9, e107522 — Global agricultural land resources: a high resolution suitability evaluation and its perspectives until 2100 under climate change conditions. doi:10.1371/journal.pone.0107522
+- Zahnle, K. & Catling, D. 2017, ApJ, 843, 122 — The Cosmic Shoreline. doi:10.3847/1538-4357/aa7846
+- Zeng, L. et al. 2016, ApJ, 819, 127 — rocky mass–radius relation from PREM. https://arxiv.org/abs/1512.08827
+- Zhang, L. et al. 2004, Water Resources Research, 40, W02502 — A rational function approach for estimating mean annual evapotranspiration. doi:10.1029/2003WR002710
+- Zhang, D. et al. 2007, PNAS, 104, 19214 — Global climate change, war, and population decline in recent human history. doi:10.1073/pnas.0703073104
+- Zhang, D. et al. 2011, PNAS, 108, 17296 — The causality analysis of climate change and large-scale human crisis. doi:10.1073/pnas.1104268108
