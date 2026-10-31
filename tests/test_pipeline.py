@@ -6,7 +6,7 @@ from worldgen import PlanetSpec, candidates, format_report, generate
 from worldgen import constants as c
 from worldgen.cli import app
 from worldgen.priors import ARCHETYPES, resolve
-from worldgen.spec import field_role, load_spec
+from worldgen.spec import SPEC_VERSION, field_role, load_spec, save_spec
 
 from .conftest import EXAMPLES
 
@@ -106,6 +106,18 @@ def test_candidates_sorted():
 def test_invalid_specs_rejected(bad):
     with pytest.raises(ValidationError):
         PlanetSpec.model_validate(bad)
+
+
+def test_spec_version_is_written_read_and_checked(tmp_path):
+    path = tmp_path / "spec.yaml"
+    save_spec(PlanetSpec(), path)
+    assert f"spec_version: {SPEC_VERSION}" in path.read_text()
+    assert load_spec(path).spec_version == SPEC_VERSION
+    path.write_text("name: old\n")                      # files from before the field existed are version 1
+    assert load_spec(path).spec_version == 1
+    path.write_text(f"spec_version: {SPEC_VERSION + 1}\n")
+    with pytest.raises(ValidationError, match="not supported"):
+        load_spec(path)
 
 
 def test_field_roles():

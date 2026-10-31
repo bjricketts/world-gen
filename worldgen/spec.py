@@ -23,6 +23,7 @@ from .spec_base import Param, Range, Section as _Section  # noqa: F401
 
 TectonicRegime = Literal["mobile_lid", "stagnant_lid", "episodic", "heat_pipe", "inactive", "fluid"]
 Composition = Literal["n2_o2", "n2_co2", "co2", "n2_ch4", "h2_he", "none"]
+SPEC_VERSION = 1                 # version of the spec file format this release reads
 Mode = Literal["snapshot", "history"]
 TectonicsMode = Literal["simulated", "heuristic"]
 TectonicStart = Literal["supercontinent", "cratons"]
@@ -232,6 +233,7 @@ class PlanetSpec(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    spec_version: int = 1
     name: str = "Unnamed"
     seed: int = 0
     mode: Mode = "snapshot"
@@ -248,6 +250,14 @@ class PlanetSpec(BaseModel):
     culture: Optional[CultureSpec] = None   # inhabitants placed after the planet is built (DESIGN 4.8)
     system: SystemSpec = SystemSpec()       # moons and rings (DESIGN 4.12)
     parent: Optional[ParentSpec] = None     # set when the body is a moon (DESIGN 4.12)
+
+    @field_validator("spec_version")
+    @classmethod
+    def _known_spec_version(cls, v: int) -> int:
+        """Reject spec versions this release does not read."""
+        if v != SPEC_VERSION:
+            raise ValueError(f"spec_version {v} is not supported by this release (it reads version {SPEC_VERSION})")
+        return v
 
     @model_validator(mode="after")
     def _moon_needs_parent_orbit(self):
@@ -306,6 +316,7 @@ SPEC_TEMPLATE = """\
 # Each numeric value may be a number (fixed), a [low, high] range (drawn),
 # or omitted (drawn from the archetype prior or derived from physics).
 
+spec_version: 1
 name: New World
 seed: 42
 mode: snapshot            # snapshot | history (integrated from formation)

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
@@ -8,6 +8,22 @@ version = "0.1.0"
 description = "Physically motivated planet generator for world building"
 readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Benjamin Ricketts", email = "benjaminricketts5@gmail.com" }]
+keywords = ["planet", "world building", "procedural generation", "exoplanet", "plate tectonics", "climate", "worldbuilding"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Physics",
+]
 dependencies = [
     "numpy>=1.24",
     "scipy>=1.11",
@@ -26,13 +42,24 @@ dev = ["pytest>=7", "pytest-xdist>=3", "nbclient>=0.9", "nbformat>=5.9", "ipyker
 notebooks = ["jupyterlab>=4"]
 explore = ["ipywidgets>=8", "ipympl>=0.9"]
 export = ["rasterio>=1.3", "trimesh>=4"]
+data = ["miepython>=3.3.1"]
 globe = ["pyvista[jupyter]>=0.44", "trame-pyvista", "ipywidgets>=8", "imageio>=2.30", "imageio-ffmpeg", "nest_asyncio2"]
+
+[project.urls]
+Homepage = "https://github.com/bjricketts/world-gen"
+Documentation = "https://github.com/bjricketts/world-gen/tree/main/docs"
+Issues = "https://github.com/bjricketts/world-gen/issues"
+Changelog = "https://github.com/bjricketts/world-gen/blob/main/CHANGELOG.md"
 
 [project.scripts]
 worldgen = "worldgen.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["worldgen"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/worldgen", "/tests", "/scripts", "/examples", "/docs", "/README.md", "/LICENSE", "/NOTICE", "/CHANGELOG.md",
+           "/CITATION.cff", "/pyproject.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
