@@ -1,6 +1,6 @@
-"""Render the example figures kept in "Claude outputs" for the Earth example.
+"""Render the example figures written to "gallery" for the Earth example.
 
-Usage: python scripts/render_examples.py [--out "Claude outputs"] [--seed 0] [--snapshots 20]
+Usage: python scripts/render_examples.py [--out gallery] [--seed 0] [--snapshots 20]
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from validate_earth import EARTH_SPEC  # noqa: E402
 def main() -> None:
     """Generate the Earth example once and write its overview, maps and history figures."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--out", type=Path, default=Path(__file__).resolve().parent.parent / "Claude outputs")
+    parser.add_argument("--out", type=Path, default=Path(__file__).resolve().parent.parent / "gallery")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--snapshots", type=float, default=20.0)
     args = parser.parse_args()

@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use worldgen in published work, please cite it as below."
+title: "worldgen: a physically motivated planet generator for world building"
+type: software
+version: 1.0.0
+authors:
+  - family-names: Ricketts
+    given-names: Benjamin
+repository-code: "https://github.com/bjricketts/world-gen"
+license: MIT
+keywords:
+  - planet generation
+  - world building
+  - plate tectonics
+  - climate
+  - exoplanets
+abstract: >-
+  worldgen generates planets from stellar, orbital and bulk parameters: interior and plate tectonics, oceans,
+  atmosphere, climate and biomes, giants and moons, with zoomed local maps and cultures placed on the result.

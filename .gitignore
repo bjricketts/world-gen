@@ -5,3 +5,9 @@ __pycache__/
 papers/
 crust1.0.tar.gz
 /giant_colours/
+dist/
+build/
+.venv/
+.ipynb_checkpoints/
+/kestrel/
+/gallery/
