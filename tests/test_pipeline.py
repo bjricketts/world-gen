@@ -120,6 +120,18 @@ def test_spec_version_is_written_read_and_checked(tmp_path):
         load_spec(path)
 
 
+def test_package_version_matches_pyproject_and_changelog():
+    import re
+
+    import worldgen
+
+    root = EXAMPLES.parent
+    pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
+    assert re.search(r'^version = "([^"]+)"', pyproject, re.M).group(1) == worldgen.__version__
+    changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert f"## [{worldgen.__version__}]" in changelog
+
+
 def test_field_roles():
     assert field_role("atmosphere.surface_pressure_bar", "snapshot") == "input"
     assert field_role("atmosphere.surface_pressure_bar", "history") == "target"

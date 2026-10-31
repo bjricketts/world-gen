@@ -1,6 +1,6 @@
 """worldgen: physically motivated planet generation for world building."""
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 from .generate import candidates, generate, generate_world  # noqa: E402
 from .report import format_report, format_timeline, save_state  # noqa: E402

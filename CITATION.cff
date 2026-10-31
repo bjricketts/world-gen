@@ -3,6 +3,7 @@ message: "If you use worldgen in published work, please cite it as below."
 title: "worldgen: a physically motivated planet generator for world building"
 type: software
 version: 1.0.0
+date-released: 2026-10-31
 authors:
   - family-names: Ricketts
     given-names: Benjamin

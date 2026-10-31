@@ -5,7 +5,7 @@ the public interface is the command-line interface, the functions in `worldgen._
 (`spec_version`) and the save formats (world format 8, culture format 3, region format 1). Older save formats stay
 readable (worlds 4–8, cultures 1–3).
 
-## [1.0.0] - unreleased
+## [1.0.0] - 2026-10-31
 
 First public release.
 
