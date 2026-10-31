@@ -1,2 +1,37 @@
 worldgen
-Copyright (c) 2026 Benjamin Ricketts. MIT licence (see LICENSE).
+Copyright (c) 2026 Benjamin Ricketts. Released under the MIT licence (see LICENSE).
+
+Third-party data
+
+worldgen/data/giant_optics.npz
+  Methane absorption cross sections derived from the table of Karkoschka, E.
+  1994, Icarus 111, 174 (doi:10.1006/icar.1994.1139), with scattering
+  properties of cloud and haze particles computed by Mie theory. The file is
+  built by scripts/build_giant_optics.py. The table is also distributed by the
+  MPI-Mainz UV/VIS Spectral Atlas (Keller-Rudek, H. et al. 2013, Earth Syst.
+  Sci. Data 5, 365, doi:10.5194/essd-5-365-2013); the atlas page for it gives
+  no licence.
+
+Statistics and values from published work
+
+The package includes no other third-party data files. Numerical values taken
+from published work are written in worldgen/heuristics.py and the validation
+scripts with their sources, which are listed in docs/references.md. Two
+sources provide values computed from published data sets:
+
+  PHOIBLE 2.0 (Moran, S., McCloy, D. & Forkel, R. 2019, doi:10.5281/zenodo.2626687).
+  The share of the 3020 inventories that contain each consonant, and the
+  share with a long vowel, set the weights used to draw sound inventories for
+  invented languages. The PHOIBLE web site gives the licence as CC BY-SA 3.0
+  and the Zenodo record as CC BY 3.0. The package contains these aggregate
+  shares and none of the PHOIBLE tables.
+
+  HYDE 3.2 (Klein Goldewijk, K. et al. 2017, doi:10.5194/essd-9-927-2017).
+  Global population totals at selected dates serve as targets for the
+  simulated history. The package contains these totals and none of the HYDE
+  grids.
+
+Dependencies
+
+The dependencies listed in pyproject.toml are installed separately and keep
+their own licences (BSD, MIT, Apache-2.0 and the matplotlib licence).
